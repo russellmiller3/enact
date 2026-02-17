@@ -916,6 +916,8 @@ function queueHandler(fn) {
 async function runWorkflow() {
   running = true;
   resetUI();
+  handlerQueue = Promise.resolve(); // Reset queue for new run
+  let receivedDone = false; // Flag to distinguish normal stream end from errors
   workflowState = { startTime: now() };
   
   const btn = document.getElementById('runBtn');
@@ -1363,12 +1365,15 @@ async function runWorkflow() {
   
   // Handle done event
   eventSource.addEventListener('done', (e) => {
+    // Close EventSource IMMEDIATELY to prevent onerror from firing
+    // when the server naturally closes the SSE stream
+    receivedDone = true;
+    eventSource.close();
+    
     queueHandler(async () => {
     const data = JSON.parse(e.data);
     console.log('✅ Done event:', data);
     workflowState.doneData = data;
-    
-    eventSource.close();
     
     document.getElementById('runHint').textContent = 'generating receipt...';
     
@@ -1457,7 +1462,7 @@ async function runWorkflow() {
     // Show result
     const res = document.getElementById('result');
     res.style.borderLeft = '3px solid '+resultColor;
-    const totalMs = data.total_duration_ms || 600;
+    const totalMs = data.total_ms || 600;
     res.innerHTML = `<span class="res-lbl" style="color:${resultColor}">${resultLabel}</span>
       <div class="res-stats"><div class="res-s"><b>5</b><small>Agents</small></div><div class="res-s"><b>${passedChecks}/${totalChecks}</b><small>ABAC Checks</small></div><div class="res-s"><b>${totalMs}ms</b><small>Total</small></div></div>`;
     await sleep(100);
@@ -1471,8 +1476,12 @@ async function runWorkflow() {
     });
   });
   
-  // Handle errors
+  // Handle errors - but NOT when the stream ends naturally after "done"
   eventSource.onerror = (err) => {
+    if (receivedDone) {
+      console.log('SSE stream ended normally (after done event)');
+      return;
+    }
     console.error('❌ SSE connection error:', err);
     eventSource.close();
     
