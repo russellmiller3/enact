@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backend Architecture — Visa GDO</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#1A1F71;--gold:#F7B600;--blue:#1434CB;
+  --bg:#0f1419;--surface:#1a1f2e;--card:#252b3b;
+  --text:#e4e7eb;--text-2:#9ca3af;--text-3:#6b7280;
+  --border:#374151;--accent:#60a5fa;
+  --green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#a78bfa;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  padding:40px 20px;
+  line-height:1.6;
+}
+.container{max-width:1200px;margin:0 auto;}
+h1{
+  font-size:36px;
+  font-weight:700;
+  background:linear-gradient(135deg,var(--gold),#fde68a);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  margin-bottom:12px;
+}
+.subtitle{color:var(--text-2);font-size:16px;margin-bottom:40px;}
+.section{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:28px;
+  margin-bottom:24px;
+  transition:transform .2s;
+}
+.section:hover{transform:translateY(-2px);border-color:var(--accent);}
+.section-title{
+  font-size:20px;
+  font-weight:600;
+  color:var(--accent);
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.icon{
+  width:32px;
+  height:32px;
+  background:linear-gradient(135deg,var(--accent),#3b82f6);
+  border-radius:8px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+}
+.flow{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  margin:20px 0;
+}
+.flow-item{
+  background:var(--card);
+  border-left:3px solid var(--green);
+  padding:16px 20px;
+  border-radius:6px;
+  position:relative;
+}
+.flow-item.claude{border-left-color:var(--purple);}
+.flow-item.abac{border-left-color:var(--amber);}
+.flow-item.api{border-left-color:var(--green);}
+.flow-title{
+  font-size:16px;
+  font-weight:600;
+  margin-bottom:8px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.badge{
+  font-size:10px;
+  font-weight:600;
+  padding:3px 8px;
+  border-radius:4px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+.badge-claude{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3);}
+.badge-abac{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3);}
+.badge-api{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3);}
+.flow-desc{font-size:14px;color:var(--text-2);line-height:1.6;}
+.code-block{
+  background:#0d1117;
+  border:1px solid #30363d;
+  border-radius:6px;
+  padding:16px;
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  color:#c9d1d9;
+  overflow-x:auto;
+  margin:12px 0;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:16px;
+  margin:16px 0;
+}
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:16px;
+}
+.card-title{
+  font-size:14px;
+  font-weight:600;
+  color:var(--accent);
+  margin-bottom:8px;
+  font-family:'DM Mono',monospace;
+}
+.card-body{font-size:13px;color:var(--text-2);line-height:1.5;}
+.highlight{
+  background:rgba(96,165,250,.15);
+  border-left:3px solid var(--accent);
+  padding:16px 20px;
+  border-radius:6px;
+  margin:16px 0;
+}
+.highlight-title{
+  font-size:14px;
+  font-weight:600;
+  color:var(--gold);
+  margin-bottom:8px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+ul{list-style:none;padding:0;}
+li{
+  padding:6px 0;
+  padding-left:24px;
+  position:relative;
+}
+li:before{
+  content:'→';
+  position:absolute;
+  left:0;
+  color:var(--accent);
+  font-weight:700;
+}
+.tree{
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  line-height:1.8;
+  color:var(--text-2);
+}
+.tree-dir{color:var(--accent);font-weight:600;}
+.tree-file{color:var(--text);}
+.tree-comment{color:var(--text-3);font-style:italic;}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Backend Architecture</h1>
+  <p class="subtitle">Multi-Agent Data Access Automation with ABAC Policy Engine</p>
+
+  <!-- Overview -->
+  <div class="section">
+    <div class="section-title"><div class="icon">🎯</div>What We Built</div>
+    <p style="color:var(--text-2);margin-bottom:16px;">
+      A <strong>5-agent workflow system</strong> with Server-Sent Events (SSE) streaming, deterministic ABAC policy engine, and editable config files. Only 2 of 5 agents use Claude — the rest are pure Python.
+    </p>
+    <div class="highlight">
+      <div class="highlight-title">✨ The Demo Proof</div>
+      <p style="color:var(--text-2);">
+        <strong>Edit backend/config/users.json</strong> → change Sarah's role to "Contractor" → rerun request → outcome changes from APPROVE to ESCALATE. <strong>This proves policy decisions read from files, not an LLM.</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- Agent Flow -->
+  <div class="section">
+    <div class="section-title"><div class="icon">🤖</div>5-Agent Workflow Pipeline</div>
+    <div class="flow">
+      <div class="flow-item claude">
+        <div class="flow-title">
+          Agent #0: Discovery <span class="badge badge-claude">Claude Sonnet</span>
+        </div>
+        <div class="flow-desc">
+          <strong>agents/discovery.py</strong> — Searches 4-dataset catalog using Claude semantic search + keyword matching. Returns full dataset objects (with columns) for frontend modal.
+        </div>
+        <div class="code-block">Input: "I need fraud data"
+Output: 3 matches (fraud_detection_models, fraud_training_data, fraud_model_metrics)
+Tokens: ~245, Duration: ~180ms</div>
+      </div>
+
+      <div class="flow-item claude">
+        <div class="flow-title">
+          Agent #1: Intake <span class="badge badge-claude">Claude Sonnet</span>
+        </div>
+        <div class="flow-desc">
+          <strong>agents/intake.py</strong> — Parses natural language request into structured JSON. Extracts: requester, dataset, access_level, justification, urgency. Returns reasoning + confidence score.
+        </div>
+        <div class="code-block">Input: "I need read access to fraud_detection_models..."
+Output: {requester, dataset, access_level: "read", justification, confidence: 0.94}
+Tokens: ~782, Duration: ~340ms</div>
+      </div>
+
+      <div class="flow-item abac">
+        <div class="flow-title">
+          Agent #2: ABAC Policy <span class="badge badge-abac">NO LLM — Pure Python</span>
+        </div>
+        <div class="flow-desc">
+          <strong>agents/policy.py</strong> — Runs 8 deterministic ABAC checks (role, clearance, PII, training, etc). Loads users.json + datasets.json. Returns APPROVE / ESCALATE / DENY with badge-coded results.
+        </div>
+        <div class="code-block">Checks: 8 ABAC functions from config/policies.py
+Decision Logic: All pass → APPROVE, any write/admin → ESCALATE, critical fail → DENY
+Duration: ~12ms (no API calls)</div>
+      </div>
+
+      <div class="flow-item api">
+        <div class="flow-title">
+          Agent #3: Provisioning <span class="badge badge-api">JWT / IAM</span>
+        </div>
+        <div class="flow-desc">
+          <strong>agents/provision.py</strong> — Only runs if decision == APPROVE. Generates JWT token with 90-day expiry. Mock IAM integration (logs would-be API call).
+        </div>
+        <div class="code-block">Output: JWT token + expiry date
+Duration: ~45ms</div>
+      </div>
+
+      <div class="flow-item api">
+        <div class="flow-title">
+          Agent #4: Notification <span class="badge badge-api">Templates</span>
+        </div>
+        <div class="flow-desc">
+          <strong>agents/notify.py</strong> — Template-based message generation (f-strings, no LLM). Creates email, Slack, ServiceNow, audit log messages based on decision type.
+        </div>
+        <div class="code-block">Channels: email (requester + manager), Slack, ServiceNow, audit_log
+Duration: ~25ms</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config Files -->
+  <div class="section">
+    <div class="section-title"><div class="icon">📁</div>Editable Config Files (The Demo Proof)</div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">config/users.json</div>
+        <div class="card-body">
+          3 users: Sarah Chen (Senior Data Analyst, clearance 3), James Rodriguez (Staff Data Scientist, clearance 4), Unknown User<br><br>
+          <strong>Demo:</strong> Edit Sarah's role → outcome changes instantly
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">config/datasets.json</div>
+        <div class="card-body">
+          4 datasets with columns, owner, classification, PII flags, training requirements, access roles<br><br>
+          <strong>Demo:</strong> Change min_clearance → DENY if user below threshold
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">config/policies.py</div>
+        <div class="card-body">
+          8 ABAC policy functions (pure Python, NO LLM):<br>
+          Role Authorization, Clearance Level, Access Level, PII Restriction, Training, Employment Type, MNPI Blackout, Time-Limited Access
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Endpoints -->
+  <div class="section">
+    <div class="section-title"><div class="icon">🌐</div>FastAPI Server (server.py) - Port 8000</div>
+    <ul>
+      <li><strong>GET /api/stream_workflow</strong> → SSE streaming endpoint (real-time agent events)</li>
+      <li><strong>POST /api/run_workflow</strong> → JSON response (non-streaming, for testing)</li>
+      <li><strong>GET /api/config/users</strong> → View users.json</li>
+      <li><strong>GET /api/config/datasets</strong> → View datasets.json</li>
+      <li><strong>GET /api/config/version</strong> → Config version hash (SHA256)</li>
+      <li><strong>POST /api/config/reload</strong> → Force reload config</li>
+      <li><strong>GET /api/health</strong> → Health check</li>
+    </ul>
+    <div class="code-block">SSE Event Stream:
+event: discovery  → {matches: [...], match_count: 3}
+event: intake     → {extracted: {...}, reasoning: [...],  tokens: 782}
+event: policy     → {decision: "APPROVE", abac_checks: [...]}
+event: provision  → {token: "...", expires_at: "2026-05-17"}
+event: notify     → {messages: [...]}
+event: audit      → {receipt_path: "...", entries: [...]}
+event: done       → {total_ms: 565, total_tokens: 1027}</div>
+  </div>
+
+  <!-- File Structure -->
+  <div class="section">
+    <div class="section-title"><div class="icon">📦</div>Complete File Structure</div>
+    <pre class="code-block tree">backend/
+├── <span class="tree-file">server.py</span>              <span class="tree-comment"># FastAPI app + SSE streaming</span>
+├── <span class="tree-file">workflow.py</span>            <span class="tree-comment"># Agent orchestration (NO LangGraph needed)</span>
+├── <span class="tree-file">models.py</span>              <span class="tree-comment"># Pydantic schemas for validation</span>
+├── <span class="tree-file">utils.py</span>               <span class="tree-comment"># Config loaders + hot-reload + version hash</span>
+├── <span class="tree-file">receipts.py</span>            <span class="tree-comment"># Audit trail writer</span>
+├── <span class="tree-file">requirements.txt</span>       <span class="tree-comment"># Dependencies (NO LangChain/LangGraph)</span>
+├── <span class="tree-file">.env</span>                   <span class="tree-comment"># ANTHROPIC_API_KEY (you added this)</span>
+├── <span class="tree-file">pytest.ini</span>             <span class="tree-comment"># Test configuration</span>
+├── <span class="tree-dir">agents/</span>
+│   ├── <span class="tree-file">__init__.py</span>
+│   ├── <span class="tree-file">discovery.py</span>      <span class="tree-comment"># Agent #0 (Claude)</span>
+│   ├── <span class="tree-file">intake.py</span>         <span class="tree-comment"># Agent #1 (Claude)</span>
+│   ├── <span class="tree-file">policy.py</span>         <span class="tree-comment"># Agent #2 (ABAC, NO LLM) ✨</span>
+│   ├── <span class="tree-file">provision.py</span>      <span class="tree-comment"># Agent #3 (JWT mock)</span>
+│   └── <span class="tree-file">notify.py</span>         <span class="tree-comment"># Agent #4 (Templates)</span>
+├── <span class="tree-dir">config/</span>               <span class="tree-comment"># ← EDITABLE (demo proof)</span>
+│   ├── <span class="tree-file">users.json</span>        <span class="tree-comment"># 3 users with clearance/roles/training</span>
+│   ├── <span class="tree-file">datasets.json</span>     <span class="tree-comment"># 4 datasets with columns/policies</span>
+│   └── <span class="tree-file">policies.py</span>       <span class="tree-comment"># 8 ABAC policy functions</span>
+├── <span class="tree-dir">receipts/</span>             <span class="tree-comment"># Auto-generated audit files</span>
+│   └── <span class="tree-file">README.md</span>
+└── <span class="tree-dir">tests/</span>
+    ├── <span class="tree-file">__init__.py</span>
+    └── <span class="tree-file">test_policy_agent.py</span> <span class="tree-comment"># 15+ tests (TDD)</span></pre>
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="section">
+    <div class="section-title"><div class="icon">🛠️</div>Tech Stack</div>
+    <div class="grid">
+      <div class="card">
+        <div class="card-title">FastAPI + SSE</div>
+        <div class="card-body">Async web framework with Server-Sent Events for real-time streaming. Lightweight, fast, Python-native.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Claude Sonnet 4</div>
+        <div class="card-body">Used ONLY in 2 agents (Discovery + Intake) for natural language understanding. Does NOT make policy decisions.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Pydantic</div>
+        <div class="card-body">Type validation for all API requests/responses. Catches errors at runtime.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">pytest</div>
+        <div class="card-body">Test framework. 15+ tests for policy engine to ensure determinism.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">python-jose</div>
+        <div class="card-body">JWT token generation for provisioning agent (mock IAM).</div>
+      </div>
+      <div class="card">
+        <div class="card-title">watchfiles</div>
+        <div class="card-body">Config hot-reload. Edit JSON files → server automatically reloads.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Why No LangGraph -->
+  <div class="section">
+    <div class="section-title"><div class="icon">❓</div>Why No LangGraph?</div>
+    <p style="color:var(--text-2);margin-bottom:12px;">
+      Originally the plan included LangGraph for agent orchestration. But our workflow is a <strong>straight line</strong>:
+    </p>
+    <div class="code-block">Discovery → Intake → Policy → (if APPROVE) Provision → Notify → Done</div>
+    <p style="color:var(--text-2);margin-top:12px;">
+      No loops. No branching. No complex state. <strong>Plain async Python is simpler, faster, and easier to debug.</strong>
+    </p>
+    <p style="color:var(--text-3);margin-top:12px;font-size:14px;">
+      LangGraph is great for agentic systems with autonomous decision-making. This workflow is deterministic and linear.
+    </p>
+  </div>
+
+  <!-- Next Steps -->
+  <div class="section">
+    <div class="section-title"><div class="icon">🚀</div>Next Steps</div>
+    <ul style="color:var(--text-2);">
+      <li>Install dependencies: <code style="background:#0d1117;padding:2px 6px;border-radius:3px;font-family:'DM Mono',monospace;">cd backend && pip install -r requirements.txt</code></li>
+      <li>Add your API key to <strong>backend/.env</strong> (already done ✓)</li>
+      <li>Run tests: <code style="background:#0d1117;padding:2px 6px;border-radius:3px;font-family:'DM Mono',monospace;">python -m pytest tests/ -v</code></li>
+      <li>Start server: <code style="background:#0d1117;padding:2px 6px;border-radius:3px;font-family:'DM Mono',monospace;">python server.py</code></li>
+      <li>Wire frontend: Connect <strong>plans/demo-prototype.html</strong> to <code style="background:#0d1117;padding:2px 6px;border-radius:3px;font-family:'DM Mono',monospace;">/api/stream_workflow</code> via EventSource</li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;margin-top:40px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-3);font-size:14px;">
+    Built with TDD principles • Tests written before server implementation • <span style="color:var(--gold);">VISA GDO Demo 2026</span>
+  </div>
+</div>
+</body>
+</html>

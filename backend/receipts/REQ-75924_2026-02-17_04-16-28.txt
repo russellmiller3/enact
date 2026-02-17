@@ -1,0 +1,76 @@
+================================================================================
+ACCESS DECISION RECEIPT
+================================================================================
+
+Request ID: REQ-75924
+Timestamp: 2026-02-17 04:16:28 UTC
+Decision: APPROVE
+
+--------------------------------------------------------------------------------
+REQUEST DETAILS
+--------------------------------------------------------------------------------
+
+WHO:    Sarah Chen (analyst@visa.com)
+WHAT:   READ access to fraud_detection_models
+REASON: analyze Q1 false positive rates for risk analysis project
+
+--------------------------------------------------------------------------------
+POLICY EVALUATION RESULTS
+--------------------------------------------------------------------------------
+
+1. Role Authorization: ✓ PASS
+   Requirement: One of: [Data Analyst, Senior Data Analyst, Data Scientist, Staff Data Scientist]
+   User Value:  Senior Data Analyst
+
+2. Clearance Level: ✓ PASS
+   Requirement: Minimum: Level 2
+   User Value:  Level 3 (verified)
+
+3. Access Level Restriction: ✓ PASS
+   Requirement: READ requests: auto-approve eligible
+   User Value:  Requesting READ access
+
+4. PII Restriction: ✓ PASS
+   Requirement: No PII in dataset
+   User Value:  N/A
+
+5. Training Requirements: ✓ PASS
+   Requirement: InfoSec_Annual_2026
+   User Value:  Completed 2026-01-15
+
+6. Employment Type: ✓ PASS
+   Requirement: FTE or approved contractor
+   User Value:  FTE (verified via HR system)
+
+7. MNPI Blackout: ✓ PASS
+   Requirement: Dataset not tagged MNPI
+   User Value:  N/A - Dataset is Internal
+
+8. Time-Limited Access: ✓ PASS
+   Requirement: All access expires in 90 days
+   User Value:  Expiry will be set to +90 days
+
+--------------------------------------------------------------------------------
+TECHNICAL LOG
+--------------------------------------------------------------------------------
+
+Discovery Agent:    2217ms, 698 tokens (Claude)
+Intake Agent:       4632ms, 618 tokens (Claude)
+Policy Engine:      0ms, 0 tokens (Python ABAC)
+Notification Agent: 0ms
+
+Total Execution Time: 6849ms
+Total LLM Tokens: 1316
+
+--------------------------------------------------------------------------------
+COMPLIANCE NOTES
+--------------------------------------------------------------------------------
+
+• All access decisions are logged and auditable
+• This receipt is stored for compliance review
+• Policy engine uses deterministic ABAC rules (no LLM)
+• LLM used only for natural language understanding (discovery + intake)
+
+================================================================================
+END OF RECEIPT
+================================================================================

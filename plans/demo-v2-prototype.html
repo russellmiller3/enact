@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa Data Access — v2</title>
+<style>
+/* V2: Mac/Braun/Tufte Principles */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --text: #000;
+  --bg: #fff;
+  --border: #d1d1d6;
+  --action: #007aff;
+  --green: #34c759;
+  --amber: #ff9500;
+  --red: #ff3b30;
+  --gray: #8e8e93;
+  --gray-light: #f2f2f7;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Header - Minimal */
+header {
+  border-bottom: 1px solid var(--border);
+  padding: 24px 0 20px;
+  background: #fff;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Request Input */
+.request-box {
+  margin: 32px 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: #fff;
+}
+
+.request-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--gray-light);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.request-body {
+  padding: 16px;
+}
+
+.request-meta {
+  font-size: 13px;
+  color: var(--gray);
+  margin-bottom: 8px;
+}
+
+.request-text {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.btn {
+  background: var(--action);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:hover { background: #0051d5; }
+
+/* Agent Cards */
+.agent {
+  margin: 24px 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: #fff;
+}
+
+.agent-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.agent-tag {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  color: var(--gray);
+  background: var(--gray-light);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.agent-body {
+  padding: 16px;
+}
+
+/* Data Rows */
+.data-row {
+  display: flex;
+  gap: 16px;
+  padding: 6px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.data-row:last-child { border-bottom: none; }
+
+.data-label {
+  font-family: "Courier New", Courier, monospace;
+  color: var(--gray);
+  min-width: 120px;
+  font-size: 13px;
+}
+
+.data-value {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.code {
+  font-family: "Courier New", Courier, monospace;
+  background: var(--gray-light);
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-size: 13px;
+}
+
+/* ABAC Checks - List Format */
+.checks-list {
+  margin-top: 16px;
+}
+
+.check-item {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f2f2f2;
+}
+
+.check-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.check-status {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.check-status.pass { color: var(--green); }
+.check-status.fail { color: var(--red); }
+
+.check-detail {
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.6;
+  padding-left: 20px;
+}
+
+/* Decision Banner */
+.decision {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--green);
+  border-radius: 2px;
+  background: #f1fdf4;
+  font-weight: 600;
+  color: var(--green);
+}
+
+/* Receipt - Braun Style */
+.receipt {
+  margin: 32px 0;
+  border: 1px solid #000;
+  background: #fff;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.receipt-header {
+  text-align: center;
+  padding: 20px;
+  border-bottom: 1px dashed #000;
+}
+
+.receipt-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.receipt-meta {
+  font-size: 10px;
+  color: #666;
+  line-height: 1.8;
+}
+
+.receipt-body {
+  padding: 20px;
+}
+
+.receipt-line {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #000;
+  white-space: pre-wrap;
+}
+
+.receipt-footer {
+  border-top: 1px dashed #000;
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+}
+
+.receipt-footer .save-path {
+  margin-top: 6px;
+  color: #000;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Visa Data Access</h1>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Request Input -->
+  <div class="request-box">
+    <div class="request-header">Request</div>
+    <div class="request-body">
+      <div class="request-meta">analyst@visa.com</div>
+      <div class="request-text">I need read access to fraud_detection_models dataset to analyze Q1 false positive rates for my risk analysis project.</div>
+      <button class="btn">Run Workflow</button>
+    </div>
+  </div>
+
+  <!-- Intake Agent -->
+  <div class="agent">
+    <div class="agent-header">
+      <span class="agent-name">Intake Agent</span>
+      <span class="agent-tag">Claude Sonnet · 340ms</span>
+    </div>
+    <div class="agent-body">
+      <div class="data-row">
+        <div class="data-label">requester</div>
+        <div class="data-value">analyst@visa.com</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">dataset</div>
+        <div class="data-value"><span class="code">fraud_detection_models</span></div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">access_level</div>
+        <div class="data-value">read</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">justification</div>
+        <div class="data-value">Analyze Q1 false positive rates for risk analysis project</div>
+      </div>
+      <div class="data-row">
+        <div class="data-label">confidence</div>
+        <div class="data-value">0.94</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Policy Agent (ABAC) -->
+  <div class="agent">
+    <div class="agent-header">
+      <span class="agent-name">ABAC Policy Engine</span>
+      <span class="agent-tag">Python · 12ms</span>
+    </div>
+    <div class="agent-body">
+      <div style="font-size:12px;color:#8e8e93;margin-bottom:16px;font-family:'Courier New',monospace;">
+        📂 Loaded: backend/config/users.json + datasets.json
+      </div>
+
+      <div class="checks-list">
+        <div class="check-item">
+          <div class="check-status pass">✓ Role Authorization</div>
+          <div class="check-detail">
+            Requirement: One of [Data Analyst, Senior Data Analyst, Data Scientist]<br>
+            User: Senior Data Analyst
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ Clearance Level</div>
+          <div class="check-detail">
+            Requirement: Minimum Level 2<br>
+            User: Level 3 (verified)
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ Access Level Restriction</div>
+          <div class="check-detail">
+            Requirement: READ requests auto-approve eligible<br>
+            User: Requesting READ access
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ PII Restriction</div>
+          <div class="check-detail">
+            Requirement: No PII in dataset<br>
+            User: N/A
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ Training Requirements</div>
+          <div class="check-detail">
+            Requirement: InfoSec_Annual_2026<br>
+            User: Completed 2026-01-15
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ Employment Type</div>
+          <div class="check-detail">
+            Requirement: FTE or approved contractor<br>
+            User: FTE (verified via HR system)
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ MNPI Blackout</div>
+          <div class="check-detail">
+            Requirement: Dataset not tagged MNPI<br>
+            User: N/A - Dataset is Internal classification
+          </div>
+        </div>
+
+        <div class="check-item">
+          <div class="check-status pass">✓ Time-Limited Access</div>
+          <div class="check-detail">
+            Requirement: All access expires in 90 days<br>
+            User: Expiry will be set to 2026-05-17
+          </div>
+        </div>
+      </div>
+
+      <div class="decision">
+        DECISION: APPROVED — All 8 ABAC checks passed
+      </div>
+    </div>
+  </div>
+
+  <!-- Access Decision Receipt -->
+  <div class="receipt">
+    <div class="receipt-header">
+      <h3>ACCESS DECISION RECEIPT</h3>
+      <div class="receipt-meta">
+        <div>Visa Global Data Office</div>
+        <div>Data Access Request Workflow</div>
+        <div>2026-02-16 15:30:00 UTC</div>
+      </div>
+    </div>
+    
+    <div class="receipt-body">
+      <div class="receipt-line">DECISION: APPROVED
+
+WHO: Sarah Chen | Senior Data Analyst | analyst@visa.com
+WHAT: fraud_detection_models (READ access)
+REASON: Analyze Q1 false positive rates for risk analysis project
+
+WHY APPROVED:
+  ✓ Role Authorization: Senior Data Analyst
+  ✓ Clearance Level: Level 3 (verified)
+  ✓ Access Level Restriction: Requesting READ access
+  ✓ PII Restriction: N/A
+  ✓ Training Requirements: Completed 2026-01-15
+  ✓ Employment Type: FTE (verified via HR system)
+  ✓ MNPI Blackout: N/A - Dataset is Internal
+  ✓ Time-Limited Access: Expiry will be set to 2026-05-17
+
+ACCESS GRANTED UNTIL: 2026-05-17
+
+────────────────────────────────────────────────
+Technical Log:
+  15:30:00 | IntakeAgent extracted request (782 tokens)
+  15:30:01 | ABAC checked 8 policies (8 passed)
+  15:30:01 | Access token generated (visa-token-91847)
+  15:30:02 | 4 notifications sent</div>
+    </div>
+
+    <div class="receipt-footer">
+      <div>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+      <div style="margin-top:8px;">This audit log will be saved to:</div>
+      <div class="save-path">backend/receipts/REQ-91847_2026-02-16.txt</div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>

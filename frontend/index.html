@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa GDO - Data Access Request</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f4f5f9;
+    padding: 20px;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #1A1F71;
+    margin-bottom: 20px;
+  }
+  .input-group {
+    margin-bottom: 15px;
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+  }
+  input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  button {
+    background: #1A1F71;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  button:hover {
+    background: #0a0e3d;
+  }
+  button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+  #results {
+    margin-top: 30px;
+  }
+  .event {
+    background: #f9fafb;
+    border-left: 4px solid #1A1F71;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
+  .event-title {
+    font-weight: 600;
+    color: #1A1F71;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .event-data {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #333;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .status {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  .status.info {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  .status.success {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  .status.error {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🔵 Visa GDO - Data Access Request</h1>
+  
+  <div class="input-group">
+    <label for="request_text">What data do you need?</label>
+    <input 
+      type="text" 
+      id="request_text" 
+      placeholder="e.g., I need fraud detection models for analysis"
+      value="I need fraud detection models for analysis"
+    >
+  </div>
+
+  <div class="input-group">
+    <label for="requester_email">Your email</label>
+    <input 
+      type="email" 
+      id="requester_email" 
+      placeholder="e.g., analyst@visa.com"
+      value="analyst@visa.com"
+    >
+  </div>
+
+  <button id="submitBtn" onclick="submitRequest()">Submit Request</button>
+
+  <div id="status"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+let eventSource = null;
+let currentUrl = '';
+
+function submitRequest(selectedDataset = null) {
+  // Get values
+  const text = document.getElementById('request_text').value.trim();
+  const email = document.getElementById('requester_email').value.trim();
+  
+  // Validation
+  if (!text || !email) {
+    showStatus('Please fill in both fields', 'error');
+    return;
+  }
+  
+  // Clear previous results only on new request (not re-submission)
+  if (!selectedDataset) {
+    document.getElementById('results').innerHTML = '';
+  }
+  
+  // Disable button during request
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  
+  // Close previous connection if exists
+  if (eventSource) {
+    eventSource.close();
+  }
+  
+  // Build URL with query params
+  let url = `http://localhost:8000/api/stream_workflow?request_text=${encodeURIComponent(text)}&requester_email=${encodeURIComponent(email)}`;
+  
+  // Add selected dataset if provided
+  if (selectedDataset) {
+    url += `&selected_dataset=${encodeURIComponent(selectedDataset)}`;
+    showStatus(`Re-running with dataset: ${selectedDataset}`, 'info');
+  } else {
+    showStatus('Connecting to backend...', 'info');
+  }
+  
+  console.log('Opening EventSource:', url);
+  currentUrl = url;
+  
+  // Create EventSource connection
+  eventSource = new EventSource(url);
+  
+  // Listen for 'discovery' event
+  eventSource.addEventListener('discovery', (e) => {
+    console.log('Discovery event:', e.data);
+    const data = JSON.parse(e.data);
+    displayEvent('Discovery Agent', e.data);
+    
+    // Handle multiple matches - auto-select the first one
+    if (data.match_count > 1 && !selectedDataset) {
+      const topMatch = data.matches[0].dataset;
+      console.log(`Multiple matches found (${data.match_count}). Auto-selecting top match: ${topMatch}`);
+      
+      // Close this connection
+      eventSource.close();
+      
+      // Re-run with selected dataset after a brief delay
+      setTimeout(() => {
+        submitRequest(topMatch);
+      }, 200);
+    }
+  });
+  
+  // Listen for 'intake' event
+  eventSource.addEventListener('intake', (e) => {
+    console.log('Intake event:', e.data);
+    displayEvent('Intake Agent', e.data);
+  });
+  
+  // Listen for 'policy' event
+  eventSource.addEventListener('policy', (e) => {
+    console.log('Policy event:', e.data);
+    displayEvent('Policy Agent', e.data);
+  });
+  
+  // Listen for 'provision' event
+  eventSource.addEventListener('provision', (e) => {
+    console.log('Provision event:', e.data);
+    displayEvent('Provision Agent', e.data);
+  });
+  
+  // Listen for 'notify' event
+  eventSource.addEventListener('notify', (e) => {
+    console.log('Notify event:', e.data);
+    displayEvent('Notify Agent', e.data);
+  });
+  
+  // Listen for 'done' event (workflow complete)
+  eventSource.addEventListener('done', (e) => {
+    console.log('Done event:', e.data);
+    displayEvent('Workflow Complete', e.data);
+    showStatus('✅ Workflow complete!', 'success');
+    eventSource.close();
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
+  });
+  
+  // Also listen for 'audit' event
+  eventSource.addEventListener('audit', (e) => {
+    console.log('Audit event:', e.data);
+    displayEvent('Audit Receipt', e.data);
+  });
+  
+  // Listen for 'error' event from backend
+  eventSource.addEventListener('error', (e) => {
+    console.error('Error event:', e);
+    if (e.data) {
+      const data = JSON.parse(e.data);
+      showStatus(`Error: ${data.error}`, 'error');
+      displayEvent('Error', e.data);
+    }
+  });
+  
+  // Handle connection errors
+  eventSource.onerror = (err) => {
+    console.error('EventSource error:', err);
+    
+    // Only show error if we're not in the middle of re-connecting
+    if (!selectedDataset) {
+      showStatus('Connection error. Is the backend running?', 'error');
+    }
+    
+    eventSource.close();
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
+  };
+}
+
+function displayEvent(title, jsonData) {
+  const resultsDiv = document.getElementById('results');
+  
+  // Parse JSON
+  let data;
+  try {
+    data = JSON.parse(jsonData);
+  } catch (e) {
+    data = jsonData;
+  }
+  
+  // Create event element
+  const eventDiv = document.createElement('div');
+  eventDiv.className = 'event';
+  eventDiv.innerHTML = `
+    <div class="event-title">${title}</div>
+    <div class="event-data">${JSON.stringify(data, null, 2)}</div>
+  `;
+  
+  resultsDiv.appendChild(eventDiv);
+}
+
+function showStatus(message, type) {
+  const statusDiv = document.getElementById('status');
+  statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+}
+</script>
+
+</body>
+</html>

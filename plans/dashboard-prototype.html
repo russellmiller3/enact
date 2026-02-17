@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa GDO — Access Governance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1A1F71;
+  --navy-deep: #0a0e3d;
+  --gold: #F7B600;
+  --blue: #1434CB;
+  --bg: #f4f5f9;
+  --surface: #ffffff;
+  --text: #111827;
+  --text-2: #4b5563;
+  --text-3: #9ca3af;
+  --border: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  --green: #059669;
+  --green-soft: #d1fae5;
+  --amber: #d97706;
+  --amber-soft: #fef3c7;
+  --red: #dc2626;
+  --red-soft: #fee2e2;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --mono: 'DM Mono', 'Menlo', monospace;
+  --r: 10px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:var(--sans);background:var(--bg);color:var(--text);
+  -webkit-font-smoothing:antialiased;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 50% 0%,rgba(26,31,113,.04) 0%,transparent 70%),
+    radial-gradient(ellipse 60% 50% at 80% 100%,rgba(247,182,0,.03) 0%,transparent 60%);
+  min-height:100vh;
+}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px;}
+
+/* header */
+.hdr{background:linear-gradient(135deg,var(--navy-deep) 0%,var(--navy) 100%);padding:28px 0 24px;position:relative;}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),rgba(247,182,0,.3) 50%,var(--gold));}
+.hdr::before{content:'';position:absolute;bottom:0;left:0;right:0;height:12px;background:linear-gradient(180deg,transparent,rgba(247,182,0,.06));pointer-events:none;}
+.hdr-row{display:flex;align-items:baseline;gap:12px;}
+.hdr-visa{font-size:18px;font-weight:700;color:var(--gold);letter-spacing:3px;}
+.hdr-pipe{color:rgba(255,255,255,.15);}
+.hdr-dept{font-size:11px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
+.hdr-title{font-size:15px;font-weight:500;color:rgba(255,255,255,.75);margin-top:6px;}
+.nav{display:flex;gap:4px;margin-top:16px;}
+.nav a{font-size:12px;font-weight:500;padding:6px 14px;border-radius:5px;color:rgba(255,255,255,.5);text-decoration:none;transition:all .15s;}
+.nav a:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.08);}
+.nav a.on{color:#fff;background:rgba(255,255,255,.12);}
+
+/* KPI row */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0 20px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-card);}
+.kpi-val{font-size:28px;font-weight:700;font-family:var(--mono);line-height:1;}
+.kpi-lbl{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-top:4px;}
+.kpi-delta{font-size:11px;font-family:var(--mono);margin-top:6px;}
+.kpi-delta.up{color:var(--green);}
+.kpi-delta.dn{color:var(--red);}
+.kpi-delta.flat{color:var(--text-3);}
+
+/* section */
+.section{margin-bottom:20px;}
+.sec-title{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+
+/* card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;box-shadow:var(--shadow-card);margin-bottom:12px;}
+
+/* heatmap bars */
+.hm-row{display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:13px;}
+.hm-row:last-child{border-bottom:none;}
+.hm-name{min-width:160px;font-weight:500;color:var(--text);}
+.hm-bar-wrap{flex:1;height:20px;background:var(--border-subtle);border-radius:3px;overflow:hidden;position:relative;}
+.hm-bar{height:100%;border-radius:3px;transition:width .5s ease;}
+.hm-count{min-width:40px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--text-2);}
+
+/* alert rows */
+.alert{display:flex;gap:10px;padding:12px 14px;border-radius:8px;margin-bottom:8px;font-size:13px;line-height:1.5;align-items:flex-start;}
+.alert:last-child{margin-bottom:0;}
+.alert-warn{background:var(--amber-soft);border:1px solid rgba(217,119,6,.15);}
+.alert-ok{background:var(--green-soft);border:1px solid rgba(5,150,105,.15);}
+.alert-red{background:var(--red-soft);border:1px solid rgba(220,38,38,.15);}
+.alert-icon{font-size:16px;line-height:1;flex-shrink:0;margin-top:1px;}
+.alert-text b{color:var(--text);}
+.alert-text{color:var(--text-2);}
+
+/* grid 2-col */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* mini chart (CSS only) */
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:60px;padding-top:4px;}
+.chart-bar{flex:1;background:linear-gradient(180deg,rgba(20,52,203,.7),rgba(20,52,203,.3));border-radius:2px 2px 0 0;transition:height .3s;}
+
+/* scorecard */
+.sc-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border-subtle);}
+.sc-row:last-child{border-bottom:none;}
+.sc-icon{font-size:14px;width:20px;text-align:center;}
+.sc-val{margin-left:auto;font-family:var(--mono);font-size:12px;font-weight:500;}
+
+/* breakdown bars */
+.bk-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px;}
+.bk-lbl{min-width:90px;color:var(--text-2);}
+.bk-bar-wrap{flex:1;height:10px;background:var(--border-subtle);border-radius:5px;overflow:hidden;}
+.bk-bar{height:100%;border-radius:5px;}
+.bk-pct{font-family:var(--mono);font-size:12px;min-width:40px;text-align:right;color:var(--text-2);}
+
+/* footer */
+.footer{text-align:center;padding:24px 0 48px;font-size:11px;color:var(--text-3);}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <div class="hdr-row">
+      <span class="hdr-visa">VISA</span>
+      <span class="hdr-pipe">|</span>
+      <span class="hdr-dept">Global Data Office</span>
+    </div>
+    <div class="hdr-title">Access Governance Dashboard</div>
+    <div class="nav">
+      <a href="demo-prototype.html">Request Workflow</a>
+      <a href="dashboard-prototype.html" class="on">Governance Dashboard</a>
+      <a href="review-prototype.html">Review Queue</a>
+      <a href="roi-prototype.html">ROI Report</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--navy);">127</div>
+      <div class="kpi-lbl">Requests This Week</div>
+      <div class="kpi-delta up">+12% vs last week</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--green);">89</div>
+      <div class="kpi-lbl">Auto-Approved</div>
+      <div class="kpi-delta flat">70% approval rate</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--amber);">31</div>
+      <div class="kpi-lbl">Escalated</div>
+      <div class="kpi-delta flat">24% escalation rate</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-val" style="color:var(--red);">7</div>
+      <div class="kpi-lbl">Denied</div>
+      <div class="kpi-delta dn">6% denial rate</div>
+    </div>
+  </div>
+
+  <!-- Policy Trigger Heatmap -->
+  <div class="section">
+    <div class="sec-title">Policy Trigger Heatmap &mdash; Last 7 Days</div>
+    <div class="card">
+      <div class="hm-row">
+        <span class="hm-name">PII Protection</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:64%;background:linear-gradient(90deg,var(--amber),#fbbf24);"></div></div>
+        <span class="hm-count">32</span>
+      </div>
+      <div class="hm-row">
+        <span class="hm-name">Employment Type</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:32%;background:linear-gradient(90deg,var(--blue),#60a5fa);"></div></div>
+        <span class="hm-count">16</span>
+      </div>
+      <div class="hm-row">
+        <span class="hm-name">MNPI Blackout</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:24%;background:linear-gradient(90deg,var(--red),#f87171);"></div></div>
+        <span class="hm-count">12</span>
+      </div>
+      <div class="hm-row">
+        <span class="hm-name">Write Escalation</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:18%;background:linear-gradient(90deg,var(--amber),#fbbf24);"></div></div>
+        <span class="hm-count">9</span>
+      </div>
+      <div class="hm-row">
+        <span class="hm-name">InfoSec Compliance</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:10%;background:linear-gradient(90deg,var(--blue),#60a5fa);"></div></div>
+        <span class="hm-count">5</span>
+      </div>
+      <div class="hm-row">
+        <span class="hm-name">Admin Escalation</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:8%;background:linear-gradient(90deg,var(--red),#f87171);"></div></div>
+        <span class="hm-count">4</span>
+      </div>
+      <div class="hm-row">
+        <span class="hm-name">Time-Limited Access</span>
+        <div class="hm-bar-wrap"><div class="hm-bar" style="width:0%;"></div></div>
+        <span class="hm-count">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anomaly Detection -->
+  <div class="section">
+    <div class="sec-title">Anomaly Detection</div>
+    <div class="alert alert-warn">
+      <span class="alert-icon">!</span>
+      <div class="alert-text"><b>james.rodriguez@visa.com</b> &mdash; 3x normal request rate. 14 requests in 7 days (baseline: 4-5/wk). 8 distinct datasets (baseline: 2-3). <b>Auto-flagged for manager review.</b></div>
+    </div>
+    <div class="alert alert-red">
+      <span class="alert-icon">!!</span>
+      <div class="alert-text"><b>MNPI Blackout Active</b> &mdash; Q1 earnings window (Feb 1-16). 7 requests auto-blocked this week. Datasets: quarterly_financial_forecasts (5), revenue_projections (2). 5 users notified.</div>
+    </div>
+    <div class="alert alert-warn">
+      <span class="alert-icon">!</span>
+      <div class="alert-text"><b>contractor-ext-0041@visa.com</b> &mdash; Attempted PII access (3 requests). All denied per Employment Type policy. Vendor manager Smith notified.</div>
+    </div>
+    <div class="alert alert-ok">
+      <span class="alert-icon">OK</span>
+      <div class="alert-text"><b>3 expired tokens</b> pending revocation. Auto-revocation scheduled for end of day. No manual action required.</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+
+    <!-- Request Volume -->
+    <div class="section">
+      <div class="sec-title">Request Volume &mdash; Last 30 Days</div>
+      <div class="card">
+        <div class="chart-bars">
+          <div class="chart-bar" style="height:35%"></div>
+          <div class="chart-bar" style="height:42%"></div>
+          <div class="chart-bar" style="height:38%"></div>
+          <div class="chart-bar" style="height:55%"></div>
+          <div class="chart-bar" style="height:48%"></div>
+          <div class="chart-bar" style="height:30%"></div>
+          <div class="chart-bar" style="height:12%"></div>
+          <div class="chart-bar" style="height:40%"></div>
+          <div class="chart-bar" style="height:45%"></div>
+          <div class="chart-bar" style="height:50%"></div>
+          <div class="chart-bar" style="height:62%"></div>
+          <div class="chart-bar" style="height:58%"></div>
+          <div class="chart-bar" style="height:35%"></div>
+          <div class="chart-bar" style="height:15%"></div>
+          <div class="chart-bar" style="height:42%"></div>
+          <div class="chart-bar" style="height:55%"></div>
+          <div class="chart-bar" style="height:60%"></div>
+          <div class="chart-bar" style="height:68%"></div>
+          <div class="chart-bar" style="height:72%"></div>
+          <div class="chart-bar" style="height:45%"></div>
+          <div class="chart-bar" style="height:18%"></div>
+          <div class="chart-bar" style="height:50%"></div>
+          <div class="chart-bar" style="height:58%"></div>
+          <div class="chart-bar" style="height:65%"></div>
+          <div class="chart-bar" style="height:78%"></div>
+          <div class="chart-bar" style="height:85%"></div>
+          <div class="chart-bar" style="height:52%"></div>
+          <div class="chart-bar" style="height:20%"></div>
+          <div class="chart-bar" style="height:62%"></div>
+          <div class="chart-bar" style="height:90%;background:linear-gradient(180deg,var(--gold),rgba(247,182,0,.4));"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text-3);">
+          <span>30 days ago</span>
+          <span>Today</span>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text-2);">
+          Mean: <b style="color:var(--navy);">18/day</b> &nbsp; Current: <b style="color:var(--gold);">23/day</b> &nbsp;
+          <span style="color:var(--amber);font-weight:600;">+28% above baseline</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compliance Scorecard -->
+    <div class="section">
+      <div class="sec-title">Compliance Scorecard</div>
+      <div class="card">
+        <div class="sc-row">
+          <span class="sc-icon" style="color:var(--green);">&#10003;</span>
+          <span>Audit trail coverage</span>
+          <span class="sc-val" style="color:var(--green);">100%</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon" style="color:var(--green);">&#10003;</span>
+          <span>MNPI blackout enforcement</span>
+          <span class="sc-val" style="color:var(--green);">100%</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon" style="color:var(--green);">&#10003;</span>
+          <span>Unauthorized PII events</span>
+          <span class="sc-val" style="color:var(--green);">0</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon" style="color:var(--green);">&#10003;</span>
+          <span>Avg approval time</span>
+          <span class="sc-val" style="color:var(--green);">1.8 min</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon" style="color:var(--amber);">!</span>
+          <span>Expired tokens pending</span>
+          <span class="sc-val" style="color:var(--amber);">3</span>
+        </div>
+        <div class="sc-row">
+          <span class="sc-icon" style="color:var(--green);">&#10003;</span>
+          <span>InfoSec training compliance</span>
+          <span class="sc-val" style="color:var(--green);">98%</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="grid2">
+
+    <!-- Department Breakdown -->
+    <div class="section">
+      <div class="sec-title">Requests by Department</div>
+      <div class="card">
+        <div class="bk-row">
+          <span class="bk-lbl">Risk Analytics</span>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:42%;background:var(--navy);"></div></div>
+          <span class="bk-pct">42%</span>
+        </div>
+        <div class="bk-row">
+          <span class="bk-lbl">Sales Ops</span>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:28%;background:var(--blue);"></div></div>
+          <span class="bk-pct">28%</span>
+        </div>
+        <div class="bk-row">
+          <span class="bk-lbl">Legal</span>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:18%;background:var(--amber);"></div></div>
+          <span class="bk-pct">18%</span>
+        </div>
+        <div class="bk-row">
+          <span class="bk-lbl">Data Privacy</span>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:12%;background:var(--green);"></div></div>
+          <span class="bk-pct">12%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FTE vs Contractor -->
+    <div class="section">
+      <div class="sec-title">FTE vs Contractor Access</div>
+      <div class="card">
+        <div class="bk-row">
+          <span class="bk-lbl">FTE</span>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:89%;background:var(--navy);"></div></div>
+          <span class="bk-pct">89%</span>
+        </div>
+        <div class="bk-row">
+          <span class="bk-lbl">Contractor</span>
+          <div class="bk-bar-wrap"><div class="bk-bar" style="width:11%;background:var(--amber);"></div></div>
+          <span class="bk-pct">11%</span>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-subtle);font-size:12px;color:var(--text-2);">
+          Contractor PII attempts: <b style="color:var(--red);">3 denied</b><br>
+          Contractor write attempts: <b style="color:var(--amber);">2 escalated</b>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Integration Status -->
+  <div class="section">
+    <div class="sec-title">Integration Health</div>
+    <div class="card" style="display:flex;gap:20px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <b>LangGraph</b> <span style="color:var(--text-3);">Orchestrator</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <b>Claude Sonnet</b> <span style="color:var(--text-3);">NLU &middot; 99.8% uptime</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <b>Databricks</b> <span style="color:var(--text-3);">Provisioning</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <b>Slack</b> <span style="color:var(--text-3);">Notifications</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+        <b>ServiceNow</b> <span style="color:var(--text-3);">Ticketing</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);display:inline-block;"></span>
+        <b>Okta IAM</b> <span style="color:var(--text-3);">Token revocation delayed 2h</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Visa Global Data Office &middot; AI Observatory &middot; Data refreshed every 5 minutes
+  </div>
+
+</main>
+
+</body>
+</html>

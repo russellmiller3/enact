@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Service Discovery — Visa GDO Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #f1f3f5 0%, #e3e6e9 100%);
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+    
+    /* Header */
+    header {
+      background: linear-gradient(135deg, #0a0e3d 0%, #1A1F71 100%);
+      padding: 36px 48px;
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 8px 24px rgba(10, 14, 61, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(247, 182, 0, 0.3), transparent);
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .logo-mark {
+      width: 48px;
+      height: 48px;
+      background: #F7B600;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #0a0e3d;
+      font-size: 24px;
+    }
+    
+    .logo h1 {
+      color: white;
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+    
+    .tagline {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      margin-left: 64px;
+    }
+    
+    /* Main Card */
+    .main-card {
+      background: white;
+      border-radius: 0 0 16px 16px;
+      padding: 48px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    
+    /* Request Form */
+    .request-section {
+      margin-bottom: 32px;
+    }
+    
+    .request-section h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a1d29;
+      margin-bottom: 16px;
+    }
+    
+    .request-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+    
+    .request-textarea:focus {
+      outline: none;
+      border-color: #1A1F71;
+    }
+    
+    .request-textarea::placeholder {
+      color: #9ca3af;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #1A1F71 0%, #0a0e3d 100%);
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 16px;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(26, 31, 113, 0.3);
+    }
+    
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+    
+    /* Modal Overlay */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .modal-overlay.active {
+      display: flex;
+    }
+    
+    /* Disambiguation Modal */
+    .modal {
+      background: white;
+      border-radius: 12px;
+      max-width: 720px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .modal-header {
+      padding: 24px 32px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1d29;
+      margin-bottom: 8px;
+    }
+    
+    .modal-subtitle {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    
+    .modal-body {
+      padding: 32px;
+    }
+    
+    .disambiguation-intro {
+      display: flex;
+      align-items: start;
+      gap: 16px;
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #93c5fd;
+      border-radius: 12px;
+      margin-bottom: 28px;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+    }
+    
+    .disambiguation-intro .icon {
+      flex-shrink: 0;
+      color: #2563eb;
+      stroke-width: 2;
+    }
+    
+    .disambiguation-intro p {
+      color: #1e3a8a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    /* Dataset Cards */
+    .dataset-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .dataset-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      background: white;
+    }
+    
+    .dataset-card:hover {
+      border-color: #1A1F71;
+      box-shadow: 0 8px 20px rgba(26, 31, 113, 0.12), 0 2px 6px rgba(26, 31, 113, 0.04);
+      transform: translateY(-2px);
+    }
+    
+    .dataset-card.selected {
+      border-color: #1A1F71;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      box-shadow: 0 8px 20px rgba(26, 31, 113, 0.15), 0 2px 6px rgba(26, 31, 113, 0.06);
+    }
+    
+    .dataset-card input[type="radio"] {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .dataset-content {
+      margin-left: 32px;
+    }
+    
+    .dataset-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    
+    .dataset-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1d29;
+    }
+    
+    .dataset-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    
+    .dataset-description {
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    
+    .dataset-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 12px;
+    }
+    
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .badge-restricted {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .badge-internal {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .badge-highly-restricted {
+      background: #fecaca;
+      color: #7f1d1d;
+    }
+    
+    /* Column Drilldown */
+    .view-columns {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .view-columns-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #1A1F71;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 6px 0;
+      transition: opacity 0.2s;
+    }
+    
+    .view-columns-toggle:hover {
+      opacity: 0.7;
+    }
+    
+    .view-columns-toggle .chevron {
+      transition: transform 0.2s;
+    }
+    
+    .view-columns-toggle.expanded .chevron {
+      transform: rotate(180deg);
+    }
+    
+    .columns-list {
+      display: none;
+      margin-top: 12px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .columns-list.visible {
+      display: block;
+    }
+    
+    .column-group h4 {
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .column-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    
+    .column-item {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: #4b5563;
+      padding: 4px 8px;
+      background: white;
+      border-radius: 4px;
+    }
+    
+    /* Modal Footer */
+    .modal-footer {
+      padding: 20px 32px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .help-text {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+    }
+    
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+    
+    .btn-continue {
+      background: linear-gradient(135deg, #1A1F71 0%, #0a0e3d 100%);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .btn-continue:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    
+    .btn-continue:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* Success State */
+    .success-message {
+      display: none;
+      padding: 20px;
+      background: #ecfdf5;
+      border: 2px solid #059669;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+    
+    .success-message.visible {
+      display: block;
+    }
+    
+    .success-message h3 {
+      color: #059669;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .success-message p {
+      color: #047857;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    
+    .selected-dataset {
+      font-family: 'DM Mono', monospace;
+      font-weight: 600;
+      color: #065f46;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-mark">V</div>
+        <h1>Global Data Office — Access Request</h1>
+      </div>
+      <div class="tagline">Self-Service Discovery Demo</div>
+    </header>
+    
+    <div class="main-card">
+      <div class="request-section">
+        <h2>Describe what you need</h2>
+        <textarea 
+          id="requestInput" 
+          class="request-textarea" 
+          placeholder="Example: I need fraud data for Q1 analysis&#10;&#10;The system will search the catalog and help you find the right dataset."
+        >I need fraud data for Q1 analysis</textarea>
+        <button class="btn-primary" onclick="handleSubmit()">Submit Request</button>
+      </div>
+      
+      <div id="successMessage" class="success-message">
+        <h3>✓ Dataset Selected</h3>
+        <p>Proceeding with <span class="selected-dataset" id="selectedDatasetName"></span>. The workflow will now run to check policies and provision access.</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Disambiguation Modal -->
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>Select a Dataset</h2>
+        <p class="modal-subtitle">Your request matched multiple datasets</p>
+      </div>
+      
+      <div class="modal-body">
+        <div class="disambiguation-intro">
+          <i data-lucide="search" class="icon" style="width: 20px; height: 20px;"></i>
+          <div>
+            <p><strong>I found 3 datasets matching "fraud data".</strong> Please select which you need. Click "View Columns" to see what's in each table.</p>
+          </div>
+        </div>
+        
+        <div class="dataset-options">
+          <!-- Dataset 1 -->
+          <div class="dataset-card" onclick="selectDataset('ds1')">
+            <input type="radio" name="dataset" id="ds1" value="fraud_detection_models">
+            <div class="dataset-content">
+              <div class="dataset-header">
+                <span class="dataset-name">fraud_detection_models</span>
+                <span class="dataset-id">DS-001</span>
+              </div>
+              <p class="dataset-description">ML model definitions and performance metrics for fraud detection</p>
+              <div class="dataset-meta">
+                <span class="meta-item"><i data-lucide="database" style="width: 14px; height: 14px; margin-right: 4px;"></i>2.3M rows</span>
+                <span class="meta-item"><i data-lucide="columns-3" style="width: 14px; height: 14px; margin-right: 4px;"></i>47 columns</span>
+                <span class="badge badge-restricted">Restricted</span>
+              </div>
+              <div class="dataset-meta">
+                <span class="meta-item"><i data-lucide="users" style="width: 14px; height: 14px; margin-right: 4px;"></i>Owner: Data Science Team</span>
+                <span class="meta-item"><i data-lucide="calendar" style="width: 14px; height: 14px; margin-right: 4px;"></i>Updated: 2026-02-15</span>
+              </div>
+              <div class="view-columns">
+                <div class="view-columns-toggle" onclick="event.stopPropagation(); toggleColumns('columns1', this)">
+                  <span>View Columns</span>
+                  <span class="chevron">▼</span>
+                </div>
+                <div id="columns1" class="columns-list">
+                  <div class="column-group">
+                    <h4>Key Metrics</h4>
+                    <div class="column-items">
+                      <div class="column-item">model_id</div>
+                      <div class="column-item">model_name</div>
+                      <div class="column-item">accuracy_score</div>
+                      <div class="column-item">precision_rate</div>
+                      <div class="column-item">recall_rate</div>
+                      <div class="column-item">f1_score</div>
+                      <div class="column-item">false_positive_rate</div>
+                      <div class="column-item">false_negative_rate</div>
+                    </div>
+                  </div>
+                  <div class="column-group">
+                    <h4>Metadata</h4>
+                    <div class="column-items">
+                      <div class="column-item">training_date</div>
+                      <div class="column-item">deployment_date</div>
+                      <div class="column-item">version</div>
+                      <div class="column-item">owner_team</div>
+                      <div class="column-item">model_type</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Dataset 2 -->
+          <div class="dataset-card" onclick="selectDataset('ds2')">
+            <input type="radio" name="dataset" id="ds2" value="fraud_training_data">
+            <div class="dataset-content">
+              <div class="dataset-header">
+                <span class="dataset-name">fraud_training_data</span>
+                <span class="dataset-id">DS-008</span>
+              </div>
+              <p class="dataset-description">Historical transaction data used for training fraud detection models</p>
+              <div class="dataset-meta">
+                <span class="meta-item"><i data-lucide="database" style="width: 14px; height: 14px; margin-right: 4px;"></i>180M rows</span>
+                <span class="meta-item"><i data-lucide="columns-3" style="width: 14px; height: 14px; margin-right: 4px;"></i>89 columns</span>
+                <span class="badge badge-highly-restricted">Highly Restricted</span>
+              </div>
+              <div class="dataset-meta">
+                <span class="meta-item"><i data-lucide="users" style="width: 14px; height: 14px; margin-right: 4px;"></i>Owner: Fraud Prevention Team</span>
+                <span class="meta-item"><i data-lucide="alert-triangle" style="width: 14px; height: 14px; margin-right: 4px; color: #d97706;"></i>Requires PII training</span>
+              </div>
+              <div class="view-columns">
+                <div class="view-columns-toggle" onclick="event.stopPropagation(); toggleColumns('columns2', this)">
+                  <span>View Columns</span>
+                  <span class="chevron">▼</span>
+                </div>
+                <div id="columns2" class="columns-list">
+                  <div class="column-group">
+                    <h4>Transaction Data</h4>
+                    <div class="column-items">
+                      <div class="column-item">transaction_id</div>
+                      <div class="column-item">transaction_amt</div>
+                      <div class="column-item">merchant_id</div>
+                      <div class="column-item">merchant_category</div>
+                      <div class="column-item">transaction_date</div>
+                      <div class="column-item">card_present</div>
+                      <div class="column-item">is_fraud</div>
+                    </div>
+                  </div>
+                  <div class="column-group">
+                    <h4>Features (engineered)</h4>
+                    <div class="column-items">
+                      <div class="column-item">velocity_7d</div>
+                      <div class="column-item">avg_transaction_amt</div>
+                      <div class="column-item">merchant_risk_score</div>
+                      <div class="column-item">geographic_anomaly</div>
+                      <div class="column-item">time_since_last_txn</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Dataset 3 -->
+          <div class="dataset-card" onclick="selectDataset('ds3')">
+            <input type="radio" name="dataset" id="ds3" value="fraud_model_metrics">
+            <div class="dataset-content">
+              <div class="dataset-header">
+                <span class="dataset-name">fraud_model_metrics</span>
+                <span class="dataset-id">DS-012</span>
+              </div>
+              <p class="dataset-description">Daily performance logs and KPIs for production fraud detection models</p>
+              <div class="dataset-meta">
+                <span class="meta-item"><i data-lucide="database" style="width: 14px; height: 14px; margin-right: 4px;"></i>45M rows</span>
+                <span class="meta-item"><i data-lucide="columns-3" style="width: 14px; height: 14px; margin-right: 4px;"></i>23 columns</span>
+                <span class="badge badge-internal">Internal</span>
+              </div>
+              <div class="dataset-meta">
+                <span class="meta-item"><i data-lucide="users" style="width: 14px; height: 14px; margin-right: 4px;"></i>Owner: Analytics Team</span>
+                <span class="meta-item"><i data-lucide="calendar" style="width: 14px; height: 14px; margin-right: 4px;"></i>Updated: Today</span>
+              </div>
+              <div class="view-columns">
+                <div class="view-columns-toggle" onclick="event.stopPropagation(); toggleColumns('columns3', this)">
+                  <span>View Columns</span>
+                  <span class="chevron">▼</span>
+                </div>
+                <div id="columns3" class="columns-list">
+                  <div class="column-group">
+                    <h4>Performance Metrics</h4>
+                    <div class="column-items">
+                      <div class="column-item">metric_date</div>
+                      <div class="column-item">model_id</div>
+                      <div class="column-item">true_positives</div>
+                      <div class="column-item">false_positives</div>
+                      <div class="column-item">true_negatives</div>
+                      <div class="column-item">false_negatives</div>
+                      <div class="column-item">precision</div>
+                      <div class="column-item">recall</div>
+                      <div class="column-item">f1_score</div>
+                    </div>
+                  </div>
+                  <div class="column-group">
+                    <h4>Volume & Latency</h4>
+                    <div class="column-items">
+                      <div class="column-item">predictions_count</div>
+                      <div class="column-item">avg_latency_ms</div>
+                      <div class="column-item">p95_latency_ms</div>
+                      <div class="column-item">error_rate</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <span class="help-text">Can't find what you need? <a href="#" style="color: #1A1F71; font-weight: 600;">Search catalog</a></span>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn-continue" id="continueBtn" onclick="confirmSelection()" disabled>Continue with Selection</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let selectedDatasetId = null;
+    
+    function handleSubmit() {
+      const input = document.getElementById('requestInput').value.trim();
+      if (!input) return;
+      
+      // Show modal
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+    
+    function selectDataset(datasetId) {
+      // Update radio button
+      document.getElementById(datasetId).checked = true;
+      
+      // Update visual selection
+      document.querySelectorAll('.dataset-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      event.currentTarget.classList.add('selected');
+      
+      // Enable continue button
+      selectedDatasetId = datasetId;
+      document.getElementById('continueBtn').disabled = false;
+    }
+    
+    function toggleColumns(columnsId, toggleElement) {
+      const columnsList = document.getElementById(columnsId);
+      const isVisible = columnsList.classList.contains('visible');
+      
+      if (isVisible) {
+        columnsList.classList.remove('visible');
+        toggleElement.classList.remove('expanded');
+      } else {
+        columnsList.classList.add('visible');
+        toggleElement.classList.add('expanded');
+      }
+    }
+    
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('active');
+      selectedDatasetId = null;
+      document.getElementById('continueBtn').disabled = true;
+      
+      // Reset selections
+      document.querySelectorAll('.dataset-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      document.querySelectorAll('input[name="dataset"]').forEach(radio => {
+        radio.checked = false;
+      });
+    }
+    
+    function confirmSelection() {
+      if (!selectedDatasetId) return;
+      
+      const datasetName = document.getElementById(selectedDatasetId).value;
+      
+      // Close modal
+      closeModal();
+      
+      // Show success message
+      document.getElementById('selectedDatasetName').textContent = datasetName;
+      document.getElementById('successMessage').classList.add('visible');
+      
+      // In real app, this would trigger the workflow (Intake → Policy → Provision → Notify)
+      console.log('Selected dataset:', datasetName);
+      console.log('Next: Run workflow...');
+    }
+    
+    // Close modal when clicking overlay
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeModal();
+      }
+    });
+    
+    // Initialize Lucide icons
+    lucide.createIcons();
+  </script>
+</body>
+</html>

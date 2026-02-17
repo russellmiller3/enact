@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Access Workflow — IBM Carbon</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* IBM Carbon Design System */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cds-ui-background: #ffffff;
+  --cds-ui-01: #f4f4f4;
+  --cds-ui-02: #ffffff;
+  --cds-text-01: #161616;
+  --cds-text-02: #525252;
+  --cds-text-03: #a8a8a8;
+  --cds-interactive-01: #0f62fe;
+  --cds-interactive-02: #393939;
+  --cds-support-01: #da1e28; /* error */
+  --cds-support-02: #24a148; /* success */
+  --cds-support-03: #f1c21b; /* warning */
+  --cds-border-subtle: #e0e0e0;
+}
+
+body {
+  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--cds-ui-background);
+  color: var(--cds-text-01);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.container {
+  max-width: 1056px; /* IBM 12-column grid */
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Header */
+.header {
+  background: var(--cds-interactive-02);
+  color: white;
+  padding: 0;
+  border-bottom: 1px solid #393939;
+}
+
+.header-inner {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.16px;
+}
+
+/* Typography */
+h1 { font-size: 32px; font-weight: 400; line-height: 1.25; margin-bottom: 8px; }
+h2 { font-size: 20px; font-weight: 400; line-height: 1.4; margin-bottom: 16px; }
+.label { font-size: 12px; font-weight: 400; line-height: 1.34; color: var(--cds-text-02); text-transform: uppercase; letter-spacing: 0.32px; margin-bottom: 8px; }
+
+/* Spacing (8pt grid) */
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+.mb-5 { margin-bottom: 48px; }
+.mt-4 { margin-top: 32px; }
+.mt-5 { margin-top: 48px; }
+
+/* Request Panel */
+.request-panel {
+  background: var(--cds-ui-02);
+  border: 1px solid var(--cds-border-subtle);
+  margin: 32px 0;
+}
+
+.panel-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  background: var(--cds-ui-01);
+}
+
+.panel-body {
+  padding: 16px;
+}
+
+.text-input {
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  border-bottom: 1px solid var(--cds-text-03);
+  background: var(--cds-ui-01);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.43;
+  color: var(--cds-text-01);
+  outline: none;
+  transition: border-color 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+.text-input:focus {
+  border-bottom: 2px solid var(--cds-interactive-01);
+}
+
+/* Button */
+.btn-primary {
+  background: var(--cds-interactive-01);
+  color: white;
+  border: none;
+  padding: 14px 64px 14px 16px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.16px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.11s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+.btn-primary:hover {
+  background: #0353e9;
+}
+
+/* Tile (Agent Cards) */
+.tile {
+  background: var(--cds-ui-02);
+  border: 1px solid var(--cds-border-subtle);
+  margin-bottom: 16px;
+}
+
+.tile-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--cds-border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.tile-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cds-text-01);
+}
+
+.tile-tag {
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+  font-size: 12px;
+  color: var(--cds-text-02);
+  background: var(--cds-ui-01);
+  padding: 2px 8px;
+}
+
+.tile-body {
+  padding: 16px;
+}
+
+/* Data Table Rows */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table tr {
+  border-bottom: 1px solid var(--cds-border-subtle);
+}
+
+.data-table tr:last-child {
+  border-bottom: none;
+}
+
+.data-table td {
+  padding: 12px 0;
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+.data-table .cell-label {
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--cds-text-02);
+  width: 160px;
+  font-size: 12px;
+}
+
+.data-table .cell-value {
+  color: var(--cds-text-01);
+  font-weight: 400;
+}
+
+.code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: var(--cds-ui-01);
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--cds-text-01);
+}
+
+/* Check List */
+.check-list-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cds-border-subtle);
+}
+
+.check-list-item:last-child {
+  border-bottom: none;
+}
+
+.check-status {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check-status.pass { color: var(--cds-support-02); }
+.check-status.fail { color: var(--cds-support-01); }
+
+.check-detail {
+  font-size: 12px;
+  color: var(--cds-text-02);
+  line-height: 1.5;
+  margin-left: 24px;
+}
+
+/* Notification Inline */
+.notification {
+  display: flex;
+  border-left: 3px solid var(--cds-support-02);
+  background: var(--cds-ui-01);
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.notification.success { border-left-color: var(--cds-support-02); }
+
+.notification-content {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cds-text-01);
+}
+
+/* Receipt */
+.receipt {
+  margin: 32px 0;
+  border: 1px solid var(--cds-border-subtle);
+  background: var(--cds-ui-02);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.receipt-header {
+  background: var(--cds-interactive-02);
+  color: white;
+  padding: 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--cds-border-subtle);
+}
+
+.receipt-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+
+.receipt-meta {
+  font-size: 11px;
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+.receipt-body {
+  padding: 24px;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--cds-text-01);
+  white-space: pre-wrap;
+}
+
+.receipt-footer {
+  border-top: 1px solid var(--cds-border-subtle);
+  padding: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--cds-text-02);
+  background: var(--cds-ui-01);
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container">
+    <div class="header-inner">
+      <span class="header-title">Visa / Data Access Workflow</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <h1 class="mt-5">Data Access Request</h1>
+  
+  <!-- Request Panel -->
+  <div class="request-panel">
+    <div class="panel-header">
+      <div class="label">Request Details</div>
+    </div>
+    <div class="panel-body">
+      <div class="mb-2">
+        <div class="label">Requester</div>
+        <div style="font-size:14px;color:#161616;">analyst@visa.com</div>
+      </div>
+      <div class="mb-3">
+        <div class="label">Justification</div>
+        <div style="font-size:14px;line-height:1.43;color:#161616;">I need read access to fraud_detection_models dataset to analyze Q1 false positive rates for my risk analysis project.</div>
+      </div>
+      <button class="btn-primary">Run Workflow</button>
+    </div>
+  </div>
+
+  <!-- Intake Agent -->
+  <div class="tile">
+    <div class="tile-header">
+      <span class="tile-title">Intake Agent</span>
+      <span class="tile-tag">Claude Sonnet · 340ms</span>
+    </div>
+    <div class="tile-body">
+      <table class="data-table">
+        <tr>
+          <td class="cell-label">requester</td>
+          <td class="cell-value">analyst@visa.com</td>
+        </tr>
+        <tr>
+          <td class="cell-label">dataset</td>
+          <td class="cell-value"><span class="code">fraud_detection_models</span></td>
+        </tr>
+        <tr>
+          <td class="cell-label">access_level</td>
+          <td class="cell-value">read</td>
+        </tr>
+        <tr>
+          <td class="cell-label">justification</td>
+          <td class="cell-value">Analyze Q1 false positive rates for risk analysis project</td>
+        </tr>
+        <tr>
+          <td class="cell-label">confidence</td>
+          <td class="cell-value">0.94</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ABAC Policy Engine -->
+  <div class="tile">
+    <div class="tile-header">
+      <span class="tile-title">ABAC Policy Engine</span>
+      <span class="tile-tag">Python · 12ms</span>
+    </div>
+    <div class="tile-body">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#525252;margin-bottom:16px;">
+        // Loaded: backend/config/users.json + datasets.json
+      </div>
+
+      <div class="label mb-2">Policy Checks (8/8 passed)</div>
+      
+      <div class="check-list-item">
+        <div class="check-status pass">✓ Role Authorization</div>
+        <div class="check-detail">
+          Requirement: One of [Data Analyst, Senior Data Analyst, Data Scientist]<br>
+          User: Senior Data Analyst
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ Clearance Level</div>
+        <div class="check-detail">
+          Requirement: Minimum Level 2<br>
+          User: Level 3 (verified)
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ Access Level Restriction</div>
+        <div class="check-detail">
+          Requirement: READ requests auto-approve eligible<br>
+          User: Requesting READ access
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ PII Restriction</div>
+        <div class="check-detail">
+          Requirement: No PII in dataset<br>
+          User: N/A
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ Training Requirements</div>
+        <div class="check-detail">
+          Requirement: InfoSec_Annual_2026<br>
+          User: Completed 2026-01-15
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ Employment Type</div>
+        <div class="check-detail">
+          Requirement: FTE or approved contractor<br>
+          User: FTE (verified via HR system)
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ MNPI Blackout</div>
+        <div class="check-detail">
+          Requirement: Dataset not tagged MNPI<br>
+          User: N/A - Dataset is Internal classification
+        </div>
+      </div>
+
+      <div class="check-list-item">
+        <div class="check-status pass">✓ Time-Limited Access</div>
+        <div class="check-detail">
+          Requirement: All access expires in 90 days<br>
+          User: Expiry will be set to 2026-05-17
+        </div>
+      </div>
+
+      <div class="notification success">
+        <div class="notification-content">DECISION: APPROVED — All 8 ABAC checks passed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Receipt -->
+  <div class="receipt">
+    <div class="receipt-header">
+      <h3>ACCESS DECISION RECEIPT</h3>
+      <div class="receipt-meta">
+        <div>Visa Global Data Office</div>
+        <div>Data Access Request Workflow</div>
+        <div>2026-02-16 15:30:00 UTC</div>
+      </div>
+    </div>
+    
+    <div class="receipt-body">DECISION: APPROVED
+
+WHO: Sarah Chen | Senior Data Analyst | analyst@visa.com
+WHAT: fraud_detection_models (READ access)
+REASON: Analyze Q1 false positive rates for risk analysis project
+
+WHY APPROVED:
+  ✓ Role Authorization: Senior Data Analyst
+  ✓ Clearance Level: Level 3 (verified)
+  ✓ Access Level Restriction: Requesting READ access
+  ✓ PII Restriction: N/A
+  ✓ Training Requirements: Completed 2026-01-15
+  ✓ Employment Type: FTE (verified via HR system)
+  ✓ MNPI Blackout: N/A - Dataset is Internal
+  ✓ Time-Limited Access: Expiry will be set to 2026-05-17
+
+ACCESS GRANTED UNTIL: 2026-05-17
+
+────────────────────────────────────────────────
+Technical Log:
+  15:30:00 | IntakeAgent extracted request (782 tokens)
+  15:30:01 | ABAC checked 8 policies (8 passed)
+  15:30:01 | Access token generated (visa-token-91847)
+  15:30:02 | 4 notifications sent</div>
+
+    <div class="receipt-footer">
+      <div>This audit log will be saved to:</div>
+      <div style="margin-top:4px;font-family:'IBM Plex Mono',monospace;">backend/receipts/REQ-91847_2026-02-16.txt</div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>

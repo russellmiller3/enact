@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa GDO — Data Access Automation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+:root {
+  --navy:#1A1F71;--navy-deep:#0a0e3d;--gold:#F7B600;--blue:#1434CB;
+  --bg:#f4f5f9;--surface:#ffffff;--text:#111827;--text-2:#4b5563;--text-3:#9ca3af;
+  --border:#e5e7eb;--border-subtle:#f3f4f6;
+  --green:#059669;--green-soft:#d1fae5;--amber:#d97706;--amber-soft:#fef3c7;--red:#dc2626;--red-soft:#fee2e2;
+  --sans:'DM Sans',system-ui,sans-serif;--mono:'DM Mono','Menlo',monospace;
+  --r:10px;
+  --shadow-card:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.03);
+  --shadow-lift:0 2px 8px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(26,31,113,.04) 0%,transparent 70%),
+  radial-gradient(ellipse 60% 50% at 80% 100%,rgba(247,182,0,.03) 0%,transparent 60%);min-height:100vh;}
+.wrap{max-width:880px;margin:0 auto;padding:0 24px;}
+
+/* header */
+.hdr{background:linear-gradient(135deg,var(--navy-deep),var(--navy));padding:28px 0 24px;position:relative;}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),rgba(247,182,0,.3) 50%,var(--gold));}
+.hdr::before{content:'';position:absolute;bottom:0;left:0;right:0;height:12px;background:linear-gradient(180deg,transparent,rgba(247,182,0,.06));pointer-events:none;}
+.hdr-row{display:flex;align-items:baseline;gap:12px;}
+.hdr-visa{font-size:18px;font-weight:700;color:var(--gold);letter-spacing:3px;}
+.hdr-pipe{color:rgba(255,255,255,.15);}
+.hdr-dept{font-size:11px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
+.hdr-title{font-size:15px;font-weight:500;color:rgba(255,255,255,.75);margin-top:6px;}
+
+/* input */
+.input-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin:24px 0 20px;box-shadow:var(--shadow-card);}
+.input-top{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:flex;justify-content:space-between;}
+.input-top span{font-family:var(--mono);font-size:10px;text-transform:none;letter-spacing:0;}
+textarea{width:100%;border:none;resize:none;font-family:var(--sans);font-size:14px;color:var(--text);line-height:1.65;background:transparent;outline:none;min-height:40px;}
+.run-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:12px;border-top:1px solid var(--border-subtle);}
+.run-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;border:none;border-radius:6px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(20,52,203,.25);}
+.run-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(20,52,203,.35);}
+.run-btn:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.run-btn svg{width:12px;height:12px;}
+.run-hint{font-size:11px;color:var(--text-3);font-family:var(--mono);}
+
+/* personas */
+.personas-label{font-size:10px;font-weight:600;color:var(--text-3);letter-spacing:.5px;text-transform:uppercase;margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--border-subtle);}
+.personas{display:flex;gap:8px;}
+.persona{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);cursor:pointer;font-family:var(--sans);transition:all .15s;text-align:left;}
+.persona:hover{border-color:var(--blue);background:rgba(20,52,203,.03);}
+.persona.on{border-color:var(--navy);background:rgba(26,31,113,.04);box-shadow:0 0 0 1px var(--navy);}
+.persona-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:1px;}
+.persona-role{font-size:10px;color:var(--text-3);margin-bottom:4px;}
+.persona-req{font-size:11px;color:var(--text-2);line-height:1.4;}
+.persona-outcome{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.3px;padding:1px 5px;border-radius:3px;margin-top:4px;}
+.po-g{background:var(--green-soft);color:var(--green);}
+.po-a{background:var(--amber-soft);color:var(--amber);}
+.po-r{background:var(--red-soft);color:var(--red);}
+
+/* stepper */
+.stepper{display:flex;align-items:center;margin:0 0 20px;padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);}
+.st-node{display:flex;align-items:center;gap:6px;}
+.st-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .4s;}
+.st-dot svg{width:12px;height:12px;stroke:#fff;stroke-width:3;fill:none;opacity:0;transition:opacity .2s;}
+.st-dot.done{border-color:var(--green);background:linear-gradient(135deg,#059669,#34d399);box-shadow:0 0 0 3px rgba(5,150,105,.15);}
+.st-dot.done svg{opacity:1;}
+.st-dot.run{border-color:var(--blue);animation:pulse 1.2s infinite;}
+.st-dot.esc{border-color:var(--amber);background:var(--amber);box-shadow:0 0 0 3px rgba(217,119,6,.15);}
+.st-dot.esc svg{opacity:1;stroke:var(--amber);}
+.st-dot.no{border-color:var(--red);background:var(--red);box-shadow:0 0 0 3px rgba(220,38,38,.15);}
+.st-dot.no svg{opacity:1;}
+.st-dot.skip{border-color:var(--border);background:var(--border-subtle);}
+.st-label{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.4px;transition:color .3s;}
+.st-label.done{color:var(--green);}
+.st-label.run{color:var(--navy);}
+.st-label.esc{color:var(--amber);}
+.st-label.no{color:var(--red);}
+.st-line{flex:1;height:1px;background:var(--border);margin:0 12px;transition:background .4s;}
+.st-line.done{background:var(--green);}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(20,52,203,.15);}50%{box-shadow:0 0 0 6px rgba(20,52,203,0);}}
+
+/* timeline */
+.timeline{position:relative;padding-left:40px;margin-bottom:20px;min-height:20px;}
+.timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:var(--border);border-radius:1px;transition:background .5s;}
+.timeline.go::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 85%,var(--border) 100%);}
+.tl-node{position:relative;margin-bottom:14px;opacity:0;transform:translateY(12px);transition:all .4s ease;}
+.tl-node:last-child{margin-bottom:0;}
+.tl-node.show{opacity:1;transform:translateY(0);}
+.tl-dot{position:absolute;left:-40px;top:14px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:2;border:2px solid var(--border);background:var(--surface);transition:all .4s;}
+.tl-dot.done{border-color:var(--green);background:linear-gradient(135deg,#059669,#34d399);box-shadow:0 0 0 3px rgba(5,150,105,.15);}
+.tl-dot.esc{border-color:var(--amber);background:linear-gradient(135deg,#d97706,#fbbf24);box-shadow:0 0 0 3px rgba(217,119,6,.15);}
+.tl-dot.no{border-color:var(--red);background:linear-gradient(135deg,#dc2626,#f87171);box-shadow:0 0 0 3px rgba(220,38,38,.15);}
+.tl-dot svg{width:12px;height:12px;stroke:#fff;stroke-width:3;fill:none;opacity:0;transition:opacity .2s;}
+.tl-dot.done svg,.tl-dot.esc svg,.tl-dot.no svg{opacity:1;}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow-card);}
+.card-hd{display:flex;align-items:center;gap:8px;padding:12px 16px;font-size:12px;font-weight:600;color:var(--text);border-bottom:1px solid var(--border-subtle);background:linear-gradient(180deg,rgba(0,0,0,.01),transparent);}
+.card-hd .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.dot-intake{background:linear-gradient(135deg,#7c3aed,#a78bfa);}
+.dot-policy{background:linear-gradient(135deg,#2563eb,#60a5fa);}
+.dot-prov{background:linear-gradient(135deg,#059669,#34d399);}
+.dot-notify{background:linear-gradient(135deg,#d97706,#fbbf24);}
+.card-hd .ms{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-3);font-weight:400;display:flex;gap:8px;align-items:center;}
+.tag{font-size:9px;padding:1px 6px;border-radius:3px;font-weight:500;letter-spacing:.3px;}
+.tag-llm{background:rgba(124,58,237,.1);color:#7c3aed;border:1px solid rgba(124,58,237,.15);}
+.tag-rule{background:rgba(37,99,235,.08);color:#2563eb;border:1px solid rgba(37,99,235,.12);}
+.tag-api{background:rgba(5,150,105,.08);color:#059669;border:1px solid rgba(5,150,105,.12);}
+.card-body{padding:14px 16px;}
+
+/* data rows */
+.kv{display:flex;gap:12px;padding:3px 0;font-size:13px;}
+.kv-k{font-family:var(--mono);font-size:11px;color:var(--text-3);min-width:110px;flex-shrink:0;}
+.kv-v{color:var(--text);}
+.kv-v code{font-family:var(--mono);font-size:12px;background:#f3f4f6;padding:1px 5px;border-radius:3px;border:1px solid var(--border-subtle);}
+
+/* streaming cursor */
+.streaming{border-right:2px solid var(--blue);animation:blink .5s infinite;}
+@keyframes blink{0%,100%{border-color:var(--blue);}50%{border-color:transparent;}}
+
+/* policy rows */
+.pol{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:13px;opacity:0;transition:opacity .3s;}
+.pol.show{opacity:1;}
+.pol:last-child{border-bottom:none;}
+.pol-b{font-family:var(--mono);font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;min-width:48px;text-align:center;}
+.pol-b.g{background:var(--green-soft);color:var(--green);}
+.pol-b.s{background:var(--border-subtle);color:var(--text-3);}
+.pol-b.a{background:var(--amber-soft);color:var(--amber);}
+.pol-b.r{background:var(--red-soft);color:var(--red);}
+.pol-n{font-weight:500;color:var(--text);min-width:140px;}
+.pol-d{color:var(--text-2);font-size:12px;}
+
+/* decision */
+.dec{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:6px;margin-top:10px;font-weight:600;font-size:13px;opacity:0;transition:opacity .4s;}
+.dec.show{opacity:1;}
+.dec.g{background:var(--green-soft);color:var(--green);border:1px solid rgba(5,150,105,.15);}
+.dec.a{background:var(--amber-soft);color:var(--amber);border:1px solid rgba(217,119,6,.15);}
+.dec.r{background:var(--red-soft);color:var(--red);border:1px solid rgba(220,38,38,.15);}
+
+/* reasoning */
+.reasoning{margin-top:10px;padding:10px 14px;background:linear-gradient(135deg,#faf5ff,#f5f3ff);border:1px solid rgba(124,58,237,.12);border-radius:6px;font-size:12px;line-height:1.7;color:var(--text-2);opacity:0;transition:opacity .4s;}
+.reasoning.show{opacity:1;}
+.reasoning-hd{font-size:10px;font-weight:600;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.reasoning em{font-style:normal;color:var(--text);font-weight:500;}
+.reasoning .conf{font-family:var(--mono);font-size:11px;color:#7c3aed;font-weight:500;}
+
+/* notif channels */
+.notif-ch{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;margin-right:6px;}
+.ch-email{background:#dbeafe;color:#2563eb;}
+.ch-slack{background:#fce7f3;color:#be185d;}
+.ch-jira{background:#e0e7ff;color:#4338ca;}
+
+/* audit - receipt style (Braun aesthetic) */
+.audit-lbl{font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.5px;text-transform:uppercase;margin:20px 0 0;padding-left:40px;display:none;}
+.audit-lbl.show{display:block;}
+.audit-box{
+  background:#fff;
+  border:1px solid #000;
+  margin:8px 0 20px 40px;
+  padding:0;
+  display:none;
+  font-family:'Courier New',Courier,monospace;
+  box-shadow:0 2px 4px rgba(0,0,0,.08);
+}
+.audit-box.show{display:block;}
+.audit-header{
+  border-bottom:1px dashed #000;
+  padding:16px 20px 12px;
+  text-align:center;
+}
+.audit-header h3{
+  font-size:13px;
+  font-weight:700;
+  margin:0 0 4px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.audit-header .meta{
+  font-size:10px;
+  color:#666;
+  line-height:1.6;
+}
+.audit-entries{
+  padding:16px 20px;
+}
+.audit-entry{
+  font-size:11px;
+  line-height:1.7;
+  color:#000;
+  margin-bottom:2px;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.audit-footer{
+  border-top:1px dashed #000;
+  padding:12px 20px;
+  font-size:10px;
+  color:#666;
+  text-align:center;
+}
+.audit-footer .save-path{
+  margin-top:6px;
+  font-family:var(--mono);
+  color:#000;
+}
+
+/* result */
+.result{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;margin:4px 0 48px;display:none;align-items:center;justify-content:space-between;box-shadow:var(--shadow-lift);opacity:0;transform:translateY(8px);transition:all .5s;}
+.result.show{display:flex;opacity:1;transform:translateY(0);}
+.res-lbl{font-size:15px;font-weight:700;}
+.res-stats{display:flex;gap:24px;}
+.res-s{text-align:center;}
+.res-s b{display:block;font-family:var(--mono);font-size:16px;color:var(--navy);}
+.res-s small{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;}
+
+/* Discovery Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.active{display:flex;}
+.modal{background:white;border-radius:16px;max-width:720px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);animation:modalSlideIn .3s ease-out;}
+@keyframes modalSlideIn{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:translateY(0);}}
+.modal-header{padding:24px 32px;border-bottom:1px solid var(--border);}
+.modal-header h2{font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px;}
+.modal-subtitle{color:var(--text-2);font-size:14px;}
+.modal-body{padding:32px;}
+.disambiguation-intro{display:flex;align-items:start;gap:16px;padding:20px 24px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1px solid #93c5fd;border-radius:12px;margin-bottom:28px;box-shadow:0 2px 8px rgba(59,130,246,.08);}
+.disambiguation-intro .icon{flex-shrink:0;color:#2563eb;stroke-width:2;}
+.disambiguation-intro p{color:#1e3a8a;font-size:14px;line-height:1.6;}
+.dataset-options{display:flex;flex-direction:column;gap:16px;}
+.dataset-card{border:2px solid var(--border);border-radius:12px;padding:24px;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);position:relative;background:white;}
+.dataset-card:hover{border-color:var(--navy);box-shadow:0 8px 20px rgba(26,31,113,.12),0 2px 6px rgba(26,31,113,.04);transform:translateY(-2px);}
+.dataset-card.selected{border-color:var(--navy);background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);box-shadow:0 8px 20px rgba(26,31,113,.15),0 2px 6px rgba(26,31,113,.06);}
+.dataset-card input[type="radio"]{position:absolute;top:20px;left:20px;width:20px;height:20px;cursor:pointer;}
+.dataset-content{margin-left:32px;}
+.dataset-header{display:flex;align-items:baseline;gap:12px;margin-bottom:8px;}
+.dataset-name{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--text);}
+.dataset-id{font-family:var(--mono);font-size:12px;color:var(--text-3);}
+.dataset-description{color:var(--text-2);font-size:14px;line-height:1.5;margin-bottom:12px;}
+.dataset-meta{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--text-2);margin-bottom:12px;}
+.meta-item{display:flex;align-items:center;gap:4px;}
+.badge{display:inline-block;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.badge-restricted{background:#fee2e2;color:#991b1b;}
+.badge-internal{background:#fef3c7;color:#92400e;}
+.badge-highly-restricted{background:#fecaca;color:#7f1d1d;}
+.view-columns{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-subtle);}
+.view-columns-toggle{display:inline-flex;align-items:center;gap:6px;color:var(--navy);font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;transition:opacity .2s;}
+.view-columns-toggle:hover{opacity:.7;}
+.view-columns-toggle .chevron{transition:transform .2s;}
+.view-columns-toggle.expanded .chevron{transform:rotate(180deg);}
+.columns-list{display:none;margin-top:12px;padding:12px;background:#f9fafb;border-radius:6px;max-height:200px;overflow-y:auto;}
+.columns-list.visible{display:block;}
+.column-group h4{font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+.column-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:12px;}
+.column-item{font-family:var(--mono);font-size:12px;color:var(--text-2);padding:4px 8px;background:white;border-radius:4px;}
+.modal-footer{padding:20px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.help-text{font-size:13px;color:var(--text-2);}
+.modal-actions{display:flex;gap:12px;}
+.btn-secondary{background:white;color:#374151;border:1px solid #d1d5db;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-secondary:hover{background:#f9fafb;}
+.btn-continue{background:linear-gradient(135deg,var(--navy),var(--navy-deep));color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;transition:transform .2s;}
+.btn-continue:hover:not(:disabled){transform:translateY(-1px);}
+.btn-continue:disabled{opacity:.5;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <div class="hdr-row">
+      <span class="hdr-visa">VISA</span>
+      <span class="hdr-pipe">|</span>
+      <span class="hdr-dept">Global Data Office</span>
+    </div>
+    <div class="hdr-title">Data Access Request &mdash; Workflow Automation</div>
+    <div style="display:flex;gap:4px;margin-top:16px;">
+      <a href="demo-prototype.html" style="font-size:12px;font-weight:500;padding:6px 14px;border-radius:5px;color:#fff;background:rgba(255,255,255,.12);text-decoration:none;">Request Workflow</a>
+      <a href="dashboard-prototype.html" style="font-size:12px;font-weight:500;padding:6px 14px;border-radius:5px;color:rgba(255,255,255,.5);text-decoration:none;">Governance Dashboard</a>
+      <a href="review-prototype.html" style="font-size:12px;font-weight:500;padding:6px 14px;border-radius:5px;color:rgba(255,255,255,.5);text-decoration:none;">Review Queue</a>
+      <a href="roi-prototype.html" style="font-size:12px;font-weight:500;padding:6px 14px;border-radius:5px;color:rgba(255,255,255,.5);text-decoration:none;">ROI Report</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="input-card">
+    <div class="input-top">Request<span id="userEmail">analyst@visa.com</span></div>
+    <textarea id="req" rows="2">I need read access to fraud_detection_models dataset to analyze Q1 false positive rates for my risk analysis project.</textarea>
+    <div class="run-row">
+      <button class="run-btn" id="runBtn" onclick="run()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3l14 9-14 9V3z"/></svg>
+        <span id="runLabel">Run Workflow</span>
+      </button>
+      <span class="run-hint" id="runHint">4 agents &middot; 8 policy checks</span>
+    </div>
+    <div class="personas-label">Try a scenario</div>
+    <div class="personas" id="personas"></div>
+  </div>
+
+  <!-- Stepper -->
+  <div class="stepper" id="stepper">
+    <div class="st-node"><div class="st-dot" id="sd0"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="st-label" id="sl0">Intake</span></div>
+    <div class="st-line" id="sc0"></div>
+    <div class="st-node"><div class="st-dot" id="sd1"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="st-label" id="sl1">Policy</span></div>
+    <div class="st-line" id="sc1"></div>
+    <div class="st-node"><div class="st-dot" id="sd2"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="st-label" id="sl2">Provision</span></div>
+    <div class="st-line" id="sc2"></div>
+    <div class="st-node"><div class="st-dot" id="sd3"><svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div><span class="st-label" id="sl3">Notify</span></div>
+  </div>
+
+  <!-- Timeline (agent cards injected by JS) -->
+  <div class="timeline" id="timeline"></div>
+
+  <!-- Audit -->
+  <div class="audit-lbl" id="auditLbl">Audit Trail</div>
+  <div class="audit-box" id="auditBox">
+    <div class="audit-header">
+      <h3>AUDIT TRAIL</h3>
+      <div class="meta">
+        <div>Visa Global Data Office</div>
+        <div>Data Access Request Workflow</div>
+        <div id="auditDate"></div>
+      </div>
+    </div>
+    <div class="audit-entries" id="auditEntries"></div>
+    <div class="audit-footer">
+      <div>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+      <div style="margin-top:8px;">This audit log will be saved to:</div>
+      <div class="save-path" id="auditPath"></div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result" id="result"></div>
+</main>
+
+<!-- Discovery Modal -->
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Select a Dataset</h2>
+      <p class="modal-subtitle">Your request matched multiple datasets</p>
+    </div>
+    
+    <div class="modal-body">
+      <div class="disambiguation-intro">
+        <i data-lucide="search" class="icon" style="width:20px;height:20px;"></i>
+        <div>
+          <p><strong>I found 3 datasets matching "fraud data".</strong> Please select which you need. Click "View Columns" to see what's in each table.</p>
+        </div>
+      </div>
+      
+      <div class="dataset-options">
+        <!-- Dataset 1 -->
+        <div class="dataset-card" onclick="selectDataset('ds1')">
+          <input type="radio" name="dataset" id="ds1" value="fraud_detection_models">
+          <div class="dataset-content">
+            <div class="dataset-header">
+              <span class="dataset-name">fraud_detection_models</span>
+              <span class="dataset-id">DS-001</span>
+            </div>
+            <p class="dataset-description">ML model definitions and performance metrics for fraud detection</p>
+            <div class="dataset-meta">
+              <span class="meta-item"><i data-lucide="database" style="width:14px;height:14px;"></i>2.3M rows</span>
+              <span class="meta-item"><i data-lucide="columns-3" style="width:14px;height:14px;"></i>47 columns</span>
+              <span class="badge badge-restricted">Restricted</span>
+            </div>
+            <div class="dataset-meta">
+              <span class="meta-item"><i data-lucide="users" style="width:14px;height:14px;"></i>Owner: Data Science Team</span>
+              <span class="meta-item"><i data-lucide="calendar" style="width:14px;height:14px;"></i>Updated: 2026-02-15</span>
+            </div>
+            <div class="view-columns">
+              <div class="view-columns-toggle" onclick="event.stopPropagation();toggleColumns('columns1',this)">
+                <span>View Columns</span>
+                <span class="chevron">▼</span>
+              </div>
+              <div id="columns1" class="columns-list">
+                <div class="column-group">
+                  <h4>Key Metrics</h4>
+                  <div class="column-items">
+                    <div class="column-item">model_id</div>
+                    <div class="column-item">model_name</div>
+                    <div class="column-item">accuracy_score</div>
+                    <div class="column-item">precision_rate</div>
+                    <div class="column-item">recall_rate</div>
+                    <div class="column-item">f1_score</div>
+                    <div class="column-item">false_positive_rate</div>
+                    <div class="column-item">false_negative_rate</div>
+                  </div>
+                </div>
+                <div class="column-group">
+                  <h4>Metadata</h4>
+                  <div class="column-items">
+                    <div class="column-item">training_date</div>
+                    <div class="column-item">deployment_date</div>
+                    <div class="column-item">version</div>
+                    <div class="column-item">owner_team</div>
+                    <div class="column-item">model_type</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Dataset 2 -->
+        <div class="dataset-card" onclick="selectDataset('ds2')">
+          <input type="radio" name="dataset" id="ds2" value="fraud_training_data">
+          <div class="dataset-content">
+            <div class="dataset-header">
+              <span class="dataset-name">fraud_training_data</span>
+              <span class="dataset-id">DS-008</span>
+            </div>
+            <p class="dataset-description">Historical transaction data used for training fraud detection models</p>
+            <div class="dataset-meta">
+              <span class="meta-item"><i data-lucide="database" style="width:14px;height:14px;"></i>180M rows</span>
+              <span class="meta-item"><i data-lucide="columns-3" style="width:14px;height:14px;"></i>89 columns</span>
+              <span class="badge badge-highly-restricted">Highly Restricted</span>
+            </div>
+            <div class="dataset-meta">
+              <span class="meta-item"><i data-lucide="users" style="width:14px;height:14px;"></i>Owner: Fraud Prevention Team</span>
+              <span class="meta-item"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#d97706;"></i>Requires PII training</span>
+            </div>
+            <div class="view-columns">
+              <div class="view-columns-toggle" onclick="event.stopPropagation();toggleColumns('columns2',this)">
+                <span>View Columns</span>
+                <span class="chevron">▼</span>
+              </div>
+              <div id="columns2" class="columns-list">
+                <div class="column-group">
+                  <h4>Transaction Data</h4>
+                  <div class="column-items">
+                    <div class="column-item">transaction_id</div>
+                    <div class="column-item">transaction_amt</div>
+                    <div class="column-item">merchant_id</div>
+                    <div class="column-item">merchant_category</div>
+                    <div class="column-item">transaction_date</div>
+                    <div class="column-item">card_present</div>
+                    <div class="column-item">is_fraud</div>
+                  </div>
+                </div>
+                <div class="column-group">
+                  <h4>Features (engineered)</h4>
+                  <div class="column-items">
+                    <div class="column-item">velocity_7d</div>
+                    <div class="column-item">avg_transaction_amt</div>
+                    <div class="column-item">merchant_risk_score</div>
+                    <div class="column-item">geographic_anomaly</div>
+                    <div class="column-item">time_since_last_txn</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Dataset 3 -->
+        <div class="dataset-card" onclick="selectDataset('ds3')">
+          <input type="radio" name="dataset" id="ds3" value="fraud_model_metrics">
+          <div class="dataset-content">
+            <div class="dataset-header">
+              <span class="dataset-name">fraud_model_metrics</span>
+              <span class="dataset-id">DS-012</span>
+            </div>
+            <p class="dataset-description">Daily performance logs and KPIs for production fraud detection models</p>
+            <div class="dataset-meta">
+              <span class="meta-item"><i data-lucide="database" style="width:14px;height:14px;"></i>45M rows</span>
+              <span class="meta-item"><i data-lucide="columns-3" style="width:14px;height:14px;"></i>23 columns</span>
+              <span class="badge badge-internal">Internal</span>
+            </div>
+            <div class="dataset-meta">
+              <span class="meta-item"><i data-lucide="users" style="width:14px;height:14px;"></i>Owner: Analytics Team</span>
+              <span class="meta-item"><i data-lucide="calendar" style="width:14px;height:14px;"></i>Updated: Today</span>
+            </div>
+            <div class="view-columns">
+              <div class="view-columns-toggle" onclick="event.stopPropagation();toggleColumns('columns3',this)">
+                <span>View Columns</span>
+                <span class="chevron">▼</span>
+              </div>
+              <div id="columns3" class="columns-list">
+                <div class="column-group">
+                  <h4>Performance Metrics</h4>
+                  <div class="column-items">
+                    <div class="column-item">metric_date</div>
+                    <div class="column-item">model_id</div>
+                    <div class="column-item">true_positives</div>
+                    <div class="column-item">false_positives</div>
+                    <div class="column-item">true_negatives</div>
+                    <div class="column-item">false_negatives</div>
+                    <div class="column-item">precision</div>
+                    <div class="column-item">recall</div>
+                    <div class="column-item">f1_score</div>
+                  </div>
+                </div>
+                <div class="column-group">
+                  <h4>Volume & Latency</h4>
+                  <div class="column-items">
+                    <div class="column-item">predictions_count</div>
+                    <div class="column-item">avg_latency_ms</div>
+                    <div class="column-item">p95_latency_ms</div>
+                    <div class="column-item">error_rate</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <span class="help-text">Can't find what you need? <a href="#" style="color:var(--navy);font-weight:600;">Search catalog</a></span>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn-continue" id="continueBtn" onclick="confirmSelection()" disabled>Continue with Selection</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════ SCENARIO DATA ═══════
+const SCENARIOS = {
+  approve: {
+    email: "analyst@visa.com",
+    text: "I need read access to fraud_detection_models dataset to analyze Q1 false positive rates for my risk analysis project.",
+    persona: {name:"Sarah Chen",role:"Senior Data Analyst",desc:"Read access to fraud detection models",badge:"po-g",label:"Auto-Approve"},
+    intake: {
+      fields: [
+        ["requester","analyst@visa.com"],
+        ["dataset","fraud_detection_models"],
+        ["access_level","read"],
+        ["justification","Analyze Q1 false positive rates for risk analysis project"],
+        ["urgency","medium"]
+      ],
+      reasoning: [
+        'Detected dataset: <em>fraud_detection_models</em> (exact catalog match, DS-001)',
+        'Inferred access_level: <em>read</em> from verb "analyze" <span class="conf">confidence: 0.94</span>',
+        'Justification quality: sufficient (62 chars, business context present)',
+        'Urgency: <em>medium</em> &mdash; no time-sensitive language detected'
+      ],
+      tokens: 847, ms: [280,340]
+    },
+    abac_checks: [
+      {policy:"Role Authorization",req:"One of: [Data Analyst, Senior Data Analyst, Data Scientist]",user:"Senior Data Analyst",match:true,badge:"g"},
+      {policy:"Clearance Level",req:"Minimum: Level 2",user:"Level 3 (verified)",match:true,badge:"g"},
+      {policy:"Access Level",req:"READ requests: auto-approve eligible",user:"Requesting READ access",match:true,badge:"g"},
+      {policy:"PII Restriction", req:"No PII in dataset OR FTE with training",user:"Dataset contains no PII",match:true,badge:"g"},
+      {policy:"Training Requirements",req:"InfoSec Annual 2026",user:"Completed 2026-01-15",match:true,badge:"g"},
+      {policy:"Employment Type",req:"FTE or approved contractor",user:"FTE (verified via HR system)",match:true,badge:"g"},
+      {policy:"MNPI Blackout",req:"Dataset not tagged MNPI",user:"N/A - Dataset is Internal classification",match:true,badge:"g"},
+      {policy:"Time-Limited Access",req:"All access expires in 90 days",user:"Expiry will be set to LIVE_EXPIRE_SHORT",match:true,badge:"g"}
+    ],
+    justification_note: "Justification text is logged for audit but not scored. Decision based on ABAC matching above.",
+    decision: {cls:"g",text:"Decision: APPROVE &mdash; All 8 policy checks passed"},
+    provision: [
+      ["status",'<span style="color:var(--green);font-weight:600;">✅ ACCESS GRANTED</span>'],
+      ["dataset","<code>fraud_detection_models</code>"],
+      ["access_level","<code>READ</code>"],
+      ["duration","90 days"],
+      ["granted_at","LIVE_TIME"],
+      ["expires_at","LIVE_EXPIRE"],
+      ["","<div style=\"margin-top:10px;padding:10px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid rgba(37,99,235,.15);border-radius:6px;font-size:12px;\"><div style=\"font-size:10px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;\">🔑 API Access Token (Bearer)</div><div style=\"font-family:var(--mono);font-size:10px;color:var(--text-2);word-break:break-all;line-height:1.6;margin-bottom:6px;\">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbmFseXN0QHZpc2EuY29tIiwiZGF0YXNldCI6ImZyYXVkX2RldGVjdGlvbl9tb2RlbHMiLCJhY2Nlc3MiOiJyZWFkIiwiZXhwIjoxNzU1MzMxMjAwfQ.LIVE_JWT_SIG</div><div style=\"font-size:11px;color:var(--text-3);line-height:1.5;\"><em>In production, IAM role assignment via Okta/AWS. Token shown for API integration demo.</em></div></div>"]
+    ],
+    notifications: [
+      ["ch-email","Email","analyst@visa.com &mdash; <em>Access Granted: fraud_detection_models (READ, expires LIVE_EXPIRE_SHORT)</em>"],
+      ["ch-email","Email","mike.foster@visa.com &mdash; <em>FYI: Access granted to Sarah Chen (90-day READ access)</em>"],
+      ["ch-slack","Slack","#data-access-requests &mdash; <em>✅ Access granted: Sarah Chen → fraud_detection_models</em>"],
+      ["ch-jira","ServiceNow","GDO-4521 created &mdash; <em>Auto-resolved: READ access provisioned, expires LIVE_EXPIRE_SHORT</em>"]
+    ],
+    resultColor: "var(--green)", resultLabel: "APPROVED",
+    stepStates: ["done","done","done","done"],
+    lineStates: ["done","done","done"],
+    dotStates: ["done","done","done","done"]
+  },
+  escalate: {
+    email: "scientist@visa.com",
+    text: "I need write access to customer_pii_cardholder_data to update incorrect address records as part of GDPR compliance project.",
+    persona: {name:"James Rodriguez",role:"Staff Data Scientist",desc:"Write access to PII cardholder data",badge:"po-a",label:"Escalate"},
+    intake: {
+      fields: [
+        ["requester","scientist@visa.com"],
+        ["dataset","customer_pii_cardholder_data"],
+        ["access_level","write"],
+        ["justification","Update incorrect address records for GDPR compliance project"],
+        ["urgency","high"]
+      ],
+      reasoning: [
+        'Detected dataset: <em>customer_pii_cardholder_data</em> (catalog match, DS-002, RESTRICTED)',
+        'Access_level: <em>write</em> from verb "update" <span class="conf">confidence: 0.97</span>',
+        'PII flag: <em>TRUE</em> &mdash; dataset name contains "pii" and "cardholder"',
+        'Urgency: <em>high</em> &mdash; GDPR compliance implies regulatory deadline'
+      ],
+      tokens: 923, ms: [310,380]
+    },
+    abac_checks: [
+      {policy:"Role Authorization",req:"One of: [Staff Data Scientist, Principal Data Scientist]",user:"Staff Data Scientist",match:true,badge:"g"},
+      {policy:"Clearance Level",req:"Minimum: Level 3",user:"Level 4 (verified)",match:true,badge:"g"},
+      {policy:"Access Level",req:"READ requests: auto-approve eligible",user:"Requesting WRITE access",match:false,badge:"a"},
+      {policy:"PII Restriction",req:"FTE only for PII datasets",user:"FTE with PII_Handling_2026 training",match:true,badge:"g"},
+      {policy:"Training Requirements",req:"PII_Handling_2026, InfoSec_Annual_2026",user:"Completed 2026-01-10",match:true,badge:"g"},
+      {policy:"Employment Type",req:"FTE or approved contractor",user:"FTE (verified via HR system)",match:true,badge:"g"},
+      {policy:"MNPI Blackout",req:"Dataset not tagged MNPI",user:"N/A - Dataset is Restricted classification",match:true,badge:"g"},
+      {policy:"Time-Limited Access",req:"All access expires in 90 days",user:"Expiry will be set to LIVE_EXPIRE_SHORT",match:true,badge:"g"}
+    ],
+    justification_note: "Write access to PII data requires manager approval regardless of other checks. Justification logged for manager review.",
+    decision: {cls:"a",text:"Decision: ESCALATE &mdash; PII + write access requires manager approval"},
+    provision: null,
+    notifications: [
+      ["ch-email","Email","manager@visa.com &mdash; <em>🔔 Approval Required: PII write access for James Rodriguez</em>"],
+      ["ch-email","Email","scientist@visa.com &mdash; <em>Request escalated to manager for approval (PII + write access)</em>"],
+      ["ch-slack","Slack","#data-access-requests &mdash; <em>⚠️ Escalation: James Rodriguez → customer_pii_cardholder_data (WRITE)</em>"],
+      ["ch-jira","ServiceNow","GDO-4523 created &mdash; <em>Pending manager approval: PII data modification request</em>"]
+    ],
+    resultColor: "var(--amber)", resultLabel: "ESCALATED",
+    stepStates: ["done","done","skip","done"],
+    lineStates: ["done","done","done"],
+    dotStates: ["done","esc","skip","esc"]
+  },
+  deny: {
+    email: "unknown@visa.com",
+    text: "Give me admin access to all datasets for general testing purposes.",
+    persona: {name:"Unknown User",role:"No role specified",desc:"Admin access to all datasets",badge:"po-r",label:"Deny"},
+    intake: {
+      fields: [
+        ["requester","unknown@visa.com"],
+        ["dataset","all_datasets"],
+        ["access_level","admin"],
+        ["justification","general testing purposes"],
+        ["urgency","low"]
+      ],
+      reasoning: [
+        'Dataset: <em>all_datasets</em> &mdash; overly broad scope, no catalog match',
+        'Access_level: <em>admin</em> from explicit request <span class="conf">confidence: 0.99</span>',
+        'Justification quality: <em>insufficient</em> (24 chars, no business context)',
+        'Risk assessment: <em>HIGH</em> &mdash; broad scope + admin + weak justification'
+      ],
+      tokens: 712, ms: [250,310]
+    },
+    abac_checks: [
+      {policy:"Role Authorization",req:"Dataset not in catalog",user:"No role in system",match:false,badge:"r"},
+      {policy:"Clearance Level",req:"Cannot assess (unknown dataset)",user:"Level 0 (unverified)",match:false,badge:"r"},
+      {policy:"Access Level",req:"READ requests: auto-approve eligible",user:"Requesting ADMIN access",match:false,badge:"r"},
+      {policy:"PII Restriction",req:"Cannot assess (dataset not in catalog)",user:"N/A",match:false,badge:"s"},
+      {policy:"Training Requirements",req:"Cannot assess (unknown dataset)",user:"No training records found",match:false,badge:"r"},
+      {policy:"Employment Type",req:"FTE or approved contractor",user:"No employment record",match:false,badge:"r"},
+      {policy:"MNPI Blackout",req:"Cannot assess (dataset unknown)",user:"N/A",match:false,badge:"s"},
+      {policy:"Time-Limited Access",req:"All access expires in 90 days",user:"N/A (request denied)",match:false,badge:"s"}
+    ],
+    justification_note: "Admin access to unknown dataset with insufficient justification. Multiple policy violations detected.",
+    decision: {cls:"r",text:"Decision: DENY &mdash; Insufficient justification + unverified user + admin scope"},
+    provision: null,
+    notifications: [
+      ["ch-email","Email","unknown@visa.com &mdash; <em>❌ Access Denied: Insufficient justification for admin access</em>"],
+      ["ch-slack","Slack","#security-alerts &mdash; <em>🚨 Denied: Admin access attempt by unknown@visa.com (insufficient justification)</em>"],
+      ["ch-jira","ServiceNow","GDO-4525 created &mdash; <em>Security Review: Admin request denied, user verification required</em>"]
+    ],
+    resultColor: "var(--red)", resultLabel: "DENIED",
+    stepStates: ["done","done","skip","done"],
+    lineStates: ["done","done","done"],
+    dotStates: ["done","no","skip","no"]
+  },
+  discovery: {
+    email: "analyst@visa.com",
+    text: "I need fraud data for Q1 analysis",
+    persona: {name:"Discovery Test",role:"Data Analyst",desc:"Vague request triggers dataset selection",badge:"po-g",label:"Discovery"},
+    intake: {
+      fields: [
+        ["requester","analyst@visa.com"],
+        ["dataset","fraud_detection_models"],
+        ["access_level","read"],
+        ["justification","Q1 analysis"],
+        ["urgency","medium"]
+      ],
+      reasoning: [
+        'Detected dataset: <em>fraud_detection_models</em> (selected by user via discovery)',
+        'Inferred access_level: <em>read</em> from verb "analysis" <span class="conf">confidence: 0.92</span>',
+        'Justification quality: sufficient (business context present)',
+        'Urgency: <em>medium</em> — no time-sensitive language detected'
+      ],
+      tokens: 782, ms: [260,320]
+    },
+    abac_checks: [
+      {policy:"Role Authorization",req:"One of: [Data Analyst, Senior Data Analyst, Data Scientist]",user:"Senior Data Analyst",match:true,badge:"g"},
+      {policy:"Clearance Level",req:"Minimum: Level 2",user:"Level 3 (verified)",match:true,badge:"g"},
+      {policy:"Access Level",req:"READ requests: auto-approve eligible",user:"Requesting READ access",match:true,badge:"g"},
+      {policy:"PII Restriction",req:"No PII in dataset",user:"N/A",match:true,badge:"g"},
+      {policy:"Training Requirements",req:"InfoSec Annual 2026",user:"Completed 2026-01-15",match:true,badge:"g"},
+      {policy:"Employment Type",req:"FTE or approved contractor",user:"FTE (verified via HR system)",match:true,badge:"g"},
+      {policy:"MNPI Blackout",req:"Dataset not tagged MNPI",user:"N/A - Dataset is Internal classification",match:true,badge:"g"},
+      {policy:"Time-Limited Access",req:"All access expires in 90 days",user:"Expiry will be set to LIVE_EXPIRE_SHORT",match:true,badge:"g"}
+    ],
+    justification_note: "Justification text is logged for audit but not scored. Decision based on ABAC matching above.",
+    decision: {cls:"g",text:"Decision: APPROVE &mdash; All 8 policy checks passed"},
+    provision: [
+      ["status",'<span style="color:var(--green);font-weight:600;">✅ ACCESS GRANTED</span>'],
+      ["dataset","<code>fraud_detection_models</code>"],
+      ["access_level","<code>READ</code>"],
+      ["duration","90 days"],
+      ["granted_at","LIVE_TIME"],
+      ["expires_at","LIVE_EXPIRE"],
+      ["","<div style=\"margin-top:10px;padding:10px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid rgba(37,99,235,.15);border-radius:6px;font-size:12px;\"><div style=\"font-size:10px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;\">🔑 API Access Token (Bearer)</div><div style=\"font-family:var(--mono);font-size:10px;color:var(--text-2);word-break:break-all;line-height:1.6;margin-bottom:6px;\">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhbmFseXN0QHZpc2EuY29tIiwiZGF0YXNldCI6ImZyYXVkX2RldGVjdGlvbl9tb2RlbHMiLCJhY2Nlc3MiOiJyZWFkIiwiZXhwIjoxNzU1MzMxMjAwfQ.LIVE_JWT_SIG</div><div style=\"font-size:11px;color:var(--text-3);line-height:1.5;\"><em>In production, IAM role assignment via Okta/AWS. Token shown for API integration demo.</em></div></div>"]
+    ],
+    notifications: [
+      ["ch-email","Email","analyst@visa.com &mdash; <em>Access Granted: fraud_detection_models (READ, expires LIVE_EXPIRE_SHORT)</em>"],
+      ["ch-email","Email","mike.foster@visa.com &mdash; <em>FYI: Access granted to Sarah Chen (90-day READ access)</em>"],
+      ["ch-slack","Slack","#data-access-requests &mdash; <em>✅ Access granted: analyst@visa.com → fraud_detection_models</em>"],
+      ["ch-jira","ServiceNow","GDO-4526 created &mdash; <em>Auto-resolved: READ access provisioned, expires LIVE_EXPIRE_SHORT</em>"]
+    ],
+    resultColor: "var(--green)", resultLabel: "APPROVED",
+    stepStates: ["done","done","done","done"],
+    lineStates: ["done","done","done"],
+    dotStates: ["done","done","done","done"]
+  }
+};
+
+let currentScenario = 'approve';
+let running = false;
+
+// ═══════ INIT ═══════
+function init() {
+  const pc = document.getElementById('personas');
+  pc.innerHTML = '';
+  Object.entries(SCENARIOS).forEach(([key,s]) => {
+    const d = document.createElement('div');
+    d.className = 'persona' + (key===currentScenario?' on':'');
+    d.onclick = () => pickScenario(key);
+    d.innerHTML = `<div class="persona-name">${s.persona.name}</div><div class="persona-role">${s.persona.role}</div><div class="persona-req">${s.persona.desc}</div><span class="persona-outcome ${s.persona.badge}">${s.persona.label}</span>`;
+    pc.appendChild(d);
+  });
+}
+
+function pickScenario(key) {
+  if (running) return;
+  currentScenario = key;
+  const s = SCENARIOS[key];
+  document.getElementById('req').value = s.text;
+  document.getElementById('userEmail').textContent = s.email;
+  document.querySelectorAll('.persona').forEach((p,i) => {
+    p.className = 'persona' + (Object.keys(SCENARIOS)[i]===key?' on':'');
+  });
+  resetUI();
+}
+
+function resetUI() {
+  for(let i=0;i<4;i++){
+    document.getElementById('sd'+i).className='st-dot';
+    document.getElementById('sl'+i).className='st-label';
+    if(i<3) document.getElementById('sc'+i).className='st-line';
+  }
+  document.getElementById('timeline').innerHTML='';
+  document.getElementById('timeline').classList.remove('go');
+  document.getElementById('auditLbl').classList.remove('show');
+  document.getElementById('auditBox').classList.remove('show');
+  const r=document.getElementById('result');r.className='result';r.innerHTML='';
+}
+
+// ═══════ HELPERS ═══════
+function now(){return new Date().toISOString();}
+function rng(a,b){return a+Math.floor(Math.random()*(b-a));}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function expDate(){const d=new Date();d.setDate(d.getDate()+90);return d.toISOString().slice(0,10);}
+function chk(){return '<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';}
+
+// ═══════ STREAMING TEXT ═══════
+async function streamText(el, text, speed=18) {
+  el.textContent = '';
+  el.classList.add('streaming');
+  for(let i=0;i<text.length;i++){
+    el.textContent += text[i];
+    await sleep(speed + rng(-5,8));
+  }
+  el.classList.remove('streaming');
+}
+
+// ═══════ RUN WORKFLOW ═══════
+async function run() {
+  if(running) return;
+  
+  // Check if request is ambiguous (needs discovery)
+  const requestText = document.getElementById('req').value.toLowerCase();
+  const isAmbiguous = (requestText.includes('fraud data') ||
+                      (requestText.includes('fraud') && !requestText.includes('fraud_detection_models') &&
+                       !requestText.includes('fraud_training_data') && !requestText.includes('fraud_model_metrics')));
+  
+  if (isAmbiguous) {
+    // Show discovery modal and wait for selection
+    running = true;
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    document.getElementById('runLabel').textContent = 'Select Dataset...';
+    showDiscoveryModal(() => runWorkflow());
+    return;
+  }
+  
+  runWorkflow();
+}
+
+async function runWorkflow() {
+  running = true;
+  resetUI();
+  const s = SCENARIOS[currentScenario];
+  const btn = document.getElementById('runBtn');
+  btn.disabled = true;
+  document.getElementById('runLabel').textContent = 'Running...';
+  document.getElementById('runHint').textContent = 'executing pipeline...';
+
+  const tl = document.getElementById('timeline');
+  const startTime = now();
+
+  // ── STEP 1: INTAKE ──
+  document.getElementById('sd0').className='st-dot run';
+  document.getElementById('sl0').className='st-label run';
+  await sleep(300);
+
+  const intakeMs = rng(s.intake.ms[0], s.intake.ms[1]);
+  const intakeNode = document.createElement('div');
+  intakeNode.className = 'tl-node';
+  intakeNode.innerHTML = `<div class="tl-dot" id="td0">${chk()}</div>
+    <div class="card"><div class="card-hd"><span class="dot dot-intake"></span>Intake Agent<span class="ms"><span class="tag tag-llm">Claude Sonnet</span><span id="intakeMs"></span></span></div>
+    <div class="card-body" id="intakeBody"></div></div>`;
+  tl.appendChild(intakeNode);
+  await sleep(50);
+  intakeNode.classList.add('show');
+
+  // Stream fields one by one
+  const ib = document.getElementById('intakeBody');
+  for(const [k,v] of s.intake.fields){
+    const row = document.createElement('div');
+    row.className = 'kv';
+    const isCode = k==='dataset';
+    row.innerHTML = `<span class="kv-k">${k}</span><span class="kv-v" id="iv-${k}">${isCode?'<code>':''}${isCode?'</code>':''}</span>`;
+    ib.appendChild(row);
+    const target = document.getElementById('iv-'+k);
+    if(isCode){
+      const codeEl = target.querySelector('code') || target;
+      await streamText(codeEl, v, 14);
+    } else {
+      await streamText(target, v, 12);
+    }
+    await sleep(60);
+  }
+
+  document.getElementById('intakeMs').textContent = s.intake.tokens+' tok \u00B7 '+intakeMs+'ms';
+
+  // Reasoning
+  const reasoning = document.createElement('div');
+  reasoning.className = 'reasoning';
+  reasoning.innerHTML = '<div class="reasoning-hd">Agent Reasoning</div>' + s.intake.reasoning.join('<br>');
+  ib.appendChild(reasoning);
+  await sleep(200);
+  reasoning.classList.add('show');
+
+  // Complete intake step
+  await sleep(300);
+  document.getElementById('sd0').className='st-dot done';
+  document.getElementById('sl0').className='st-label done';
+  document.getElementById('sc0').className='st-line done';
+  document.getElementById('td0').className='tl-dot done';
+  tl.classList.add('go');
+
+  // ── STEP 2: POLICY (ABAC) ──
+  document.getElementById('sd1').className='st-dot run';
+  document.getElementById('sl1').className='st-label run';
+  await sleep(400);
+
+  const policyMs = rng(10,18);
+  const polNode = document.createElement('div');
+  polNode.className = 'tl-node';
+  polNode.innerHTML = `<div class="tl-dot" id="td1">${chk()}</div>
+    <div class="card"><div class="card-hd"><span class="dot dot-policy"></span>ABAC Policy Engine<span class="ms"><span class="tag tag-rule">No LLM</span>Python \u00B7 ${policyMs}ms</span></div>
+    <div class="card-body" id="polBody"></div></div>`;
+  tl.appendChild(polNode);
+  await sleep(50);
+  polNode.classList.add('show');
+
+  const pb = document.getElementById('polBody');
+  
+  // Show config loading messages
+  const loadMsg = document.createElement('div');
+  loadMsg.style.cssText = 'font-size:11px;color:var(--text-3);margin-bottom:12px;font-family:var(--mono);';
+  loadMsg.innerHTML = '📂 Loading backend/config/users.json + datasets.json...';
+  pb.appendChild(loadMsg);
+  await sleep(200);
+
+  // Show ABAC checks one by one
+  for(const check of s.abac_checks){
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:160px 1fr auto 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-subtle);font-size:12px;opacity:0;transition:opacity .3s;';
+    const checkIcon = check.match ? '✓' : '✗';
+    const checkColor = check.match ? 'var(--green)' : (check.badge === 'a' ? 'var(--amber)' : 'var(--red)');
+    row.innerHTML = `
+      <div style="font-weight:600;font-size:10px;color:var(--text-2);text-transform:uppercase;letter-spacing:.5px;">${check.policy}</div>
+      <div style="background:#f9fafb;padding:6px 10px;border-radius:4px;font-size:11px;color:var(--text-2);">${check.req}</div>
+      <div style="color:var(--text-3);font-size:14px;">→</div>
+      <div style="font-weight:500;color:${checkColor};">${check.user} <span style="margin-left:4px;">${checkIcon}</span></div>
+    `;
+    pb.appendChild(row);
+    await sleep(100);
+    row.style.opacity = '1';
+  }
+
+  await sleep(200);
+
+  // Justification note
+  if(s.justification_note){
+    const note = document.createElement('div');
+    note.style.cssText = 'margin-top:12px;padding:10px 14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid rgba(37,99,235,.12);border-radius:6px;font-size:11px;line-height:1.6;color:var(--text-2);';
+    note.innerHTML = `<div style="font-size:10px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">ℹ️ Note</div>${s.justification_note}`;
+    pb.appendChild(note);
+    await sleep(150);
+  }
+
+  // Decision banner
+  const dec = document.createElement('div');
+  dec.className = 'dec ' + s.decision.cls;
+  dec.textContent = '';
+  dec.innerHTML = s.decision.text;
+  pb.appendChild(dec);
+  await sleep(200);
+  dec.classList.add('show');
+
+  // Complete policy step
+  await sleep(300);
+  const polDotState = s.dotStates[1];
+  document.getElementById('sd1').className='st-dot '+polDotState;
+  document.getElementById('sl1').className='st-label '+polDotState;
+  document.getElementById('sc1').className='st-line done';
+  document.getElementById('td1').className='tl-dot '+polDotState;
+
+  // ── STEP 3: PROVISION (or skip) ──
+  if(s.provision){
+    document.getElementById('sd2').className='st-dot run';
+    document.getElementById('sl2').className='st-label run';
+    await sleep(400);
+
+    const provMs = rng(160,210);
+    const provNode = document.createElement('div');
+    provNode.className = 'tl-node';
+    provNode.innerHTML = `<div class="tl-dot" id="td2">${chk()}</div>
+      <div class="card"><div class="card-hd"><span class="dot dot-prov"></span>Provisioning Agent<span class="ms"><span class="tag tag-api">API Call</span>${provMs}ms</span></div>
+      <div class="card-body" id="provBody"></div></div>`;
+    tl.appendChild(provNode);
+    await sleep(50);
+    provNode.classList.add('show');
+
+    const pvb = document.getElementById('provBody');
+    for(let [k,v] of s.provision){
+      if(v==='LIVE_TIME') v='<code>'+now().replace('T',' ').slice(0,19)+' UTC</code>';
+      if(v==='LIVE_EXPIRE') v='<code>'+expDate()+'</code>';
+      if(v.includes('LIVE_EXPIRE_SHORT')) v=v.replace('LIVE_EXPIRE_SHORT',expDate());
+      if(v.includes('LIVE_JWT_SIG')){
+        const sig = 'sig_'+Math.random().toString(36).substr(2,16);
+        v = v.replace('LIVE_JWT_SIG',sig);
+      }
+      if(k==='') {
+        const row = document.createElement('div');
+        row.innerHTML = v;
+        pvb.appendChild(row);
+        await sleep(80);
+      } else {
+        const row = document.createElement('div');
+        row.className='kv';
+        row.innerHTML=`<span class="kv-k">${k}</span><span class="kv-v">${v}</span>`;
+        pvb.appendChild(row);
+        await sleep(80);
+      }
+    }
+
+    await sleep(200);
+    document.getElementById('sd2').className='st-dot done';
+    document.getElementById('sl2').className='st-label done';
+    document.getElementById('sc2').className='st-line done';
+    document.getElementById('td2').className='tl-dot done';
+  } else {
+    document.getElementById('sd2').className='st-dot skip';
+    document.getElementById('sl2').className='st-label';
+    document.getElementById('sc2').className='st-line done';
+    await sleep(200);
+  }
+
+  // ── STEP 4: NOTIFY ──
+  document.getElementById('sd3').className='st-dot run';
+  document.getElementById('sl3').className='st-label run';
+  await sleep(300);
+
+  const notifMs = rng(75,110);
+  const notifNode = document.createElement('div');
+  notifNode.className = 'tl-node';
+  const notifDotState = s.dotStates[3];
+  notifNode.innerHTML = `<div class="tl-dot" id="td3">${chk()}</div>
+    <div class="card"><div class="card-hd"><span class="dot dot-notify"></span>Notification Agent<span class="ms"><span class="tag tag-api">API Call</span>${notifMs}ms</span></div>
+    <div class="card-body" id="notifBody"></div></div>`;
+  tl.appendChild(notifNode);
+  await sleep(50);
+  notifNode.classList.add('show');
+
+  const nb = document.getElementById('notifBody');
+  for(let [chCls,chLabel,text] of s.notifications){
+    if(text.includes('LIVE_EXPIRE_SHORT')) text=text.replace(/LIVE_EXPIRE_SHORT/g,expDate());
+    const row = document.createElement('div');
+    row.className='kv';
+    row.innerHTML=`<span class="kv-k"><span class="notif-ch ${chCls}">${chLabel}</span></span><span class="kv-v">${text}</span>`;
+    nb.appendChild(row);
+    await sleep(150);
+  }
+
+  await sleep(200);
+  document.getElementById('sd3').className='st-dot '+notifDotState;
+  document.getElementById('sl3').className='st-label '+notifDotState;
+  document.getElementById('td3').className='tl-dot '+notifDotState;
+
+  // ── AUDIT TRAIL (Receipt Style) ──
+  const passedChecks = s.abac_checks.filter(c => c.match).length;
+  const totalChecks = s.abac_checks.length;
+  const failedChecks = s.abac_checks.filter(c => !c.match);
+  
+  const requestId = 'REQ-' + rng(10000,99999);
+  const auditDate = new Date().toISOString().slice(0,19).replace('T', ' ') + ' UTC';
+  const savePath = `backend/receipts/${requestId}_${new Date().toISOString().slice(0,10)}.txt`;
+  
+  const userEmail = s.intake.fields.find(f => f[0] === 'requester')[1];
+  const datasetName = s.intake.fields.find(f => f[0] === 'dataset')[1];
+  const accessLevel = s.intake.fields.find(f => f[0] === 'access_level')[1];
+  const justification = s.intake.fields.find(f => f[0] === 'justification')[1];
+  
+  const auditLines = [
+    `DECISION: ${s.resultLabel}`,
+    ``,
+    `WHO: ${userEmail}`,
+    `WHAT: ${datasetName} (${accessLevel.toUpperCase()} access)`,
+    `REASON: ${justification}`,
+    ``,
+  ];
+  
+  if(s.resultLabel === 'APPROVED'){
+    auditLines.push(`WHY APPROVED:`);
+    s.abac_checks.filter(c => c.match).forEach(c => {
+      auditLines.push(`  ✓ ${c.policy}: ${c.user}`);
+    });
+    if(s.provision){
+      auditLines.push(``);
+      auditLines.push(`ACCESS GRANTED UNTIL: ${expDate()}`);
+    }
+  } else if(s.resultLabel === 'ESCALATED'){
+    auditLines.push(`WHY ESCALATED:`);
+    failedChecks.forEach(c => {
+      auditLines.push(`  ⚠ ${c.policy}: ${c.user}`);
+    });
+    auditLines.push(``);
+    auditLines.push(`REQUIRES: Manager approval`);
+  } else {
+    auditLines.push(`WHY DENIED:`);
+    failedChecks.forEach(c => {
+      auditLines.push(`  ✗ ${c.policy}: ${c.user}`);
+    });
+  }
+  
+  auditLines.push(``);
+  auditLines.push(`────────────────────────────────────────────`);
+  auditLines.push(`Technical Log:`);
+  auditLines.push(`  ${startTime.slice(11,19)} | IntakeAgent extracted request (${s.intake.tokens} tokens)`);
+  auditLines.push(`  ${now().slice(11,19)} | ABAC checked ${totalChecks} policies (${passedChecks} passed)`);
+  if(s.provision){
+    auditLines.push(`  ${now().slice(11,19)} | Access token generated (visa-token-${rng(10000,99999)})`);
+  }
+  auditLines.push(`  ${now().slice(11,19)} | ${s.notifications.length} notifications sent`);
+
+  document.getElementById('auditLbl').classList.add('show');
+  document.getElementById('auditLbl').textContent='Access Decision Receipt';
+  document.getElementById('auditDate').textContent = auditDate;
+  document.getElementById('auditPath').textContent = savePath;
+  
+  const entriesEl = document.getElementById('auditEntries');
+  entriesEl.innerHTML = '';
+  for(const line of auditLines){
+    const entry = document.createElement('div');
+    entry.className = 'audit-entry';
+    entry.textContent = line;
+    entriesEl.appendChild(entry);
+  }
+  
+  await sleep(100);
+  document.getElementById('auditBox').classList.add('show');
+
+  // ── RESULT ──
+  const res = document.getElementById('result');
+  res.style.borderLeft = '3px solid '+s.resultColor;
+  const totalMs = intakeMs + policyMs + (s.provision?rng(160,210):0) + notifMs;
+  res.innerHTML = `<span class="res-lbl" style="color:${s.resultColor}">${s.resultLabel}</span>
+    <div class="res-stats"><div class="res-s"><b>4</b><small>Agents</small></div><div class="res-s"><b>${passedChecks}/${totalChecks}</b><small>ABAC Checks</small></div><div class="res-s"><b>${totalMs}ms</b><small>Total</small></div></div>`;
+  await sleep(100);
+  res.classList.add('show');
+
+  // Done
+  btn.disabled = false;
+  document.getElementById('runLabel').textContent = 'Run Workflow';
+  document.getElementById('runHint').textContent = '4 agents \u00B7 8 policy checks';
+  running = false;
+}
+
+// ═══════ DISCOVERY MODAL ═══════
+let selectedDatasetId = null;
+let discoveryCallback = null;
+
+function showDiscoveryModal(callback) {
+  discoveryCallback = callback;
+  document.getElementById('modalOverlay').classList.add('active');
+  // Initialize icons in modal
+  setTimeout(() => lucide.createIcons(), 50);
+}
+
+function selectDataset(datasetId) {
+  document.getElementById(datasetId).checked = true;
+  document.querySelectorAll('.dataset-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  event.currentTarget.classList.add('selected');
+  selectedDatasetId = datasetId;
+  document.getElementById('continueBtn').disabled = false;
+}
+
+function toggleColumns(columnsId, toggleElement) {
+  const columnsList = document.getElementById(columnsId);
+  const isVisible = columnsList.classList.contains('visible');
+  
+  if (isVisible) {
+    columnsList.classList.remove('visible');
+    toggleElement.classList.remove('expanded');
+  } else {
+    columnsList.classList.add('visible');
+    toggleElement.classList.add('expanded');
+  }
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+  selectedDatasetId = null;
+  document.getElementById('continueBtn').disabled = true;
+  
+  document.querySelectorAll('.dataset-card').forEach(card => {
+    card.classList.remove('selected');
+  });
+  document.querySelectorAll('input[name="dataset"]').forEach(radio => {
+    radio.checked = false;
+  });
+  
+  // Re-enable run button
+  const btn = document.getElementById('runBtn');
+  btn.disabled = false;
+  document.getElementById('runLabel').textContent = 'Run Workflow';
+  running = false;
+}
+
+function confirmSelection() {
+  if (!selectedDatasetId) return;
+  
+  const datasetName = document.getElementById(selectedDatasetId).value;
+  
+  // Update request text with selected dataset
+  const currentText = document.getElementById('req').value;
+  const updatedText = currentText.replace(/fraud data|fraud/i, datasetName);
+  document.getElementById('req').value = updatedText;
+  
+  // Close modal
+  closeModal();
+  
+  // Execute the callback (run workflow)
+  if (discoveryCallback) {
+    setTimeout(discoveryCallback, 300);
+    discoveryCallback = null;
+  }
+}
+
+// Close modal when clicking overlay
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeModal();
+  }
+});
+
+init();
+// Initialize Lucide icons
+lucide.createIcons();
+</script>
+</body>
+</html>
