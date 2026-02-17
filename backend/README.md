@@ -7,9 +7,10 @@
 - ✅ 5 agents executing in real-time
 - ✅ Beautiful Visa UI with live data streaming
 - ✅ Comprehensive terminal logging (detailed execution flow)
-- ✅ SSE event-driven updates
+- ✅ SSE event-driven updates (sequential agent rendering)
 - ✅ Server online/offline demo ready
 - ✅ Conference interview-ready
+- ✅ Fixed SSE race condition (agents now render in correct order)
 
 Find and kill processes
 netstat -ano | findstr :8000
@@ -402,12 +403,32 @@ Located in `config/policies.py`:
 
 ---
 
+## Known Issues & Fixes
+
+### ✅ FIXED: SSE Event Rendering Race Condition
+
+**Symptom:** Agents rendered out of order, or alert popup appeared after Discovery/Intake agents.
+
+**Root Cause:** `EventSource.onerror` fired when the server naturally closed the SSE connection after sending all events. EventSource is designed for persistent connections and treats connection closure as an error. The `onerror` handler called `alert()` which blocked the JavaScript thread, preventing the `queueHandler` promise chain from processing remaining events (policy, provision, notify, audit, done).
+
+**Fix (commit `a2513c4`):**
+1. Added `receivedDone` flag in `runWorkflow()` to distinguish normal stream end from errors
+2. Close `EventSource` immediately in `done` event listener (before queueHandler)
+3. Skip `onerror` handling if `receivedDone` is true (normal stream end, not error)
+4. Reset `handlerQueue = Promise.resolve()` at start of each workflow run
+5. Fixed `total_duration_ms` → `total_ms` field name mismatch
+
+**Verify Fix:** Hard refresh browser (Ctrl+Shift+R) to clear cache. All 7 SSE events should arrive in order, all 5 agent cards render sequentially, no alert popups.
+
+---
+
 ## Next Steps
 
 - [x] Backend 5-agent system
 - [x] SSE streaming endpoint
 - [x] Frontend SSE integration
 - [x] Terminal logging for demos
+- [x] Fixed SSE race condition
 - [ ] Add server status indicator to frontend
 - [ ] Deploy backend to Railway
 - [ ] Deploy frontend to Vercel
