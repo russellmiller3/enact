@@ -727,6 +727,49 @@ const SCENARIOS = {
     stepStates: ["done","done","done","done"],
     lineStates: ["done","done","done"],
     dotStates: ["done","done","done","done"]
+  },
+  mnpi: {
+    email: "analyst@visa.com",
+    text: "I need quarterly_financial_results for earnings analysis",
+    persona: {name:"MNPI Violation",role:"Data Analyst",desc:"Request for MNPI data during blackout",badge:"po-r",label:"MNPI Deny"},
+    intake: {
+      fields: [
+        ["requester","analyst@visa.com"],
+        ["dataset","quarterly_financial_results"],
+        ["access_level","read"],
+        ["justification","earnings analysis"],
+        ["urgency","medium"]
+      ],
+      reasoning: [
+        'Dataset: <em>quarterly_financial_results</em> &mdash; contains Material Non-Public Information',
+        'Access_level: <em>read</em> from verb "analysis" <span class="conf">confidence: 0.95</span>',
+        'Justification quality: sufficient but dataset restricted',
+        '⚠️ MNPI dataset flagged for policy check'
+      ],
+      tokens: 645, ms: [240,290]
+    },
+    abac_checks: [
+      {policy:"Role Authorization",req:"One of: [Finance Analyst, Senior Finance Analyst]",user:"Data Analyst (not finance role)",match:false,badge:"r"},
+      {policy:"Clearance Level",req:"Minimum: Level 4",user:"Level 3 (insufficient)",match:false,badge:"r"},
+      {policy:"Access Level",req:"READ requests: auto-approve eligible",user:"Requesting READ access",match:true,badge:"g"},
+      {policy:"PII Restriction",req:"No PII in dataset",user:"N/A (dataset has no PII)",match:true,badge:"g"},
+      {policy:"Training Requirements",req:"MNPI_Training_2026 + InfoSec_Annual_2026",user:"Missing MNPI_Training_2026",match:false,badge:"r"},
+      {policy:"Employment Type",req:"FTE only (contractors excluded)",user:"FTE (verified via HR system)",match:true,badge:"g"},
+      {policy:"MNPI Blackout",req:"Dataset tagged MNPI - restricted",user:"MNPI dataset during blackout period",match:false,badge:"r"},
+      {policy:"Time-Limited Access",req:"All access expires in 90 days",user:"N/A (request denied)",match:false,badge:"s"}
+    ],
+    justification_note: "MNPI dataset access denied: Wrong role, insufficient clearance, missing training, blackout period active.",
+    decision: {cls:"r",text:"Decision: DENY &mdash; MNPI restrictions: 4 policy failures"},
+    provision: null,
+    notifications: [
+      ["ch-email","Email","analyst@visa.com &mdash; <em>❌ Access Denied: MNPI data restricted (quarterly_financial_results)</em>"],
+      ["ch-slack","Slack","#security-alerts &mdash; <em>🚨 MNPI Access Denied: analyst@visa.com attempted quarterly_financial_results</em>"],
+      ["ch-jira","ServiceNow","GDO-4527 created &mdash; <em>Security Alert: MNPI access attempt logged for compliance review</em>"]
+    ],
+    resultColor: "var(--red)", resultLabel: "DENIED (MNPI)",
+    stepStates: ["done","done","skip","done"],
+    lineStates: ["done","done","done"],
+    dotStates: ["done","no","skip","no"]
   }
 };
 
