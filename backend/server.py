@@ -65,6 +65,42 @@ async def serve_index():
     return {"message": "index.html not found"}
 
 
+@app.get("/workflow.html")
+async def serve_workflow():
+    """Serve workflow.html (main demo interface)"""
+    workflow_path = frontend_dir / "workflow.html"
+    if workflow_path.exists():
+        return FileResponse(workflow_path)
+    return {"detail": "Not Found"}
+
+
+@app.get("/dashboard-prototype.html")
+async def serve_dashboard():
+    """Serve governance dashboard prototype"""
+    dashboard_path = frontend_dir / "dashboard-prototype.html"
+    if dashboard_path.exists():
+        return FileResponse(dashboard_path)
+    return {"detail": "Not Found"}
+
+
+@app.get("/review-prototype.html")
+async def serve_review():
+    """Serve review queue prototype"""
+    review_path = frontend_dir / "review-prototype.html"
+    if review_path.exists():
+        return FileResponse(review_path)
+    return {"detail": "Not Found"}
+
+
+@app.get("/roi-prototype.html")
+async def serve_roi():
+    """Serve ROI report prototype"""
+    roi_path = frontend_dir / "roi-prototype.html"
+    if roi_path.exists():
+        return FileResponse(roi_path)
+    return {"detail": "Not Found"}
+
+
 @app.get("/api/stream_workflow")
 async def stream_workflow(
     request_text: str = Query(..., description="Natural language data access request"),

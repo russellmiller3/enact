@@ -226,16 +226,20 @@ When you run a workflow, the terminal shows **detailed execution logs**:
 
 ## Key Endpoints
 
-| Endpoint               | Method | Description                                |
-| ---------------------- | ------ | ------------------------------------------ |
-| `/`                    | GET    | Serve frontend (workflow.html)             |
-| `/api/stream_workflow` | GET    | **SSE streaming** - real-time agent events |
-| `/api/run_workflow`    | POST   | JSON response (for testing/debugging)      |
-| `/api/config/users`    | GET    | View users.json                            |
-| `/api/config/datasets` | GET    | View datasets.json                         |
-| `/api/config/version`  | GET    | Config version hash (changes on edit)      |
-| `/api/config/reload`   | POST   | Force reload configs                       |
-| `/api/health`          | GET    | Health check                               |
+| Endpoint                      | Method | Description                                |
+| ----------------------------- | ------ | ------------------------------------------ |
+| `/`                           | GET    | Serve frontend (workflow.html)             |
+| `/workflow.html`              | GET    | Main workflow demo interface               |
+| `/dashboard-prototype.html`   | GET    | Governance dashboard (metrics, anomalies)  |
+| `/review-prototype.html`      | GET    | Human review queue (escalations)           |
+| `/roi-prototype.html`         | GET    | ROI report ($5M annual value)              |
+| `/api/stream_workflow`        | GET    | **SSE streaming** - real-time agent events |
+| `/api/run_workflow`           | POST   | JSON response (for testing/debugging)      |
+| `/api/config/users`           | GET    | View users.json                            |
+| `/api/config/datasets`        | GET    | View datasets.json                         |
+| `/api/config/version`         | GET    | Config version hash (changes on edit)      |
+| `/api/config/reload`          | POST   | Force reload configs                       |
+| `/api/health`                 | GET    | Health check                               |
 
 ---
 

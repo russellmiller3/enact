@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visa GDO — Human Review Queue</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#1A1F71;--navy-deep:#0a0e3d;--gold:#F7B600;--blue:#1434CB;
+  --bg:#f4f5f9;--surface:#ffffff;--text:#111827;--text-2:#4b5563;--text-3:#9ca3af;
+  --border:#e5e7eb;--border-subtle:#f3f4f6;
+  --green:#059669;--green-soft:#d1fae5;--amber:#d97706;--amber-soft:#fef3c7;--red:#dc2626;--red-soft:#fee2e2;
+  --sans:'DM Sans',system-ui,sans-serif;--mono:'DM Mono','Menlo',monospace;
+  --r:10px;--shadow-card:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.03);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(26,31,113,.04) 0%,transparent 70%),
+  radial-gradient(ellipse 60% 50% at 80% 100%,rgba(247,182,0,.03) 0%,transparent 60%);min-height:100vh;}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px;}
+
+.hdr{background:linear-gradient(135deg,var(--navy-deep) 0%,var(--navy) 100%);padding:28px 0 24px;position:relative;}
+.hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),rgba(247,182,0,.3) 50%,var(--gold));}
+.hdr::before{content:'';position:absolute;bottom:0;left:0;right:0;height:12px;background:linear-gradient(180deg,transparent,rgba(247,182,0,.06));pointer-events:none;}
+.hdr-row{display:flex;align-items:baseline;gap:12px;}
+.hdr-visa{font-size:18px;font-weight:700;color:var(--gold);letter-spacing:3px;}
+.hdr-pipe{color:rgba(255,255,255,.15);}
+.hdr-dept{font-size:11px;font-weight:500;color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;}
+.hdr-title{font-size:15px;font-weight:500;color:rgba(255,255,255,.75);margin-top:6px;}
+.nav{display:flex;gap:4px;margin-top:16px;}
+.nav a{font-size:12px;font-weight:500;padding:6px 14px;border-radius:5px;color:rgba(255,255,255,.5);text-decoration:none;transition:all .15s;}
+.nav a:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.08);}
+.nav a.on{color:#fff;background:rgba(255,255,255,.12);}
+
+/* Filter bar */
+.filters{display:flex;gap:8px;margin:24px 0 16px;align-items:center;}
+.filter-btn{padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text-2);cursor:pointer;transition:all .15s;}
+.filter-btn:hover{border-color:var(--blue);color:var(--navy);}
+.filter-btn.on{border-color:var(--navy);background:var(--navy);color:#fff;}
+.filter-count{font-family:var(--mono);font-size:11px;margin-left:4px;opacity:.7;}
+.filter-spacer{flex:1;}
+.filter-sort{font-size:11px;color:var(--text-3);}
+
+/* Review cards */
+.review-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow-card);}
+.rc-hd{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--border-subtle);}
+.rc-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;font-family:var(--mono);letter-spacing:.3px;}
+.rc-badge.esc{background:var(--amber-soft);color:var(--amber);border:1px solid rgba(217,119,6,.15);}
+.rc-badge.auto{background:var(--green-soft);color:var(--green);border:1px solid rgba(5,150,105,.15);}
+.rc-badge.deny{background:var(--red-soft);color:var(--red);border:1px solid rgba(220,38,38,.15);}
+.rc-id{font-family:var(--mono);font-size:12px;color:var(--text-3);}
+.rc-time{margin-left:auto;font-size:11px;color:var(--text-3);}
+.rc-body{padding:16px 20px;}
+.rc-body h3{font-size:14px;font-weight:600;margin-bottom:4px;}
+.rc-body .sub{font-size:12px;color:var(--text-2);margin-bottom:12px;}
+
+/* Detail rows */
+.det{display:flex;gap:10px;padding:3px 0;font-size:13px;}
+.det-k{font-family:var(--mono);font-size:11px;color:var(--text-3);min-width:100px;flex-shrink:0;}
+.det-v{color:var(--text);}
+
+/* Policy triggers */
+.triggers{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;}
+.trigger{font-size:11px;font-weight:500;padding:3px 8px;border-radius:4px;}
+.trigger.a{background:var(--amber-soft);color:var(--amber);}
+.trigger.r{background:var(--red-soft);color:var(--red);}
+
+/* Justification block */
+.justification{background:var(--bg);border:1px solid var(--border-subtle);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:13px;font-style:italic;color:var(--text-2);line-height:1.6;}
+
+/* AI recommendation */
+.ai-rec{background:linear-gradient(135deg,#faf5ff,#f5f3ff);border:1px solid rgba(124,58,237,.12);border-radius:6px;padding:10px 14px;margin:10px 0;font-size:12px;}
+.ai-rec-hd{font-size:10px;font-weight:600;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.ai-rec .conf{font-family:var(--mono);color:#7c3aed;font-weight:500;}
+
+/* Action buttons */
+.actions{display:flex;gap:8px;margin:14px 0 10px;padding-top:14px;border-top:1px solid var(--border-subtle);}
+.act-btn{padding:8px 20px;border-radius:6px;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+.act-approve{background:var(--green);color:#fff;}
+.act-approve:hover{background:#047857;}
+.act-deny{background:var(--red);color:#fff;}
+.act-deny:hover{background:#b91c1c;}
+.act-return{background:var(--surface);color:var(--text-2);border:1px solid var(--border);}
+.act-return:hover{border-color:var(--navy);color:var(--navy);}
+
+/* Feedback section */
+.feedback{background:var(--bg);border:1px solid var(--border-subtle);border-radius:8px;padding:14px 16px;margin-top:12px;}
+.fb-title{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.fb-options{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.fb-opt{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer;}
+.fb-opt input[type=radio]{accent-color:var(--navy);}
+.fb-text{width:100%;border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-family:var(--sans);font-size:13px;color:var(--text);background:var(--surface);resize:none;min-height:48px;outline:none;}
+.fb-text:focus{border-color:var(--blue);}
+.fb-text::placeholder{color:var(--text-3);}
+.fb-hint{font-size:10px;color:var(--text-3);margin-top:6px;}
+.fb-submit{margin-top:10px;padding:7px 18px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:var(--sans);font-size:12px;font-weight:600;cursor:pointer;}
+
+/* Reviewed badge */
+.reviewed{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:4px;margin:6px 0;}
+.reviewed.approved{background:var(--green-soft);color:var(--green);}
+.reviewed.denied{background:var(--red-soft);color:var(--red);}
+
+/* Stats mini bar */
+.review-stats{display:flex;gap:16px;margin:20px 0 16px;padding:12px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow-card);}
+.rs{text-align:center;flex:1;}
+.rs b{display:block;font-family:var(--mono);font-size:20px;}
+.rs small{font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.5px;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="wrap">
+    <div class="hdr-row">
+      <span class="hdr-visa">VISA</span>
+      <span class="hdr-pipe">|</span>
+      <span class="hdr-dept">Global Data Office</span>
+    </div>
+    <div class="hdr-title">Human Review Queue</div>
+    <div class="nav">
+      <a href="demo-prototype.html">Request Workflow</a>
+      <a href="dashboard-prototype.html">Governance Dashboard</a>
+      <a href="review-prototype.html" class="on">Review Queue</a>
+      <a href="roi-prototype.html">ROI Report</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Stats -->
+  <div class="review-stats">
+    <div class="rs"><b style="color:var(--amber);">5</b><small>Pending Review</small></div>
+    <div class="rs"><b style="color:var(--green);">12</b><small>Reviewed Today</small></div>
+    <div class="rs"><b style="color:var(--navy);">91%</b><small>Escalation Accuracy</small></div>
+    <div class="rs"><b style="color:var(--navy);">47</b><small>Labels This Month</small></div>
+    <div class="rs"><b style="color:var(--green);">v2.3</b><small>Model Deployed</small></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button class="filter-btn on">Pending<span class="filter-count">5</span></button>
+    <button class="filter-btn">Reviewed<span class="filter-count">12</span></button>
+    <button class="filter-btn">Spot Checks<span class="filter-count">3</span></button>
+    <button class="filter-btn">All</button>
+    <div class="filter-spacer"></div>
+    <span class="filter-sort">Sorted by: Newest first</span>
+  </div>
+
+  <!-- ESCALATION #1: PII Write Access -->
+  <div class="review-card">
+    <div class="rc-hd">
+      <span class="rc-badge esc">ESCALATED</span>
+      <span class="rc-id">GDO-4523</span>
+      <span>James Rodriguez &rarr; Write PII Data</span>
+      <span class="rc-time">2 hours ago</span>
+    </div>
+    <div class="rc-body">
+      <h3>Write access to customer_pii_cardholder_data</h3>
+      <div class="sub">James Rodriguez &middot; Staff Data Scientist &middot; Risk Analytics</div>
+
+      <div class="det"><span class="det-k">dataset</span><span class="det-v">customer_pii_cardholder_data (DS-002, Restricted)</span></div>
+      <div class="det"><span class="det-k">access_level</span><span class="det-v">write</span></div>
+      <div class="det"><span class="det-k">employment</span><span class="det-v">FTE &middot; PII training: current</span></div>
+      <div class="det"><span class="det-k">escalated_to</span><span class="det-v">mike.foster@visa.com (Manager)</span></div>
+
+      <div class="triggers">
+        <span class="trigger a">PII Protection</span>
+        <span class="trigger a">Write Escalation</span>
+      </div>
+
+      <div class="justification">"I need to update incorrect address records as part of the GDPR compliance project. The data privacy team has approved the scope of changes."</div>
+
+      <div class="ai-rec">
+        <div class="ai-rec-hd">AI Recommendation</div>
+        Escalate to manager &mdash; PII dataset + write access combination requires human review per Policy 1 &amp; 3. Justification quality is strong (<span class="conf">confidence: 0.89</span>), but PII write access cannot be auto-approved regardless of justification quality.
+      </div>
+
+      <div class="actions">
+        <button class="act-btn act-approve">Approve Access</button>
+        <button class="act-btn act-deny">Deny Access</button>
+        <button class="act-btn act-return">Return for More Info</button>
+      </div>
+
+      <div class="feedback">
+        <div class="fb-title">Escalation Quality Feedback (for model retraining)</div>
+        <div class="fb-options">
+          <label class="fb-opt"><input type="radio" name="fb1" checked> Good escalation &mdash; correct to flag this for human review</label>
+          <label class="fb-opt"><input type="radio" name="fb1"> Bad escalation &mdash; should have been auto-approved (policy too strict)</label>
+          <label class="fb-opt"><input type="radio" name="fb1"> Needs policy update &mdash; rule is too broad/narrow</label>
+        </div>
+        <textarea class="fb-text" placeholder="Optional: explain your reasoning for the model to learn from..."></textarea>
+        <div class="fb-hint">This feedback is used to improve prompt engineering and policy calibration. 47 labels collected this month.</div>
+        <button class="fb-submit">Submit Review</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESCALATION #2: Admin Access -->
+  <div class="review-card">
+    <div class="rc-hd">
+      <span class="rc-badge esc">ESCALATED</span>
+      <span class="rc-id">GDO-4520</span>
+      <span>temp-contractor-019 &rarr; Admin Sales Data</span>
+      <span class="rc-time">5 hours ago</span>
+    </div>
+    <div class="rc-body">
+      <h3>Admin access to sales_dashboard_aggregated</h3>
+      <div class="sub">External Contractor &middot; Sales Operations &middot; Vendor: Accenture</div>
+
+      <div class="det"><span class="det-k">dataset</span><span class="det-v">sales_dashboard_aggregated (DS-003, Internal)</span></div>
+      <div class="det"><span class="det-k">access_level</span><span class="det-v">admin</span></div>
+      <div class="det"><span class="det-k">employment</span><span class="det-v">Contractor &middot; Vendor: Accenture &middot; Contract ends: Mar 15</span></div>
+
+      <div class="triggers">
+        <span class="trigger r">Admin Escalation</span>
+        <span class="trigger a">Employment Type</span>
+      </div>
+
+      <div class="justification">"Need admin access to configure new dashboard views for the Q1 sales review."</div>
+
+      <div class="ai-rec">
+        <div class="ai-rec-hd">AI Recommendation</div>
+        <b>Deny.</b> Contractor requesting admin access to internal dataset. Admin access for contractors requires director approval (Policy 4 + 6). Contract ends Mar 15 &mdash; time-limited to 28 days. Recommend downgrade to <em>read</em> access instead. <span class="conf">confidence: 0.95</span>
+      </div>
+
+      <div class="actions">
+        <button class="act-btn act-approve">Approve Access</button>
+        <button class="act-btn act-deny">Deny Access</button>
+        <button class="act-btn act-return">Return for More Info</button>
+      </div>
+
+      <div class="feedback">
+        <div class="fb-title">Escalation Quality Feedback</div>
+        <div class="fb-options">
+          <label class="fb-opt"><input type="radio" name="fb2" checked> Good escalation &mdash; correct to flag this</label>
+          <label class="fb-opt"><input type="radio" name="fb2"> Bad escalation &mdash; should have auto-denied (no need for human)</label>
+          <label class="fb-opt"><input type="radio" name="fb2"> Needs policy update</label>
+        </div>
+        <textarea class="fb-text" placeholder="Optional: explain your reasoning..."></textarea>
+        <button class="fb-submit">Submit Review</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPOT CHECK: Auto-approved request -->
+  <div class="review-card" style="border-left:3px solid var(--green);">
+    <div class="rc-hd">
+      <span class="rc-badge auto">SPOT CHECK</span>
+      <span class="rc-id">GDO-4521</span>
+      <span>Sarah Chen &rarr; Read Fraud Models</span>
+      <span class="rc-time">3 hours ago</span>
+    </div>
+    <div class="rc-body">
+      <h3>Read access to fraud_detection_models &mdash; Auto-Approved</h3>
+      <div class="sub">Sarah Chen &middot; Senior Data Analyst &middot; 8 policy checks passed</div>
+
+      <div class="det"><span class="det-k">decision</span><span class="det-v" style="color:var(--green);font-weight:600;">AUTO-APPROVED</span></div>
+      <div class="det"><span class="det-k">reason</span><span class="det-v">Read + non-PII + valid justification + FTE + no MNPI + InfoSec current</span></div>
+      <div class="det"><span class="det-k">time</span><span class="det-v">635ms (4 agents, 0 human involvement)</span></div>
+
+      <div class="feedback" style="margin-top:14px;">
+        <div class="fb-title">Was this auto-approval correct?</div>
+        <div class="fb-options">
+          <label class="fb-opt"><input type="radio" name="fb3" checked> Correct &mdash; should have been approved</label>
+          <label class="fb-opt"><input type="radio" name="fb3"> Incorrect &mdash; should have been escalated</label>
+          <label class="fb-opt"><input type="radio" name="fb3"> Incorrect &mdash; should have been denied</label>
+        </div>
+        <textarea class="fb-text" placeholder="Optional: why?"></textarea>
+        <button class="fb-submit">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Already reviewed (collapsed) -->
+  <div class="review-card" style="opacity:.65;">
+    <div class="rc-hd">
+      <span class="rc-badge deny">DENIED</span>
+      <span class="rc-id">GDO-4518</span>
+      <span>unknown@visa.com &rarr; Admin All Datasets</span>
+      <span class="rc-time">Yesterday</span>
+    </div>
+    <div class="rc-body">
+      <div class="reviewed denied">Reviewed &mdash; Denial confirmed by M. Foster</div>
+      <div class="det"><span class="det-k">feedback</span><span class="det-v">"Good denial. Vague justification + admin scope = obvious reject. Policy working as intended."</span></div>
+      <div class="det"><span class="det-k">label</span><span class="det-v">Good denial &rarr; added to training set</span></div>
+    </div>
+  </div>
+
+</main>
+
+</body>
+</html>
