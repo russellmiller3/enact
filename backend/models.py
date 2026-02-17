@@ -23,6 +23,7 @@ class DatasetMatch(BaseModel):
     last_updated: str
     contains_pii: bool
     contains_mnpi: bool
+    pii_contractor_restriction: bool = False  # Add contractor restriction flag
     keywords: List[str]
     match_score: float
     matched_keywords: List[str]

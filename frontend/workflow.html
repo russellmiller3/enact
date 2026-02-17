@@ -825,6 +825,100 @@ function showDiscoveryModal(callback) {
   setTimeout(() => lucide.createIcons(), 50);
 }
 
+// NEW FUNCTION: Populate modal with actual discovery data
+function populateDiscoveryModal(discoveryData) {
+  const matches = discoveryData.matches;
+  
+  // Update intro text
+  const introText = document.querySelector('.disambiguation-intro p');
+  if (introText) {
+    introText.innerHTML = `<strong>I found ${matches.length} dataset${matches.length > 1 ? 's' : ''} matching your request.</strong> Please select which you need. Click "View Columns" to see what's in each table.`;
+  }
+  
+  // Get the container for dataset cards
+  const optionsContainer = document.querySelector('.dataset-options');
+  if (!optionsContainer) return;
+  
+  // Clear existing cards
+  optionsContainer.innerHTML = '';
+  
+  // Build a card for each match
+  matches.forEach((match, index) => {
+    // The match object IS the dataset details (DatasetMatch model)
+    const dataset = match;
+    const datasetId = `ds${index}`;
+    
+    // Classification badge
+    let badgeClass = 'badge-internal';
+    let badgeText = dataset.classification || 'Internal';
+    if (badgeText === 'Highly Restricted') badgeClass = 'badge-highly-restricted';
+    else if (badgeText === 'Restricted') badgeClass = 'badge-restricted';
+    else if (badgeText === 'Confidential') badgeClass = 'badge-confidential';
+    
+    // Build columns HTML
+    let columnsHtml = '';
+    if (dataset.columns) {
+      Object.entries(dataset.columns).forEach(([groupName, columnList]) => {
+        columnsHtml += `
+          <div class="column-group">
+            <h4>${groupName}</h4>
+            <div class="column-items">
+              ${columnList.map(col => `<div class="column-item">${col}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    // Special indicators
+    let specialIndicators = '';
+    if (dataset.contains_pii) {
+      specialIndicators += `<span class="meta-item"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#d97706;"></i>Contains PII</span>`;
+    }
+    if (dataset.pii_contractor_restriction) {
+      specialIndicators += `<span class="meta-item"><i data-lucide="alert-triangle" style="width:14px;height:14px;color:#d97706;"></i>No contractor access</span>`;
+    }
+    
+    // Build the card
+    const card = document.createElement('div');
+    card.className = 'dataset-card';
+    card.onclick = () => selectDataset(datasetId);
+    card.innerHTML = `
+      <input type="radio" name="dataset" id="${datasetId}" value="${dataset.dataset}">
+      <div class="dataset-content">
+        <div class="dataset-header">
+          <span class="dataset-name">${dataset.dataset}</span>
+          <span class="dataset-id">${dataset.id}</span>
+        </div>
+        <p class="dataset-description">${dataset.description}</p>
+        <div class="dataset-meta">
+          <span class="meta-item"><i data-lucide="database" style="width:14px;height:14px;"></i>${dataset.row_count} rows</span>
+          <span class="meta-item"><i data-lucide="columns-3" style="width:14px;height:14px;"></i>${dataset.column_count} columns</span>
+          <span class="badge ${badgeClass}">${badgeText}</span>
+        </div>
+        <div class="dataset-meta">
+          <span class="meta-item"><i data-lucide="users" style="width:14px;height:14px;"></i>Owner: ${dataset.owner}</span>
+          ${specialIndicators}
+        </div>
+        <div class="view-columns">
+          <div class="view-columns-toggle" onclick="event.stopPropagation();toggleColumns('columns${index}',this)">
+            <span>View Columns</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div id="columns${index}" class="columns-list">
+            ${columnsHtml}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    optionsContainer.appendChild(card);
+  });
+  
+  // Re-initialize Lucide icons for the new content
+  setTimeout(() => lucide.createIcons(), 50);
+}
+
 function selectDataset(datasetId) {
   document.getElementById(datasetId).checked = true;
   document.querySelectorAll('.dataset-card').forEach(card => {
@@ -872,6 +966,9 @@ function confirmSelection() {
   
   const datasetName = document.getElementById(selectedDatasetId).value;
   
+  // Store selected dataset for next workflow run
+  userSelectedDataset = datasetName;
+  
   // Update request text with selected dataset
   const currentText = document.getElementById('req').value;
   const updatedText = currentText.replace(/fraud data|fraud/i, datasetName);
@@ -906,6 +1003,9 @@ let workflowState = {
   doneData: null
 };
 
+// Track selected dataset to pass to backend
+let userSelectedDataset = null;
+
 // Event handler queue to ensure sequential execution
 let handlerQueue = Promise.resolve();
 function queueHandler(fn) {
@@ -931,8 +1031,12 @@ async function runWorkflow() {
   const requestText = document.getElementById('req').value;
   const requesterEmail = document.getElementById('userEmail').textContent;
   
-  // Open SSE connection to backend
-  const url = `http://localhost:8000/api/stream_workflow?request_text=${encodeURIComponent(requestText)}&requester_email=${encodeURIComponent(requesterEmail)}`;
+  // Build URL with optional selected_dataset parameter
+  let url = `http://localhost:8000/api/stream_workflow?request_text=${encodeURIComponent(requestText)}&requester_email=${encodeURIComponent(requesterEmail)}`;
+  if (userSelectedDataset) {
+    url += `&selected_dataset=${encodeURIComponent(userSelectedDataset)}`;
+    userSelectedDataset = null; // Reset after use
+  }
   
   console.log('🔌 Connecting to backend:', url);
   const eventSource = new EventSource(url);
@@ -1073,6 +1177,30 @@ async function runWorkflow() {
     document.getElementById('sl-discovery').className='st-label done';
     document.getElementById('sc-discovery').className='st-line done';
     document.getElementById('td-discovery').className='tl-dot done';
+    
+    // CRITICAL: If multiple matches, show modal and pause workflow
+    if (data.match_count > 1) {
+      console.log('🔀 Multiple matches detected, showing discovery modal');
+      document.getElementById('runHint').textContent = 'waiting for dataset selection...';
+      
+      // Close SSE connection - we'll restart after user selects
+      eventSource.close();
+      
+      // Populate modal with actual data
+      populateDiscoveryModal(data);
+      
+      // Show modal with callback to restart workflow with selected dataset
+      showDiscoveryModal(() => {
+        console.log('✅ Dataset selected, restarting workflow');
+        runWorkflow(); // This will start a new SSE connection with the updated request
+      });
+      
+      // Exit this handler - workflow will restart after selection
+      return;
+    }
+    
+    // Otherwise, continue with single match automatically
+    console.log('✓ Single match, continuing workflow automatically');
     });
   });
   

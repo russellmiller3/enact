@@ -161,6 +161,7 @@ def _build_dataset_match(dataset_name: str, dataset: dict, score: float, matched
         last_updated=dataset.get("last_updated", ""),
         contains_pii=dataset.get("contains_pii", False),
         contains_mnpi=dataset.get("contains_mnpi", False),
+        pii_contractor_restriction=dataset.get("pii_contractor_restriction", False),
         keywords=dataset.get("keywords", []),
         match_score=score,
         matched_keywords=matched_kw,
