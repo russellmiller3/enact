@@ -103,12 +103,57 @@ Port from `receipts.py` + add:
 - Return as structured dict (not just text file)
 - Write to `receipts/` directory (local, OSS)
 
+### Models (v1)
+
+```python
+class WorkflowContext(BaseModel):
+    workflow: str
+    actor_email: str
+    payload: dict
+    systems: dict           # connector instances keyed by name
+
+class PolicyResult(BaseModel):
+    policy: str
+    passed: bool
+    reason: str
+
+class ActionResult(BaseModel):
+    action: str             # e.g. "create_contact"
+    system: str             # e.g. "hubspot"
+    success: bool
+    output: dict            # raw response from the connector
+
+class Receipt(BaseModel):
+    run_id: str             # UUID
+    workflow: str
+    actor_email: str
+    payload: dict
+    policy_results: list[PolicyResult]
+    decision: str           # "PASS" | "BLOCK"
+    actions_taken: list[ActionResult]   # empty if BLOCK
+    timestamp: str          # ISO8601
+    signature: str          # HMAC-SHA256 hex digest
+
+class RunResult(BaseModel):
+    success: bool
+    workflow: str
+    output: dict
+```
+
 ### EnactClient (v1)
 ```python
 class EnactClient:
     def __init__(self, systems, policies, workflows): ...
     def run(self, workflow, actor_email, payload) -> tuple[dict, Receipt]: ...
 ```
+
+`run()` execution order:
+1. Build `WorkflowContext` from args + registered systems
+2. Run all registered policies → `list[PolicyResult]`
+3. If any policy fails → `decision = BLOCK`, write receipt (`actions_taken=[]`), return `RunResult(success=False)`
+4. If all pass → `decision = PASS`, execute workflow → `list[ActionResult]`
+5. Write signed receipt (includes `actions_taken`)
+6. Return `RunResult(success=True, output=...)`
 
 ---
 
@@ -153,10 +198,10 @@ enact/
 ## Build Order
 
 ### Phase 1 — Core SDK (no external deps, fully testable with mocks)
-1. `enact/models.py` — `PolicyResult`, `Receipt`, `RunResult`, `WorkflowContext`
+1. `enact/models.py` — `WorkflowContext`, `PolicyResult`, `ActionResult`, `Receipt`, `RunResult`
 2. `enact/policy.py` — generalize from `backend/agents/policy.py`
 3. `enact/receipt.py` — port from `backend/receipts.py` + HMAC signing
-4. `enact/client.py` — `EnactClient.__init__` + `run()`
+4. `enact/client.py` — `EnactClient.__init__` + `run()` (policy gate + workflow execution)
 5. Tests for policy engine + receipt writer
 
 ### Phase 2 — Postgres Connector
