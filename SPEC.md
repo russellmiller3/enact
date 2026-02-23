@@ -15,6 +15,17 @@ An action firewall for AI agents. Three things:
 
 Single call from your agent:
 ```python
+from enact import EnactClient
+from enact.connectors.hubspot import HubSpotConnector
+from enact.workflows.new_lead import new_lead_workflow
+from enact.policies.crm import no_duplicate_contacts
+
+enact = EnactClient(
+    systems={"hubspot": HubSpotConnector(api_key="...")},
+    policies=[no_duplicate_contacts],
+    workflows=[new_lead_workflow],
+)
+
 result, receipt = enact.run(
     workflow="new_lead_workflow",
     actor_email="agent@company.com",
@@ -80,18 +91,18 @@ def no_duplicate_contacts(context):
 
 Built-in policies to ship:
 
-**CRM (`policies/crm.py`)**
+**CRM (`enact/policies/crm.py`)**
 - `no_duplicate_contacts()`
 - `limit_tasks_per_contact(max_tasks, window_days)`
 
-**Access (`policies/access.py`)**
+**Access (`enact/policies/access.py`)**
 - `contractor_cannot_write_pii()`
 - `require_actor_role(allowed_roles)`
 
-**Time (`policies/time.py`)**
+**Time (`enact/policies/time.py`)**
 - `within_maintenance_window(start_utc, end_utc)`
 
-**Git (`policies/git.py`)**
+**Git (`enact/policies/git.py`)**
 - `no_push_to_main()` — blocks any push directly to main/master
 - `no_push_during_deploy_freeze(start_utc, end_utc)` — time-based block
 - `max_files_per_commit(n)` — blast radius control
@@ -144,7 +155,7 @@ class RunResult(BaseModel):
 ```python
 class EnactClient:
     def __init__(self, systems, policies, workflows): ...
-    def run(self, workflow, actor_email, payload) -> tuple[dict, Receipt]: ...
+    def run(self, workflow, actor_email, payload) -> tuple[RunResult, Receipt]: ...
 ```
 
 `run()` execution order:
@@ -166,20 +177,23 @@ enact/
 │   ├── client.py             # EnactClient — main entry point
 │   ├── policy.py             # Policy engine (ported from agents/policy.py)
 │   ├── receipt.py            # Receipt writer (ported from receipts.py)
-│   ├── models.py             # PolicyResult, Receipt, RunResult
+│   ├── models.py             # WorkflowContext, PolicyResult, ActionResult, Receipt, RunResult
 │   ├── connectors/
 │   │   ├── __init__.py
 │   │   ├── hubspot.py        # HubSpot connector (hubspot-api-client)
-│   │   └── postgres.py       # Postgres connector (psycopg2)
-│   └── workflows/
+│   │   ├── postgres.py       # Postgres connector (psycopg2)
+│   │   └── github.py         # GitHub connector (PyGithub)
+│   ├── workflows/
+│   │   ├── __init__.py
+│   │   ├── new_lead.py           # new_lead_workflow reference impl
+│   │   ├── db_safe_insert.py     # db_safe_insert_workflow reference impl
+│   │   └── agent_pr_workflow.py  # agent_pr_workflow reference impl
+│   └── policies/             # Built-in policy functions (ships with pip install enact)
 │       ├── __init__.py
-│       ├── new_lead.py       # new_lead_workflow reference impl
-│       └── db_insert.py      # db_insert_workflow reference impl
-├── policies/                 # Built-in policy functions
-│   ├── __init__.py
-│   ├── crm.py                # no_duplicate_contacts, limit_tasks_per_contact
-│   ├── access.py             # contractor_cannot_write_pii, require_actor_role
-│   └── time.py               # within_maintenance_window
+│       ├── crm.py            # no_duplicate_contacts, limit_tasks_per_contact
+│       ├── access.py         # contractor_cannot_write_pii, require_actor_role
+│       ├── git.py            # no_push_to_main, max_files_per_commit, require_branch_prefix
+│       └── time.py           # within_maintenance_window
 ├── tests/
 │   ├── test_policy_engine.py # Port + expand from test_policy_agent.py
 │   ├── test_receipt.py
@@ -213,13 +227,13 @@ enact/
 ### Phase 3 — GitHub Connector
 10. `enact/connectors/github.py` — `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr`
 11. `enact/workflows/agent_pr_workflow.py` — reference workflow
-12. `policies/git.py` — `no_push_to_main()`, `no_push_during_deploy_freeze()`, `max_files_per_commit(n)`
+12. `enact/policies/git.py` — `no_push_to_main()`, `no_push_during_deploy_freeze()`, `max_files_per_commit(n)`
 13. Tests with mocked `PyGithub`
 
 ### Phase 4 — Policies + HubSpot
-14. `policies/crm.py` — `no_duplicate_contacts()`, `limit_tasks_per_contact(max, window_days)`
-15. `policies/access.py` — `contractor_cannot_write_pii()`, `require_actor_role(roles)`
-16. `policies/time.py` — `within_maintenance_window(start_utc, end_utc)`
+14. `enact/policies/crm.py` — `no_duplicate_contacts()`, `limit_tasks_per_contact(max, window_days)`
+15. `enact/policies/access.py` — `contractor_cannot_write_pii()`, `require_actor_role(roles)`
+16. `enact/policies/time.py` — `within_maintenance_window(start_utc, end_utc)`
 17. `enact/connectors/hubspot.py` — `create_contact`, `update_deal`, `create_task`, `get_contact`
 18. `enact/workflows/new_lead.py` — reference workflow
 19. `examples/quickstart.py` — must match landing page code exactly
