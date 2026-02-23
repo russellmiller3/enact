@@ -79,11 +79,23 @@ def no_duplicate_contacts(context):
 ```
 
 Built-in policies to ship:
+
+**CRM (`policies/crm.py`)**
 - `no_duplicate_contacts()`
-- `contractor_cannot_write_pii()`
 - `limit_tasks_per_contact(max_tasks, window_days)`
-- `within_maintenance_window(start_utc, end_utc)`
+
+**Access (`policies/access.py`)**
+- `contractor_cannot_write_pii()`
 - `require_actor_role(allowed_roles)`
+
+**Time (`policies/time.py`)**
+- `within_maintenance_window(start_utc, end_utc)`
+
+**Git (`policies/git.py`)**
+- `no_push_to_main()` — blocks any push directly to main/master
+- `no_push_during_deploy_freeze(start_utc, end_utc)` — time-based block
+- `max_files_per_commit(n)` — blast radius control
+- `require_branch_prefix(prefix)` — e.g. agent branches must start with `agent/`
 
 ### Receipt Writer (v1)
 Port from `receipts.py` + add:
