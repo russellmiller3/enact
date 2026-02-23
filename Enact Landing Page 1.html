@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enact - Stop your AI agents from doing dumb sh*t</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg: #0a0a0a;
+            --color-surface: #1a1a1a;
+            --color-border: #2a2a2a;
+            --color-text: #ffffff;
+            --color-text-muted: #a0a0a0;
+            --color-accent: #00ff88;
+            --color-accent-dim: #00cc6a;
+            --color-red: #ff4444;
+            --color-amber: #ffaa00;
+            --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Header */
+        header {
+            padding: 24px 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-accent);
+            font-family: var(--font-mono);
+        }
+
+        nav a {
+            color: var(--color-text-muted);
+            text-decoration: none;
+            margin-left: 32px;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        nav a:hover {
+            color: var(--color-text);
+        }
+
+        /* Hero */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 56px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .hero h1 {
+            background: linear-gradient(135deg, var(--color-text) 0%, var(--color-accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subhead {
+            font-size: 20px;
+            color: var(--color-text-muted);
+            max-width: 700px;
+            margin: 0 auto 40px;
+            line-height: 1.5;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-block;
+            font-family: var(--font-mono);
+        }
+
+        .btn-primary {
+            background: var(--color-accent);
+            color: var(--color-bg);
+            border: 2px solid var(--color-accent);
+        }
+
+        .btn-primary:hover {
+            background: var(--color-accent-dim);
+            border-color: var(--color-accent-dim);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--color-text);
+            border: 2px solid var(--color-border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--color-accent);
+            color: var(--color-accent);
+        }
+
+        /* Problem section */
+        .problem {
+            padding: 80px 0;
+            background: var(--color-surface);
+        }
+
+        .problem h2 {
+            font-size: 36px;
+            margin-bottom: 32px;
+            text-align: center;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .problem-card {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 32px;
+        }
+
+        .problem-card h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: var(--color-red);
+        }
+
+        .problem-card p {
+            color: var(--color-text-muted);
+            line-height: 1.6;
+        }
+
+        /* How it works */
+        .how-it-works {
+            padding: 80px 0;
+        }
+
+        .how-it-works h2 {
+            font-size: 36px;
+            margin-bottom: 64px;
+            text-align: center;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 48px;
+        }
+
+        .step {
+            position: relative;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--color-accent);
+            color: var(--color-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            margin-bottom: 16px;
+            font-family: var(--font-mono);
+        }
+
+        .step h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .step p {
+            color: var(--color-text-muted);
+            line-height: 1.6;
+        }
+
+        .step code {
+            background: var(--color-surface);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--color-accent);
+        }
+
+        /* Code example */
+        .code-example {
+            padding: 80px 0;
+            background: var(--color-surface);
+        }
+
+        .code-example h2 {
+            font-size: 36px;
+            margin-bottom: 48px;
+            text-align: center;
+        }
+
+        pre {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 32px;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .code-keyword { color: #ff79c6; }
+        .code-function { color: #50fa7b; }
+        .code-string { color: #f1fa8c; }
+        .code-comment { color: #6272a4; }
+
+        /* What you get */
+        .benefits {
+            padding: 80px 0;
+        }
+
+        .benefits h2 {
+            font-size: 36px;
+            margin-bottom: 64px;
+            text-align: center;
+        }
+
+        .benefit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 40px;
+        }
+
+        .benefit {
+            text-align: center;
+        }
+
+        .benefit-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--color-surface);
+            border: 2px solid var(--color-accent);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 32px;
+        }
+
+        .benefit h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .benefit p {
+            color: var(--color-text-muted);
+            line-height: 1.6;
+        }
+
+        /* Receipt example */
+        .receipt-example {
+            padding: 80px 0;
+            background: var(--color-surface);
+        }
+
+        .receipt-example h2 {
+            font-size: 36px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .receipt-example .subtext {
+            text-align: center;
+            color: var(--color-text-muted);
+            margin-bottom: 48px;
+        }
+
+        .receipt {
+            background: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 32px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.8;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .receipt-header {
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+
+        .receipt-status {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--color-accent);
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .receipt-section {
+            margin-top: 24px;
+        }
+
+        .receipt-section h4 {
+            color: var(--color-accent);
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .receipt-row {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .receipt-label {
+            color: var(--color-text-muted);
+            width: 180px;
+            flex-shrink: 0;
+        }
+
+        .receipt-value {
+            color: var(--color-text);
+        }
+
+        .policy-check {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: var(--color-surface);
+            border-radius: 6px;
+        }
+
+        .policy-badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .badge-pass {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--color-accent);
+        }
+
+        .policy-name {
+            flex: 1;
+        }
+
+        /* CTA Footer */
+        .cta-footer {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .cta-footer h2 {
+            font-size: 42px;
+            margin-bottom: 24px;
+        }
+
+        .cta-footer p {
+            font-size: 18px;
+            color: var(--color-text-muted);
+            margin-bottom: 40px;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--color-border);
+            text-align: center;
+            color: var(--color-text-muted);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 36px;
+            }
+
+            .subhead {
+                font-size: 18px;
+            }
+
+            .cta-group {
+                flex-direction: column;
+            }
+
+            .steps {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                padding: 60px 0 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">enact</div>
+                <nav>
+                    <a href="#how">How it works</a>
+                    <a href="#benefits">Benefits</a>
+                    <a href="#receipt">See receipt</a>
+                    <a href="https://github.com/yourusername/enact">GitHub</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Stop your AI agents from<br>doing dumb sh*t. And prove it.</h1>
+            <p class="subhead">
+                Enact is an action firewall for AI agents. It only lets them take the SaaS actions you approve—under your policies—and gives you a human-readable receipt for every run.
+            </p>
+            <div class="cta-group">
+                <a href="#" class="btn btn-primary">pip install enact</a>
+                <a href="#receipt" class="btn btn-secondary">View example receipt</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="problem">
+        <div class="container">
+            <h2>AI agents are great at doing work.<br>They're terrible at knowing where the line is.</h2>
+            
+            <div class="problem-grid">
+                <div class="problem-card">
+                    <h3>⚠️ Data gets wrecked</h3>
+                    <p>Duplicate contacts, overwritten deals, spam emails. Your CRM becomes a mess and you spend Fridays cleaning it up.</p>
+                </div>
+                <div class="problem-card">
+                    <h3>❌ No visibility</h3>
+                    <p>You don't have a clean answer to "who did what, when, and why?" when your boss or auditor asks.</p>
+                </div>
+                <div class="problem-card">
+                    <h3>🔁 Reinvent every time</h3>
+                    <p>Every new agent means re-implementing the same safety logic, state checks, and logging again.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="how">
+        <div class="container">
+            <h2>How it works</h2>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Pick your systems</h3>
+                    <p>Start with first-class support for <code>HubSpot</code>, <code>Salesforce</code>, and <code>Postgres</code>. Enact ships canonical actions like <code>create_contact</code>, <code>update_deal</code>, <code>insert_row</code>.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Define your policies</h3>
+                    <p>Use a simple Python DSL to define global and user-based policies. No LLMs. Just deterministic functions versioned in Git.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Define workflows</h3>
+                    <p>Describe the workflows your agent is allowed to run: <code>new_lead_workflow</code>, <code>enrich_and_route</code>, <code>convert_to_opportunity</code>.</p>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Call Enact</h3>
+                    <p>Your agent calls a single function. Enact validates state, runs policies, executes allowed actions, and returns both the result and a human-readable receipt.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="code-example">
+        <div class="container">
+            <h2>Ship agents in days, not weeks</h2>
+            
+            <pre><code><span class="code-keyword">from</span> enact <span class="code-keyword">import</span> EnactClient, workflows, policies
+
+enact = <span class="code-function">EnactClient</span>(
+    systems=[
+        <span class="code-function">HubSpot</span>(api_key=<span class="code-string">"..."</span>),
+        <span class="code-function">Salesforce</span>(api_key=<span class="code-string">"..."</span>),
+        <span class="code-function">Postgres</span>(dsn=<span class="code-string">"..."</span>),
+    ],
+    policies=[
+        policies.<span class="code-function">no_duplicate_contacts</span>(),
+        policies.<span class="code-function">contractor_cannot_write_pii</span>(),
+        policies.<span class="code-function">limit_tasks_per_contact</span>(max_tasks=<span class="code-string">3</span>, window_days=<span class="code-string">7</span>),
+    ],
+    workflows=[
+        workflows.new_lead_workflow,
+        workflows.convert_lead_workflow,
+    ],
+)
+
+<span class="code-comment"># Your agent calls this</span>
+result, receipt = enact.<span class="code-function">run</span>(
+    workflow=<span class="code-string">"new_lead_workflow"</span>,
+    actor_email=<span class="code-string">"agent@company.com"</span>,
+    payload={
+        <span class="code-string">"email"</span>: <span class="code-string">"jane@acme.com"</span>,
+        <span class="code-string">"company"</span>: <span class="code-string">"Acme Inc"</span>,
+        <span class="code-string">"source"</span>: <span class="code-string">"outbound"</span>,
+    },
+)
+
+<span class="code-comment"># Result: contact created, deal created, receipt generated</span>
+</code></pre>
+        </div>
+    </section>
+
+    <section class="benefits" id="benefits">
+        <div class="container">
+            <h2>What you get</h2>
+            
+            <div class="benefit-grid">
+                <div class="benefit">
+                    <div class="benefit-icon">🔒</div>
+                    <h3>Deterministic runs</h3>
+                    <p>Same inputs, same state, same policies → same decision every time. No surprise side effects.</p>
+                </div>
+
+                <div class="benefit">
+                    <div class="benefit-icon">📋</div>
+                    <h3>Global policies, enforced everywhere</h3>
+                    <p>Define rules once. Enact enforces them across all agents and workflows. No manual enforcement.</p>
+                </div>
+
+                <div class="benefit">
+                    <div class="benefit-icon">📄</div>
+                    <h3>Receipts, not just logs</h3>
+                    <p>Plain-English receipts showing who, what, why, every policy check, and what changed. Hand it to your boss or auditor.</p>
+                </div>
+
+                <div class="benefit">
+                    <div class="benefit-icon">⚡</div>
+                    <h3>Ship faster</h3>
+                    <p>Stop reimplementing safety logic. Use battle-tested CRM workflows and policy functions out of the box.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="receipt-example" id="receipt">
+        <div class="container">
+            <h2>Example: Safe new-lead workflow</h2>
+            <p class="subtext">Agent wants to add "jane@acme.com" as a new lead.</p>
+            
+            <div class="receipt">
+                <div class="receipt-header">
+                    <div class="receipt-row">
+                        <div class="receipt-label">Request ID:</div>
+                        <div class="receipt-value">REQ-08471</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">Timestamp:</div>
+                        <div class="receipt-value">2026-02-22 06:22:15 UTC</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">Decision:</div>
+                        <div class="receipt-value"><span class="receipt-status">APPROVED</span></div>
+                    </div>
+                </div>
+
+                <div class="receipt-section">
+                    <h4>REQUEST DETAILS</h4>
+                    <div class="receipt-row">
+                        <div class="receipt-label">WHO:</div>
+                        <div class="receipt-value">revops-agent@company.com</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">WHAT:</div>
+                        <div class="receipt-value">new_lead_workflow for jane@acme.com</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">REASON:</div>
+                        <div class="receipt-value">outbound prospecting - ICP match</div>
+                    </div>
+                </div>
+
+                <div class="receipt-section">
+                    <h4>POLICY EVALUATION</h4>
+                    
+                    <div class="policy-check">
+                        <div class="policy-badge badge-pass">✓</div>
+                        <div class="policy-name">
+                            <div><strong>Duplicate Contact Check</strong></div>
+                            <div style="color: var(--color-text-muted); font-size: 12px;">No existing contact with email jane@acme.com</div>
+                        </div>
+                    </div>
+
+                    <div class="policy-check">
+                        <div class="policy-badge badge-pass">✓</div>
+                        <div class="policy-name">
+                            <div><strong>ICP Company Match</strong></div>
+                            <div style="color: var(--color-text-muted); font-size: 12px;">Company "Acme Inc" matches ICP criteria (tech, 50-500 employees)</div>
+                        </div>
+                    </div>
+
+                    <div class="policy-check">
+                        <div class="policy-badge badge-pass">✓</div>
+                        <div class="policy-name">
+                            <div><strong>Task Limit Check</strong></div>
+                            <div style="color: var(--color-text-muted); font-size: 12px;">Contact has 0 tasks (limit: 3 per week)</div>
+                        </div>
+                    </div>
+
+                    <div class="policy-check">
+                        <div class="policy-badge badge-pass">✓</div>
+                        <div class="policy-name">
+                            <div><strong>Contractor Write Restriction</strong></div>
+                            <div style="color: var(--color-text-muted); font-size: 12px;">Agent is FTE (contractors cannot create deals)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="receipt-section">
+                    <h4>ACTIONS EXECUTED</h4>
+                    <div class="receipt-row">
+                        <div class="receipt-label">HubSpot:</div>
+                        <div class="receipt-value">Created contact (ID: 847291)</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">HubSpot:</div>
+                        <div class="receipt-value">Created deal (ID: 938471, value: $25,000)</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">HubSpot:</div>
+                        <div class="receipt-value">Created task for AE (assigned to: sales@company.com)</div>
+                    </div>
+                </div>
+
+                <div class="receipt-section">
+                    <h4>TECHNICAL LOG</h4>
+                    <div class="receipt-row">
+                        <div class="receipt-label">Total Execution:</div>
+                        <div class="receipt-value">1,247ms</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">Policy Checks:</div>
+                        <div class="receipt-value">4 passed, 0 failed</div>
+                    </div>
+                    <div class="receipt-row">
+                        <div class="receipt-label">Actions Run:</div>
+                        <div class="receipt-value">3 (all succeeded)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-footer">
+        <div class="container">
+            <h2>Ready to ship safe agents?</h2>
+            <p>Install Enact and get your first workflow running in under 10 minutes.</p>
+            <div class="cta-group">
+                <a href="#" class="btn btn-primary">pip install enact</a>
+                <a href="https://github.com/yourusername/enact" class="btn btn-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>Built for developers who need their AI agents to not screw things up.</p>
+            <p style="margin-top: 8px;">© 2026 Enact. Open source. SOC2-ready out of the box.</p>
+        </div>
+    </footer>
+</body>
+</html>
