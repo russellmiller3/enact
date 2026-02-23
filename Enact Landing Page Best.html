@@ -115,7 +115,6 @@
         .split-table tr:hover td { background: rgba(74,111,165,.04); }
         .check { color: var(--green); }
         .cross { color: var(--red); }
-        .split-note { margin-top: 28px; padding: 20px 24px; background: rgba(74,111,165,.07); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 14px; color: var(--muted); line-height: 1.7; }
 
         /* ── PRICING ── */
         .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 980px; margin: 0 auto; }
@@ -144,6 +143,11 @@
         .footer-cta h2 { font-size: 38px; margin-bottom: 16px; }
         .footer-cta p { color: var(--muted); font-size: 17px; margin-bottom: 36px; }
         footer { padding: 32px 0; border-top: 1px solid var(--border); text-align: center; color: var(--subtle); font-size: 13px; }
+
+        /* ── LUCIDE ICONS ── */
+        .icon { display: flex; align-items: center; justify-content: center; }
+        .pillar-icon { width: 40px; height: 40px; color: var(--accent); margin-bottom: 16px; }
+        .problem-icon { width: 24px; height: 24px; color: var(--red); display: inline-block; vertical-align: middle; margin-right: 8px; position: relative; top: -2px; }
 
         /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
@@ -198,17 +202,17 @@
     <div class="container">
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--border); border-radius: 12px; overflow: hidden;">
             <div style="background: var(--surface); padding: 36px 32px;">
-                <div style="font-size: 28px; margin-bottom: 14px;">🔒</div>
+                <i data-lucide="shield" class="pillar-icon"></i>
                 <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Vetted action allowlist</h3>
                 <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Define exactly which actions each agent can call — per system, per workflow, per actor. If it's not on the list, it doesn't exist.</p>
             </div>
             <div style="background: var(--surface); padding: 36px 32px;">
-                <div style="font-size: 28px; margin-bottom: 14px;">⚙️</div>
+                <i data-lucide="cpu" class="pillar-icon"></i>
                 <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Deterministic policy engine</h3>
                 <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Rules are Python functions — no LLMs in the decision path. Versioned in Git, testable with pytest. Same input always produces the same decision.</p>
             </div>
             <div style="background: var(--surface); padding: 36px 32px;">
-                <div style="font-size: 28px; margin-bottom: 14px;">📄</div>
+                <i data-lucide="file-text" class="pillar-icon"></i>
                 <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Human-readable receipts</h3>
                 <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Every run returns who, what, why, every policy check pass/fail, and what changed. Hand it to your auditor, link it in a postmortem, paste it in Slack.</p>
             </div>
@@ -242,15 +246,15 @@
         <p style="text-align:center; font-size:16px; font-weight:700; margin-bottom:32px;">Your agents have the same vulnerabilities.</p>
         <div class="problem-grid">
             <div class="problem-card">
-                <h3>💥 The blast radius problem</h3>
+                <h3><i data-lucide="zap" class="problem-icon"></i>The blast radius problem</h3>
                 <p>Your agents have access to everything. You've defined access to nothing. One bad prompt away from a production database wipe or irreversible data loss.</p>
             </div>
             <div class="problem-card">
-                <h3>🚫 No decision logic</h3>
+                <h3><i data-lucide="shield-off" class="problem-icon"></i>No decision logic</h3>
                 <p>There's no code that says "don't drop a table outside a maintenance window" or "don't bulk-email every customer from a draft." Every agent is one prompt away from a live incident.</p>
             </div>
             <div class="problem-card">
-                <h3>📭 No proof</h3>
+                <h3><i data-lucide="search-x" class="problem-icon"></i>No proof</h3>
                 <p>When your auditor or VP asks "what did the agent actually do?", you're digging through CloudWatch logs at 2am. No audit trail. No compliance path.</p>
             </div>
         </div>
@@ -453,9 +457,7 @@ result, receipt = enact.<span class="fn">run</span>(
 ════════════════════════════════════════════════════ -->
 <section>
     <div class="container">
-        <div class="section-label">Open source &amp; Cloud</div>
-        <h2>The right split</h2>
-        <p class="section-sub">Don't think of it as "what do I withhold" — think "what makes Cloud irreplaceable over time."</p>
+        <h2>Self-Hosted vs Cloud</h2>
 
         <table class="split-table">
             <thead>
@@ -477,14 +479,14 @@ result, receipt = enact.<span class="fn">run</span>(
                     <td><span class="check">✓</span> Yes</td>
                 </tr>
                 <tr>
-                    <td>Example workflows</td>
-                    <td><span class="check">✓</span> 1–2 thin reference impls</td>
-                    <td>—</td>
+                    <td>Workflows</td>
+                    <td><span class="check">✓</span> Reference implementations</td>
+                    <td><span class="check">✓</span> Validated workflow library — versioned, red-teamed, maintained</td>
                 </tr>
-                <tr>
-                    <td>Validated workflow library</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="check">✓</span> Versioned, red-teamed, maintained</td>
+                <tr style="background: rgba(74,111,165,.06); box-shadow: inset 3px 0 0 var(--accent);">
+                    <td style="font-weight:600; padding-left:17px;">Real-time alerting</td>
+                    <td><span class="cross">✗</span> Console logs</td>
+                    <td><span class="check">✓</span> SMS, phone call, PagerDuty, Slack — <em style="color:var(--muted);">know at 3:57am, not standup</em></td>
                 </tr>
                 <tr>
                     <td>Receipt search + UI</td>
@@ -492,26 +494,13 @@ result, receipt = enact.<span class="fn">run</span>(
                     <td><span class="check">✓</span> Sub-second search by actor, date, outcome</td>
                 </tr>
                 <tr>
-                    <td>Real-time alerting</td>
-                    <td><span class="cross">✗</span> Console logs</td>
-                    <td><span class="check">✓</span> SMS, phone call, PagerDuty, Slack</td>
-                </tr>
-                <tr>
                     <td>Retention + SIEM export</td>
                     <td><span class="cross">✗</span></td>
                     <td><span class="check">✓</span> 90-day / 1-year · Splunk, Sentinel</td>
                 </tr>
-                <tr>
-                    <td>New connector integrations</td>
-                    <td>Community</td>
-                    <td><span class="check">✓</span> Yours first</td>
-                </tr>
             </tbody>
         </table>
 
-        <div class="split-note">
-            The OSS workflows are <strong>thin scaffolding</strong> — they show the pattern, not the battle-hardened implementation. Cloud workflows are <strong>opinionated, versioned, and trusted</strong> — they handle edge cases someone got burned by. A platform engineer doesn't want to write <span class="inline-code">rotate_db_credentials</span> from scratch and wonder if they covered every edge case. That's trust as a product.
-        </div>
     </div>
 </section>
 
@@ -613,7 +602,7 @@ result, receipt = enact.<span class="fn">run</span>(
 <footer>
     <div class="container">
         <p>Built for engineers who can't afford to find out what happens when an agent goes off-script.</p>
-        <p style="margin-top:6px;">© 2026 Enact · Open source · <a href="https://github.com/yourusername/enact" style="color:var(--accent);">GitHub</a></p>
+        <p style="margin-top:6px;">© 2026 Enact · Open source · Audit-trail ready · <a href="https://github.com/yourusername/enact" style="color:var(--accent);">GitHub</a></p>
     </div>
 </footer>
 
@@ -626,5 +615,7 @@ result, receipt = enact.<span class="fn">run</span>(
     }
 </script>
 
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
 </body>
 </html>

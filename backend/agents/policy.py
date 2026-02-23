@@ -129,6 +129,10 @@ def _compute_badge(check_result: dict, policy_name: str, access_level: str = "re
     if "PII" in policy_type and "Contractor" in check_result.get("user_value", ""):
         return "a"
     
+    # Contractor escalation policy: always escalate (amber)
+    if "Contractor Escalation" in policy_type:
+        return "a"
+    
     # Low confidence: escalation (amber)
     if "confidence" in policy_name.lower():
         return "a"
@@ -185,6 +189,8 @@ def _generate_escalate_note(amber_flags: list, user: dict, justification: str) -
     for flag in amber_flags:
         if "Access Level" in flag.policy:
             reasons.append("Write/Admin access requires manager approval")
+        elif "Contractor Escalation" in flag.policy:
+            reasons.append("Contractor access requires manager approval")
         elif "Contractor" in flag.user_value:
             reasons.append("Contractor access to PII data requires manager approval")
         else:

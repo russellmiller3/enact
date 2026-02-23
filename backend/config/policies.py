@@ -132,6 +132,25 @@ def check_time_limited_access(user, dataset, access_level):
         "match": True
     }
 
+def check_contractor_escalation(user, dataset, access_level):
+    """ALL contractors require manager approval escalation - FTE only for auto-approve"""
+    emp_type = user.get("employee_type")
+    
+    if emp_type == "Contractor":
+        return {
+            "policy": "Contractor Escalation",
+            "requirement": "FTE only for auto-approval",
+            "user_value": "Contractor (requires manager approval)",
+            "match": False  # Forces escalation via amber badge
+        }
+    
+    return {
+        "policy": "Contractor Escalation",
+        "requirement": "FTE only for auto-approval",
+        "user_value": f"{emp_type} (verified)" if emp_type else "No employment type",
+        "match": True
+    }
+
 # Policy registry
 ABAC_POLICIES = [
     check_role_authorization,
@@ -141,5 +160,6 @@ ABAC_POLICIES = [
     check_training_requirements,
     check_employment_type,
     check_mnpi_blackout,
-    check_time_limited_access
+    check_time_limited_access,
+    check_contractor_escalation
 ]
