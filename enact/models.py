@@ -86,6 +86,9 @@ class ActionResult(BaseModel):
     success: bool
     # Raw connector response. Always a dict so receipts are cleanly serialisable to JSON.
     output: dict = Field(default_factory=dict)
+    # Pre-action state needed to reverse this action at rollback time.
+    # Connectors populate this before mutating. Empty dict = not reversible or read-only.
+    rollback_data: dict = Field(default_factory=dict)
 
 
 class Receipt(BaseModel):
@@ -116,8 +119,10 @@ class Receipt(BaseModel):
     actor_email: str
     payload: dict
     policy_results: list[PolicyResult]
-    # Literal type enforces that only "PASS" or "BLOCK" can be stored.
-    decision: Literal["PASS", "BLOCK"]
+    # "PASS" = all policies passed and workflow ran
+    # "BLOCK" = at least one policy failed
+    # "PARTIAL" = rollback ran but some actions could not be reversed (irreversible)
+    decision: Literal["PASS", "BLOCK", "PARTIAL"]
     # Empty list (not None) when BLOCK — makes serialisation consistent.
     actions_taken: list[ActionResult] = Field(default_factory=list)
     # Set by receipt.build_receipt() at construction time — always UTC.

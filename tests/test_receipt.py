@@ -2,7 +2,7 @@ import json
 import os
 import pytest
 from enact.receipt import build_receipt, sign_receipt, verify_signature, write_receipt
-from enact.models import PolicyResult, ActionResult
+from enact.models import PolicyResult, ActionResult, Receipt
 
 
 @pytest.fixture
@@ -169,3 +169,35 @@ class TestWriteReceipt:
         new_dir = str(tmp_path / "nested" / "receipts")
         filepath = write_receipt(receipt, directory=new_dir)
         assert os.path.exists(filepath)
+
+
+class TestActionResultRollbackData:
+    def test_action_result_has_rollback_data_field(self):
+        """rollback_data defaults to empty dict — backward compatible."""
+        result = ActionResult(action="create_branch", system="github", success=True, output={})
+        assert result.rollback_data == {}
+
+    def test_action_result_rollback_data_can_be_set(self):
+        result = ActionResult(
+            action="create_branch",
+            system="github",
+            success=True,
+            output={"branch": "agent/x"},
+            rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+        )
+        assert result.rollback_data["branch"] == "agent/x"
+
+    def test_receipt_decision_accepts_partial(self):
+        """
+        Receipt.decision Literal must include "PARTIAL" — rollback() sets this
+        when some actions could not be reversed. Without it, Pydantic raises
+        ValidationError and the rollback call crashes.
+        """
+        receipt = build_receipt(
+            workflow="rollback:test_workflow",
+            actor_email="agent@test.com",
+            payload={"original_run_id": "abc", "rollback": True},
+            policy_results=[],
+            decision="PARTIAL",
+        )
+        assert receipt.decision == "PARTIAL"
