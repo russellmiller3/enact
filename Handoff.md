@@ -71,11 +71,11 @@ examples/quickstart.py
 - Connectors use allowlist pattern — every method checks `_check_allowed()` before API call
 - Pre-commit hook at `.git/hooks/pre-commit` runs full pytest before every commit
 
-### Next Steps (pick any)
-- Build `PostgresConnector` (psycopg2) and wire it into db_safe_insert tests
-- Build `HubSpotConnector` and wire no_duplicate_contacts live lookup
-- Publish to PyPI (`enact` name — check availability first)
-- Open PR on GitHub to merge `feature/enact-sdk-v1` → `master` if not done
+### Next Steps (priority order)
+1. **Publish to PyPI** — package is ready. Verify `enact` name available on pypi.org, then `python -m build && twine upload dist/*`. Makes `pip install enact` real.
+2. **`PostgresConnector`** — `db_safe_insert` already tested with mocks; real connector needs psycopg2 + `select_rows()`, `insert_row()`, `delete_row()`. Works with Supabase/Neon/RDS.
+3. **`HubSpotConnector`** — `no_duplicate_contacts` already calls `hubspot.get_contact(email)`; just needs the connector class. Use HubSpot free sandbox to test.
+4. **Demo agent** — script using `EnactClient` + `GitHubConnector` end-to-end: triage issue → create branch → open PR. Good for README video / landing page.
 
 ### Files to Reference
 - `SPEC.md` — full build plan with ✅/⏭️/🔜 status markers
