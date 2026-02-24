@@ -7,19 +7,36 @@
 
 ## Strategic Thesis
 
-**Why this matters now.** Gartner forecasts 40% of enterprise apps will feature AI agents by 2026, up from <5% in 2025. 57% of organisations already have agents in production. The problem they all share: agents can do anything, and there's no enforcement layer, audit trail, or governance primitive. Enact is that layer.
+**Why this matters now.**
+- Gartner: 40% of enterprise apps will feature AI agents by 2026, up from <5% in 2025
+- 57% of organisations already have agents in production
+- 89% have implemented observability — they know they need visibility, but observability tells you what happened *after*. Enact tells you what's allowed *before*, and proves it after. Different product, different buyer (CISO not DevOps).
+- Microsoft published a formal taxonomy of agent failure modes in 2025. When Microsoft writes a whitepaper about your problem space, enterprise security teams start budgeting for it.
+- Nearly 50% of YC's latest batch are AI agent companies — your early adopter base is being minted right now.
 
-**Why this is the right abstraction.** Enact sits at the *action layer*, not the model layer. Models change constantly — GPT-5, Claude, Gemini, Llama. The actions agents take (write to database, open PR, create contact, send email) are stable. Being LLM-vendor-independent isn't a feature, it's the architecture. Same with orchestration tools like Temporal — Enact is a library that composes with whatever stack the customer uses, not a competing platform.
+**Why this is the right abstraction.**
+Enact sits at the *action layer*, not the model layer. Models change constantly (GPT-5, Claude, Gemini, Llama). The actions agents take (write to database, open PR, create contact, send email) are stable. LLM-vendor-independence isn't a feature — it's the architecture. Same with Temporal and other orchestration tools: Enact is a library that composes with whatever stack the customer uses, not a competing platform.
+
+**The MCP gap.** Model Context Protocol (MCP) is the emerging standard for connecting tools to LLMs — every agent framework is adopting it. But MCP is just a protocol. It has zero governance, zero audit, zero policy enforcement. It's TCP/IP without a firewall. Enact is the firewall. This is the "built on top of MCP" story for enterprise customers.
+
+**Why "we write the workflows for you" is the real moat.**
+Writing correct, edge-case-hardened connector code is hard. API docs are inconsistent, rate limits change, auth flows differ, idempotency is subtle. The real value isn't the policy engine — it's that customers don't have to figure out janky MCPs or write their own workflows from scratch. This is Zapier's core value prop, applied to agent governance. Every vetted workflow Enact ships is one less thing a customer has to build, test, and maintain.
+
+**The full positioning: Zapier + Okta + Splunk for AI agents.**
+- **Zapier**: pre-built integrations, don't write connector code yourself
+- **Okta**: access control and policy enforcement per actor/role
+- **Splunk**: audit trail, anomaly detection, compliance reporting
+Each of those is a billion-dollar company. Enact is the one product that does all three, purpose-built for the agent action layer.
 
 **The business model (McAfee for agent side effects).**
-- OSS core drives adoption — free to use, self-managed
-- The moat is the **vetted workflow library**: pre-built, edge-case-hardened, kept current as APIs change. Customers subscribe for updates the same way they subscribed for antivirus signature updates.
-- Network effect: every production error logged across all customers is a data point. More installs → more failure telemetry → better ML anomaly detection → better product. Nobody else has this dataset because nobody else sits at the action layer.
-- Eventually: an ML model trained on real agent failure modes across real production systems. Predicts which workflows will fail, which policy configs are too loose, which actors are behaving anomalously.
+- OSS core drives adoption — free to use, self-managed, no lock-in concern
+- Moat is the **vetted workflow library**: pre-built, edge-case-hardened, kept current as APIs change. Customers subscribe for updates the same way they subscribed for antivirus signatures.
+- Network effect: every production error across all customers is a data point. More installs → more failure telemetry → better anomaly detection → better product. Nobody else has this dataset because nobody else sits at the action layer.
+- Eventually: ML model trained on real agent failure modes. Predicts which workflows will fail, which policy configs are too loose, which actors are behaving anomalously.
 
 **Build sequencing principle.** Ship 20 hardened workflows before building the ML model. Workflows are the data collection points and the reason to subscribe. The model comes after the data exists.
 
-**The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records from agent retries. Enact's saga approach (smarter connector methods that check-before-act) directly addresses this. Ship this in v0.2 as a named feature, not an implementation detail.
+**The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records. Enact's saga approach (connector methods that check-before-act) directly addresses this. Ship in v0.2 as a named feature, not an implementation detail.
 
 ---
 
@@ -322,17 +339,69 @@ Before building more workflows, retrofit connectors with check-before-act:
 
 ---
 
-## Cloud (Post-MVP)
+## Premium Capabilities Roadmap
 
-Only after OSS has traction. Built on top of OSS core.
+Ordered by price-increase potential. Each unlocks a new buyer or a higher price tier.
 
-| Feature | Notes |
-|---------|-------|
-| Receipt storage + search UI | SQLite → Postgres, simple web UI |
-| Real-time alerting | Twilio (SMS/call), PagerDuty API, Slack webhook |
-| Retention + export | Configurable retention, JSON export |
-| Hosted API | FastAPI — already have `server.py` as starting point |
-| `enact.cloud` domain | Use as Cloud endpoint: `EnactClient(cloud_api_key="...")` |
+### Tier A — Ship with Cloud v1 (justify $299/mo)
+| Capability | What it is | Why it commands price |
+|---|---|---|
+| **Receipt storage + search UI** | Web UI for browsing all runs, filtering by agent/workflow/decision | Replaces custom logging infrastructure |
+| **Real-time alerting** | Push to Slack/PagerDuty/SMS when agent does something unexpected | On-call teams will pay for this immediately |
+| **Compliance export** | One-click SOC2 evidence package, GDPR processing records, ISO27001 audit logs — auto-generated from receipt data | Compliance consultants charge $50K for this; you automate it |
+
+### Tier B — High-value differentiators (justify $999+/mo enterprise)
+| Capability | What it is | Why it commands price |
+|---|---|---|
+| **Human-in-the-loop gates** | Policy that pauses a workflow and sends a Slack/email "approve this?" — auto-blocks if no response within N minutes | Table stakes for regulated industries; nobody else has this for agents |
+| **Rollback** | "Undo the last N agent actions" button — uses receipt data to attempt reversal (close the PR, delete the inserted row, etc.) | Enterprise will pay significantly for "undo" — only possible because every action is receipted |
+| **Vertical policy packs** | Pre-built policy bundles by industry: Healthcare (HIPAA), Finance (SOX/blackout windows), HR (GDPR/PII), Legal (privilege) | Compliance teams don't buy tools; they buy "someone already thought about the regulations" — commands 3-5x price |
+| **Multi-agent arbitration** | When two agents try to modify the same resource simultaneously, Enact arbitrates — first gets a soft lock, second blocks with "resource locked by agent-A run-xyz" in receipt | Nobody else is solving multi-agent conflicts; unique differentiator |
+
+### Tier C — ML / data network effects (long-term moat)
+| Capability | What it is | Why it commands price |
+|---|---|---|
+| **Anomaly detection** | Rule-based first (3-sigma on rolling window per agent): "this agent called delete_row 400 times in 60 seconds" → immediate alert. ML model later. | The dataset nobody else has — real agent failure modes across real production |
+| **Failure prediction** | ML model predicts which workflow configs are likely to fail based on patterns across all customers | Only possible with network scale — becomes more valuable as install base grows |
+| **Policy linter** | CLI that checks your policy config against known misconfigurations — like ESLint for agent governance | Shifts left; catches problems before they reach prod |
+
+---
+
+## How to Get Early Users
+
+### Channel 1 — Hacker News (highest ROI, do first)
+Post "Show HN: Enact — an action firewall for AI agents" when you have a clean demo.
+- Target: engineers who have already been burned by an agent doing something wrong
+- What makes it land: concrete horror story in the opening line ("our agent created 847 duplicate Jira tickets")
+- The comments will tell you exactly what the market wants
+
+### Channel 2 — YC companies (warm, fast-moving)
+Nearly 50% of the current YC batch are agent companies. They're shipping fast, hitting edge cases, and have budget. Find them via:
+- `ycombinator.com/companies` filter by "AI" + recent batch
+- Cold email founders directly: "You're building agents. Here's the thing that will bite you."
+- Offer to write their first Enact workflow free in exchange for a case study
+
+### Channel 3 — Agent framework communities (where builders are)
+- **LangChain** Discord + GitHub discussions — post "how Enact works with LangChain agents"
+- **CrewAI** and **AutoGen** communities — same angle
+- **Anthropic developer Discord** — Claude agent builders are exactly your audience
+- Write one integration guide for each (LangChain in one afternoon, drives long-tail search)
+
+### Channel 4 — Content (compounds over time)
+Each of these is also a Google-indexed landing page:
+- "How to prevent your AI agent from sending duplicate emails" → points to `send_email_workflow`
+- "AI agent audit trail: how to prove your agent only did what it was supposed to" → points to receipt system
+- "Why MCP needs a firewall" → explains the governance gap, positions Enact as the answer
+- Post on dev.to, Hashnode, personal blog — engineers find these via search when they hit the problem
+
+### Channel 5 — ProductHunt (awareness spike)
+Launch when you have 5+ workflows and a working demo. Not the primary channel but generates a one-day spike and backlinks. Time for a Monday launch (highest traffic day).
+
+### Channel 6 — Direct enterprise outreach (for first paying customers)
+Target: companies that have publicly announced AI agent deployments (press releases, engineering blogs).
+- They already have the problem, already have budget, already have a champion internally
+- Message: "You announced your agent deployment in [month]. Here's the audit trail and governance layer you'll need when compliance asks."
+- One enterprise customer at $299/mo pays for a month of your time.
 
 ---
 
