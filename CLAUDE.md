@@ -2,7 +2,30 @@
 
 ## Startup
 
-At the start of every session, read `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
+At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
+
+## Coding
+
+1. Make a plan using `PLAN-TEMPLATE.md`. Plans go in `plans/`.
+2. Red-team the plan using `plans/guides/RED-TEAM-MODE-GUIDE.md`. Fix issues before coding.
+3. Implement using TDD.
+
+## Red Team Protocol
+
+Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
+
+**Core Rule:** If you mention a test, WRITE THE TEST CODE. If you mention an edge case, WRITE THE HANDLER CODE. If you mention an error, WRITE THE ERROR STRING. No vague bullshit.
+
+**Chat output MUST include:**
+1. 🎯 Attack summary table (with fixes already applied to plan file) — in CHAT only, not in plan file
+2. 📝 Complete test code (pytest, copy-paste ready)
+3. 📦 Data contracts (Pydantic models or ActionResult output shapes)
+4. ⚠️ Exact error message strings
+5. ✏️ Fixed plan sections (applied directly to original plan file)
+
+**CRITICAL: Attack summary goes in CHAT, not in plan file.**
+The plan file should read as a clean final spec. No "Red Team Attack Summary" sections.
+The implementing AI doesn't need to know what was wrong — just needs the corrected plan.
 
 ## Environment
 
