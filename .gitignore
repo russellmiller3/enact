@@ -13,7 +13,6 @@ venv/
 .env
 
 # Generated receipts
-backend/receipts/*.txt
 receipts/
 
 # Test cache
