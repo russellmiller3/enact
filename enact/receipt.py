@@ -161,3 +161,24 @@ def write_receipt(receipt: Receipt, directory: str = "receipts") -> str:
         # indent=2 keeps files human-readable for manual audit inspection.
         json.dump(receipt.model_dump(), f, indent=2)
     return filepath
+
+
+def load_receipt(run_id: str, directory: str = "receipts") -> Receipt:
+    """
+    Load a previously written receipt from disk by its run_id.
+
+    Args:
+        run_id    — the UUID run_id used as the filename (without .json extension)
+        directory — directory to read from (must match the directory used in write_receipt)
+
+    Returns:
+        Receipt — validated Pydantic model
+
+    Raises:
+        FileNotFoundError — if no receipt file exists for the given run_id
+    """
+    filepath = os.path.join(directory, f"{run_id}.json")
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"No receipt found for run_id: {run_id}")
+    with open(filepath) as f:
+        return Receipt.model_validate(json.load(f))

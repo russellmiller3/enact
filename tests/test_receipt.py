@@ -1,7 +1,7 @@
 import json
 import os
 import pytest
-from enact.receipt import build_receipt, sign_receipt, verify_signature, write_receipt
+from enact.receipt import build_receipt, sign_receipt, verify_signature, write_receipt, load_receipt
 from enact.models import PolicyResult, ActionResult, Receipt
 
 
@@ -169,6 +169,30 @@ class TestWriteReceipt:
         new_dir = str(tmp_path / "nested" / "receipts")
         filepath = write_receipt(receipt, directory=new_dir)
         assert os.path.exists(filepath)
+
+
+class TestLoadReceipt:
+    def test_load_receipt_roundtrip(self, tmp_path, sample_policy_results):
+        """Receipt written to disk can be loaded back and matches original."""
+        receipt = build_receipt(
+            workflow="test_workflow",
+            actor_email="agent@test.com",
+            payload={"key": "val"},
+            policy_results=sample_policy_results,
+            decision="PASS",
+        )
+        receipt = sign_receipt(receipt, "test-secret")
+        write_receipt(receipt, str(tmp_path))
+
+        loaded = load_receipt(receipt.run_id, str(tmp_path))
+
+        assert loaded.run_id == receipt.run_id
+        assert loaded.workflow == receipt.workflow
+        assert loaded.signature == receipt.signature
+
+    def test_load_receipt_raises_for_missing_run_id(self, tmp_path):
+        with pytest.raises(FileNotFoundError, match="No receipt found for run_id"):
+            load_receipt("nonexistent-uuid", str(tmp_path))
 
 
 class TestActionResultRollbackData:
