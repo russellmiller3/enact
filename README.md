@@ -232,4 +232,5 @@ pytest tests/ -v
 [Elastic License 2.0 (ELv2)](./LICENSE)
 
 Free to use, modify, and redistribute. You may **not** offer Enact as a hosted
-or managed service to third parties. See [LICENSE](./LICENSE) for full terms.
+or managed service, nor sell or resell the software itself as a product.
+See [LICENSE](./LICENSE) for full terms.
