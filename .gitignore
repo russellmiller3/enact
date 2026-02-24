@@ -14,6 +14,7 @@ venv/
 
 # Generated receipts
 backend/receipts/*.txt
+receipts/
 
 # Test cache
 .pytest_cache/
