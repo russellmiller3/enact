@@ -20,6 +20,19 @@ The one exception to this rule: _check_allowed() raises PermissionError if
 the action is not in the allowlist. This is a programming error (wrong action
 name), not a runtime API failure, so it should blow up loudly.
 
+Idempotency (already_done convention)
+--------------------------------------
+Every mutating method checks whether the desired state already exists before
+acting. If it does, the method returns ActionResult(success=True) with
+output["already_done"] set to a descriptive string ("created", "deleted",
+"merged"). If it's a fresh action, already_done is False.
+
+This makes every action safe to retry. Callers check:
+    if result.output.get("already_done"):  # truthy string = noop
+        log(f"Skipped — {result.output['already_done']}")
+
+All future connectors MUST follow this convention.
+
 Usage:
     gh = GitHubConnector(
         token=os.environ["GITHUB_TOKEN"],
@@ -27,7 +40,7 @@ Usage:
     )
     result = gh.create_branch(repo="owner/repo", branch="agent/fix-123")
 """
-from github import Github
+from github import Github, UnknownObjectException
 from enact.models import ActionResult
 
 
@@ -107,14 +120,25 @@ class GitHubConnector:
         self._check_allowed("create_branch")
         try:
             repo_obj = self._get_repo(repo)
-            # get_branch returns a Branch object; we only need the tip commit's SHA.
+            # Idempotency: check if target branch already exists
+            try:
+                repo_obj.get_branch(branch)
+                return ActionResult(
+                    action="create_branch",
+                    system="github",
+                    success=True,
+                    output={"branch": branch, "already_done": "created"},
+                )
+            except Exception:
+                pass  # Branch doesn't exist — proceed to create
+
             source = repo_obj.get_branch(from_branch)
             repo_obj.create_git_ref(f"refs/heads/{branch}", source.commit.sha)
             return ActionResult(
                 action="create_branch",
                 system="github",
                 success=True,
-                output={"branch": branch},
+                output={"branch": branch, "already_done": False},
             )
         except Exception as e:
             return ActionResult(
@@ -144,12 +168,26 @@ class GitHubConnector:
         self._check_allowed("create_pr")
         try:
             repo_obj = self._get_repo(repo)
+            # Idempotency: check for existing open PR with same head->base
+            try:
+                existing = list(repo_obj.get_pulls(state="open", head=head, base=base))
+                if existing:
+                    pr = existing[0]
+                    return ActionResult(
+                        action="create_pr",
+                        system="github",
+                        success=True,
+                        output={"pr_number": pr.number, "url": pr.html_url, "already_done": "created"},
+                    )
+            except Exception:
+                pass  # Lookup failed — proceed to create
+
             pr = repo_obj.create_pull(title=title, body=body, head=head, base=base)
             return ActionResult(
                 action="create_pr",
                 system="github",
                 success=True,
-                output={"pr_number": pr.number, "url": pr.html_url},
+                output={"pr_number": pr.number, "url": pr.html_url, "already_done": False},
             )
         except Exception as e:
             return ActionResult(
@@ -175,12 +213,25 @@ class GitHubConnector:
         self._check_allowed("create_issue")
         try:
             repo_obj = self._get_repo(repo)
+            # Idempotency: check for open issue with same title
+            try:
+                for issue in repo_obj.get_issues(state="open"):
+                    if issue.title == title:
+                        return ActionResult(
+                            action="create_issue",
+                            system="github",
+                            success=True,
+                            output={"issue_number": issue.number, "url": issue.html_url, "already_done": "created"},
+                        )
+            except Exception:
+                pass  # Lookup failed — proceed to create
+
             issue = repo_obj.create_issue(title=title, body=body)
             return ActionResult(
                 action="create_issue",
                 system="github",
                 success=True,
-                output={"issue_number": issue.number, "url": issue.html_url},
+                output={"issue_number": issue.number, "url": issue.html_url, "already_done": False},
             )
         except Exception as e:
             return ActionResult(
@@ -209,14 +260,22 @@ class GitHubConnector:
         self._check_allowed("delete_branch")
         try:
             repo_obj = self._get_repo(repo)
-            # Note: get_git_ref expects "heads/<branch>", not "refs/heads/<branch>"
-            ref = repo_obj.get_git_ref(f"heads/{branch}")
+            try:
+                ref = repo_obj.get_git_ref(f"heads/{branch}")
+            except UnknownObjectException:
+                # Branch already gone — idempotent success
+                return ActionResult(
+                    action="delete_branch",
+                    system="github",
+                    success=True,
+                    output={"branch": branch, "already_done": "deleted"},
+                )
             ref.delete()
             return ActionResult(
                 action="delete_branch",
                 system="github",
                 success=True,
-                output={"branch": branch},
+                output={"branch": branch, "already_done": False},
             )
         except Exception as e:
             return ActionResult(
@@ -242,13 +301,20 @@ class GitHubConnector:
         try:
             repo_obj = self._get_repo(repo)
             pr = repo_obj.get_pull(pr_number)
-            # pr.merge() returns a MergedPullRequest namedtuple with .merged and .sha
+            # Idempotency: check if already merged
+            if pr.merged:
+                return ActionResult(
+                    action="merge_pr",
+                    system="github",
+                    success=True,
+                    output={"merged": True, "sha": pr.merge_commit_sha, "already_done": "merged"},
+                )
             result = pr.merge()
             return ActionResult(
                 action="merge_pr",
                 system="github",
                 success=True,
-                output={"merged": result.merged, "sha": result.sha},
+                output={"merged": result.merged, "sha": result.sha, "already_done": False},
             )
         except Exception as e:
             return ActionResult(

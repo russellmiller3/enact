@@ -86,6 +86,8 @@ agent calls enact.run()
 
 Every method is allowlisted at construction time — `GitHubConnector(token=..., allowlist=["create_branch", "create_pr"])` means the connector will refuse to call any method not on the list, even if the workflow tries.
 
+**Idempotent by default.** Every method checks whether the desired state already exists before acting. If an agent retries a workflow (network blip, crash recovery), it won't create duplicate branches, PRs, or issues. The output includes `already_done` — `False` for fresh actions, a descriptive string (`"created"`, `"deleted"`, `"merged"`) when the action was already performed.
+
 ### Built-in workflows
 - **`agent_pr_workflow`** — creates a feature branch then opens a PR; aborts cleanly if branch creation fails so you never get a PR pointing at a non-existent branch
 - **`db_safe_insert`** — checks for a duplicate row before inserting; returns an explanatory failure instead of letting the database raise a constraint violation
@@ -158,8 +160,8 @@ enact.run(workflow="agent_pr_workflow", actor_email="agent@co.com", payload={"re
   ├─▶ decision = PASS → execute workflow
   │
   ├─▶ actions_taken = [
-  │       ActionResult(action="create_branch", system="github", success=True, output={"branch": "agent/fix"}),
-  │       ActionResult(action="create_pr",     system="github", success=True, output={"pr_number": 42, "url": "..."}),
+  │       ActionResult(action="create_branch", system="github", success=True, output={"branch": "agent/fix", "already_done": False}),
+  │       ActionResult(action="create_pr",     system="github", success=True, output={"pr_number": 42, "url": "...", "already_done": False}),
   │   ]
   │
   ├─▶ Receipt(run_id, workflow, actor_email, payload, policy_results,
@@ -210,7 +212,7 @@ python examples/quickstart.py
 
 ```bash
 pytest tests/ -v
-# 96 tests, 0 failures
+# 102 tests, 0 failures
 ```
 
 ---
