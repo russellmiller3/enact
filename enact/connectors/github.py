@@ -130,6 +130,7 @@ class GitHubConnector:
                     system="github",
                     success=True,
                     output={"branch": branch, "already_done": "created"},
+                    rollback_data={},
                 )
             except Exception:
                 pass  # Branch doesn't exist — proceed to create
@@ -141,6 +142,7 @@ class GitHubConnector:
                 system="github",
                 success=True,
                 output={"branch": branch, "already_done": False},
+                rollback_data={"repo": repo, "branch": branch},
             )
         except Exception as e:
             return ActionResult(
@@ -180,6 +182,7 @@ class GitHubConnector:
                         system="github",
                         success=True,
                         output={"pr_number": pr.number, "url": pr.html_url, "already_done": "created"},
+                        rollback_data={},
                     )
             except Exception:
                 pass  # Lookup failed — proceed to create
@@ -190,6 +193,7 @@ class GitHubConnector:
                 system="github",
                 success=True,
                 output={"pr_number": pr.number, "url": pr.html_url, "already_done": False},
+                rollback_data={"repo": repo, "pr_number": pr.number},
             )
         except Exception as e:
             return ActionResult(
@@ -224,6 +228,7 @@ class GitHubConnector:
                             system="github",
                             success=True,
                             output={"issue_number": issue.number, "url": issue.html_url, "already_done": "created"},
+                            rollback_data={},
                         )
             except Exception:
                 pass  # Lookup failed — proceed to create
@@ -234,6 +239,7 @@ class GitHubConnector:
                 system="github",
                 success=True,
                 output={"issue_number": issue.number, "url": issue.html_url, "already_done": False},
+                rollback_data={"repo": repo, "issue_number": issue.number},
             )
         except Exception as e:
             return ActionResult(
@@ -271,13 +277,16 @@ class GitHubConnector:
                     system="github",
                     success=True,
                     output={"branch": branch, "already_done": "deleted"},
+                    rollback_data={},
                 )
+            sha = ref.object.sha  # capture before deletion for potential rollback
             ref.delete()
             return ActionResult(
                 action="delete_branch",
                 system="github",
                 success=True,
                 output={"branch": branch, "already_done": False},
+                rollback_data={"repo": repo, "branch": branch, "sha": sha},
             )
         except Exception as e:
             return ActionResult(
@@ -317,6 +326,7 @@ class GitHubConnector:
                 system="github",
                 success=True,
                 output={"merged": result.merged, "sha": result.sha, "already_done": False},
+                rollback_data={},  # merge_pr is irreversible — no undo possible
             )
         except Exception as e:
             return ActionResult(

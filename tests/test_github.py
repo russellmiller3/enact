@@ -58,6 +58,7 @@ class TestCreateBranch:
         mock_repo.create_git_ref.assert_called_once_with(
             "refs/heads/agent/feature-x", "abc123"
         )
+        assert result.rollback_data == {"repo": "owner/repo", "branch": "agent/feature-x"}
 
     def test_create_branch_failure(self, connector):
         connector._get_repo = MagicMock(side_effect=Exception("API rate limit"))
@@ -83,6 +84,7 @@ class TestCreateBranchIdempotency:
         assert result.output["already_done"] == "created"
         # Should NOT have called create_git_ref
         mock_repo.create_git_ref.assert_not_called()
+        assert result.rollback_data == {}  # already_done — we didn't create it, don't delete it
 
 
 class TestCreatePR:
@@ -106,6 +108,8 @@ class TestCreatePR:
         assert result.output["pr_number"] == 42
         assert "pull/42" in result.output["url"]
         assert result.output["already_done"] is False
+        assert result.rollback_data["pr_number"] == mock_pr.number
+        assert result.rollback_data["repo"] == "owner/repo"
 
     def test_create_pr_failure(self, connector):
         connector._get_repo = MagicMock(side_effect=Exception("Branch not found"))
@@ -153,6 +157,8 @@ class TestCreateIssue:
         assert result.success is True
         assert result.output["issue_number"] == 7
         assert result.output["already_done"] is False
+        assert result.rollback_data["issue_number"] == mock_issue.number
+        assert result.rollback_data["repo"] == "owner/repo"
 
     def test_create_issue_failure(self, connector):
         connector._get_repo = MagicMock(side_effect=Exception("Not authorized"))
@@ -211,6 +217,9 @@ class TestDeleteBranch:
         assert result.output["branch"] == "agent/old-feature"
         assert result.output["already_done"] is False
         mock_ref.delete.assert_called_once()
+        assert result.rollback_data["branch"] == "agent/old-feature"
+        assert result.rollback_data["sha"] == mock_ref.object.sha
+        assert result.rollback_data["repo"] == "owner/repo"
 
     def test_delete_branch_failure(self, connector):
         connector._get_repo = MagicMock(side_effect=Exception("Ref not found"))
@@ -233,6 +242,7 @@ class TestDeleteBranchIdempotency:
         assert result.success is True
         assert result.output["branch"] == "agent/old"
         assert result.output["already_done"] == "deleted"
+        assert result.rollback_data == {}  # Branch wasn't there — nothing to restore
 
 
 class TestMergePR:
@@ -253,6 +263,7 @@ class TestMergePR:
         assert result.output["merged"] is True
         assert result.output["sha"] == "deadbeef"
         assert result.output["already_done"] is False
+        assert result.rollback_data == {}  # merge_pr is irreversible
 
     def test_merge_pr_failure(self, connector):
         connector._get_repo = MagicMock(side_effect=Exception("PR not mergeable"))
