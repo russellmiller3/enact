@@ -1,7 +1,25 @@
 # Enact — Build Spec
 
-> Source of truth: `Enact Landing Page Best.html`
+> Source of truth: `landing_page.html`
 > Goal: Ship OSS MVP → get GitHub traction → convert to Cloud at $299/mo
+
+---
+
+## Strategic Thesis
+
+**Why this matters now.** Gartner forecasts 40% of enterprise apps will feature AI agents by 2026, up from <5% in 2025. 57% of organisations already have agents in production. The problem they all share: agents can do anything, and there's no enforcement layer, audit trail, or governance primitive. Enact is that layer.
+
+**Why this is the right abstraction.** Enact sits at the *action layer*, not the model layer. Models change constantly — GPT-5, Claude, Gemini, Llama. The actions agents take (write to database, open PR, create contact, send email) are stable. Being LLM-vendor-independent isn't a feature, it's the architecture. Same with orchestration tools like Temporal — Enact is a library that composes with whatever stack the customer uses, not a competing platform.
+
+**The business model (McAfee for agent side effects).**
+- OSS core drives adoption — free to use, self-managed
+- The moat is the **vetted workflow library**: pre-built, edge-case-hardened, kept current as APIs change. Customers subscribe for updates the same way they subscribed for antivirus signature updates.
+- Network effect: every production error logged across all customers is a data point. More installs → more failure telemetry → better ML anomaly detection → better product. Nobody else has this dataset because nobody else sits at the action layer.
+- Eventually: an ML model trained on real agent failure modes across real production systems. Predicts which workflows will fail, which policy configs are too loose, which actors are behaving anomalously.
+
+**Build sequencing principle.** Ship 20 hardened workflows before building the ML model. Workflows are the data collection points and the reason to subscribe. The model comes after the data exists.
+
+**The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records from agent retries. Enact's saga approach (smarter connector methods that check-before-act) directly addresses this. Ship this in v0.2 as a named feature, not an implementation detail.
 
 ---
 
@@ -245,7 +263,62 @@ enact/
 20. ✅ `README.md` — synced with v0.1 implementation
 21. ✅ `pyproject.toml` — PyPI config, `pip install -e ".[dev]"` works
 22. ✅ `pytest tests/ -v` — 96 tests, 0 failures
-23. 🔜 PyPI publish (`pip install enact`)
+23. ✅ PyPI publish — `pip install enact-sdk` live at https://pypi.org/project/enact-sdk/0.1.0/
+
+---
+
+## Workflow Roadmap (v0.2+)
+
+> Based on research into most common production agent use cases (2025-2026).
+> Priority = frequency of use × severity of side effects if something goes wrong.
+> Each workflow ships with: implementation + edge-case handling + idempotency + tests.
+
+### Tier 1 — Highest priority (most common + highest blast radius)
+
+| Workflow | System | Key policies needed | Idempotency concern |
+|---|---|---|---|
+| `send_email_workflow` | Gmail / SMTP | `no_bulk_email_blast`, `no_email_external_domains`, `require_actor_role` | Don't send twice on retry |
+| `create_support_ticket_workflow` | Jira / Zendesk | `no_duplicate_tickets`, `limit_tickets_per_hour` | Duplicate tickets on retry |
+| `update_crm_record_workflow` | HubSpot / Salesforce | `no_overwrite_owner`, `require_field_validation` | Double-write on retry |
+| `new_lead_workflow` | HubSpot | `no_duplicate_contacts`, `limit_tasks_per_contact` | Already partially built |
+| `db_safe_update_workflow` | Postgres | `no_update_without_where_clause`, `require_row_exists` | Partial update on retry |
+
+### Tier 2 — High value (common in coding agents + DevOps)
+
+| Workflow | System | Key policies needed | Idempotency concern |
+|---|---|---|---|
+| `issue_triage_workflow` | GitHub | `no_duplicate_labels`, `require_branch_prefix` | Double-labelling on retry |
+| `code_review_workflow` | GitHub | `no_review_own_pr`, `require_actor_role` | Duplicate review comments |
+| `deploy_to_environment_workflow` | GitHub Actions / AWS | `no_prod_deploy_without_passing_tests`, `within_maintenance_window` | Double deploy |
+| `update_feature_flag_workflow` | LaunchDarkly / custom | `require_actor_role`, `no_prod_flag_change_without_approval` | Flag toggled twice |
+| `escalate_ticket_workflow` | Jira / PagerDuty | `no_duplicate_escalation`, `within_on_call_window` | Double page |
+
+### Tier 3 — Strong enterprise demand
+
+| Workflow | System | Key policies needed | Idempotency concern |
+|---|---|---|---|
+| `post_slack_message_workflow` | Slack | `no_bulk_channel_blast`, `no_dm_external_users` | Duplicate message on retry |
+| `schedule_meeting_workflow` | Google Calendar / Outlook | `no_double_book`, `within_business_hours` | Double calendar invite |
+| `outreach_sequence_workflow` | HubSpot / Apollo | `no_duplicate_outreach`, `limit_emails_per_contact_per_day` | Duplicate outreach |
+| `update_ticket_status_workflow` | Jira / Zendesk | `no_invalid_status_transition`, `require_actor_role` | Status ping-pong |
+| `db_bulk_import_workflow` | Postgres | `no_import_without_schema_validation`, `limit_rows_per_run` | Partial import on crash |
+
+### Tier 4 — Future / emerging
+
+| Workflow | System | Notes |
+|---|---|---|
+| `create_invoice_workflow` | Stripe / QuickBooks | High stakes — financial data |
+| `update_dns_record_workflow` | Cloudflare / Route53 | Infra — needs careful rollback |
+| `send_sms_workflow` | Twilio | Regulatory compliance angle |
+| `publish_content_workflow` | CMS / social | Brand risk policies |
+| `provision_cloud_resource_workflow` | AWS / GCP | Cost policies critical |
+
+### V0.2 Feature: Idempotency (Saga Pattern)
+Before building more workflows, retrofit connectors with check-before-act:
+- Each connector method returns `already_existed: bool` alongside `success: bool`
+- Caller supplies optional `idempotency_key` to `enact.run()` — signed into receipt
+- Workflows retry-safe by default, not by accident
+- Start with `agent_pr_workflow` as the reference implementation
 
 ---
 
