@@ -49,6 +49,10 @@ class TestEnactClientInit:
         client = EnactClient(secret="my-secret")
         assert client._secret == "my-secret"
 
+    def test_rollback_disabled_by_default(self):
+        client = EnactClient()
+        assert client._rollback_enabled is False
+
 
 class TestEnactClientRun:
     def test_pass_returns_success(self, tmp_path):

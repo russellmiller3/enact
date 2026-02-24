@@ -3,8 +3,8 @@ Tests for enact/rollback.py — execute_rollback_action() dispatch logic.
 All connector calls are mocked. No real GitHub/Postgres API calls made.
 """
 import pytest
-from unittest.mock import MagicMock
-from enact.models import ActionResult
+from unittest.mock import MagicMock, patch
+from enact.models import ActionResult, PolicyResult
 from enact.rollback import execute_rollback_action
 
 
@@ -221,3 +221,211 @@ class TestRollbackSystemNotFound:
         result = execute_rollback_action(action, systems={})  # github not in systems
         assert result.success is False
         assert "not available for rollback" in result.output["error"]
+
+
+# ── EnactClient.rollback() ────────────────────────────────────────────────────
+
+from enact.client import EnactClient
+from enact.models import Receipt
+from enact.receipt import build_receipt, sign_receipt, write_receipt
+
+
+def _write_test_receipt(tmp_path, actions_taken, decision="PASS"):
+    """Helper: write a receipt to tmp_path and return its run_id."""
+    receipt = build_receipt(
+        workflow="test_workflow",
+        actor_email="agent@test.com",
+        payload={"x": 1},
+        policy_results=[PolicyResult(policy="p", passed=True, reason="ok")],
+        decision=decision,
+        actions_taken=actions_taken,
+    )
+    receipt = sign_receipt(receipt, "enact-default-secret")
+    write_receipt(receipt, str(tmp_path))
+    return receipt.run_id
+
+
+class TestEnactClientRollbackGate:
+    def test_rollback_disabled_by_default(self):
+        client = EnactClient()
+        with pytest.raises(PermissionError, match="premium feature"):
+            client.rollback("any-run-id")
+
+    def test_rollback_enabled_flag(self):
+        client = EnactClient(rollback_enabled=True)
+        assert client._rollback_enabled is True
+
+    def test_rollback_missing_receipt_raises(self, tmp_path):
+        client = EnactClient(rollback_enabled=True, receipt_dir=str(tmp_path))
+        with pytest.raises(FileNotFoundError, match="No receipt found"):
+            client.rollback("nonexistent-uuid")
+
+    def test_rollback_blocked_run_raises(self, tmp_path):
+        run_id = _write_test_receipt(tmp_path, actions_taken=[], decision="BLOCK")
+        client = EnactClient(rollback_enabled=True, receipt_dir=str(tmp_path))
+        with pytest.raises(ValueError, match="Cannot rollback a blocked run"):
+            client.rollback(run_id)
+
+
+class TestEnactClientRollbackExecution:
+    def test_rollback_reverses_actions_in_reverse_order(self, tmp_path):
+        """Actions are undone last-to-first."""
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+            ActionResult(
+                action="create_pr", system="github", success=True,
+                output={"pr_number": 1, "already_done": False},
+                rollback_data={"repo": "owner/repo", "pr_number": 1},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        mock_gh.close_pr.return_value = ActionResult(
+            action="close_pr", system="github", success=True, output={}
+        )
+        mock_gh.delete_branch.return_value = ActionResult(
+            action="delete_branch", system="github", success=True, output={}
+        )
+
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+        )
+        result, receipt = client.rollback(run_id)
+
+        # Verify order: PR closed first (it was last), then branch deleted
+        call_order = [call[0] for call in mock_gh.method_calls]
+        assert call_order.index("close_pr") < call_order.index("delete_branch")
+
+    def test_rollback_skips_already_done_noops(self, tmp_path):
+        """Actions with already_done set were not actually performed — skip them."""
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": "created"},
+                rollback_data={},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+        )
+        result, receipt = client.rollback(run_id)
+
+        mock_gh.delete_branch.assert_not_called()
+
+    def test_rollback_skips_failed_actions(self, tmp_path):
+        """Failed actions produced no state change — nothing to undo."""
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=False,
+                output={"error": "API error"},
+                rollback_data={},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+        )
+        result, receipt = client.rollback(run_id)
+
+        mock_gh.delete_branch.assert_not_called()
+
+    def test_rollback_partial_failure_continues(self, tmp_path):
+        """If one rollback step fails, the rest still execute."""
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+            ActionResult(
+                action="create_pr", system="github", success=True,
+                output={"pr_number": 1, "already_done": False},
+                rollback_data={"repo": "owner/repo", "pr_number": 1},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        # close_pr fails, delete_branch should still be called
+        mock_gh.close_pr.return_value = ActionResult(
+            action="close_pr", system="github", success=False, output={"error": "API down"}
+        )
+        mock_gh.delete_branch.return_value = ActionResult(
+            action="delete_branch", system="github", success=True, output={}
+        )
+
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+        )
+        result, receipt = client.rollback(run_id)
+
+        mock_gh.close_pr.assert_called_once()
+        mock_gh.delete_branch.assert_called_once()
+        assert result.success is False  # partial failure → RunResult.success=False
+        assert receipt.decision == "PARTIAL"  # not "PASS" — caller must know undo was incomplete
+
+    def test_rollback_produces_signed_receipt(self, tmp_path):
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        mock_gh.delete_branch.return_value = ActionResult(
+            action="delete_branch", system="github", success=True, output={}
+        )
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+        )
+        result, receipt = client.rollback(run_id)
+
+        assert receipt.signature != ""
+        assert receipt.decision == "PASS"
+
+    def test_rollback_receipt_references_original_run_id(self, tmp_path):
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        mock_gh.delete_branch.return_value = ActionResult(
+            action="delete_branch", system="github", success=True, output={}
+        )
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+        )
+        _, receipt = client.rollback(run_id)
+
+        assert receipt.payload["original_run_id"] == run_id
+        assert receipt.payload["rollback"] is True

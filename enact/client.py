@@ -28,7 +28,8 @@ verify_signature() can validate them consistently.
 import os
 from enact.models import WorkflowContext, RunResult, Receipt
 from enact.policy import evaluate_all, all_passed
-from enact.receipt import build_receipt, sign_receipt, write_receipt
+from enact.receipt import build_receipt, sign_receipt, write_receipt, load_receipt
+from enact.rollback import execute_rollback_action
 
 
 class EnactClient:
@@ -58,21 +59,23 @@ class EnactClient:
         workflows: list | None = None,
         secret: str | None = None,
         receipt_dir: str = "receipts",
+        rollback_enabled: bool = False,
     ):
         """
         Initialise the client.
 
         Args:
-            systems     — connector instances keyed by name, e.g. {"github": GitHubConnector(...)}.
-                          Passed into WorkflowContext so policies and workflows can call them.
-            policies    — list of policy callables, each (WorkflowContext) -> PolicyResult.
-                          May include factory-produced closures (e.g. max_files_per_commit(10)).
-                          All policies run on every call to run() — order matters only for receipt readability.
-            workflows   — list of workflow functions, each (WorkflowContext) -> list[ActionResult].
-                          Stored as {function.__name__: function} so they can be looked up by name string.
-            secret      — HMAC key for receipt signing. Falls back to ENACT_SECRET env var,
-                          then to "enact-default-secret". Override in production.
-            receipt_dir — directory to write signed receipt JSON files. Created on first run if absent.
+            systems          — connector instances keyed by name, e.g. {"github": GitHubConnector(...)}.
+                               Passed into WorkflowContext so policies and workflows can call them.
+            policies         — list of policy callables, each (WorkflowContext) -> PolicyResult.
+                               May include factory-produced closures (e.g. max_files_per_commit(10)).
+                               All policies run on every call to run() — order matters only for receipt readability.
+            workflows        — list of workflow functions, each (WorkflowContext) -> list[ActionResult].
+                               Stored as {function.__name__: function} so they can be looked up by name string.
+            secret           — HMAC key for receipt signing. Falls back to ENACT_SECRET env var,
+                               then to "enact-default-secret". Override in production.
+            receipt_dir      — directory to write signed receipt JSON files. Created on first run if absent.
+            rollback_enabled — premium feature flag. Set True to enable client.rollback(run_id).
         """
         self._systems = systems or {}
         self._policies = policies or []
@@ -81,6 +84,7 @@ class EnactClient:
         self._workflows = {wf.__name__: wf for wf in (workflows or [])}
         self._secret = secret or os.environ.get("ENACT_SECRET", "enact-default-secret")
         self._receipt_dir = receipt_dir
+        self._rollback_enabled = rollback_enabled
 
     def run(
         self,
@@ -166,3 +170,72 @@ class EnactClient:
         # Failed actions are in the receipt but excluded from RunResult.output.
         output = {a.action: a.output for a in actions_taken if a.success}
         return RunResult(success=True, workflow=workflow, output=output), receipt
+
+    def rollback(self, run_id: str) -> tuple[RunResult, Receipt]:
+        """
+        Reverse all successful actions from a previous run, in reverse order.
+
+        Loads the receipt for run_id, filters to actions that were actually
+        executed (success=True AND not already_done), then calls the inverse
+        operation for each via execute_rollback_action(). Produces a new
+        signed receipt referencing the original run.
+
+        PREMIUM FEATURE: requires rollback_enabled=True at init time.
+
+        Args:
+            run_id — the UUID from the original run's Receipt.run_id
+
+        Returns:
+            tuple[RunResult, Receipt] — RunResult.success=False if any rollback
+            step failed (best-effort: all steps are attempted regardless)
+
+        Raises:
+            PermissionError   — if rollback_enabled=False
+            FileNotFoundError — if no receipt exists for run_id
+            ValueError        — if the original run was a BLOCK (nothing to undo)
+        """
+        if not self._rollback_enabled:
+            raise PermissionError(
+                "Rollback is a premium feature. Set rollback_enabled=True on EnactClient to use it."
+            )
+
+        original_receipt = load_receipt(run_id, self._receipt_dir)
+
+        if original_receipt.decision == "BLOCK":
+            raise ValueError("Cannot rollback a blocked run — no actions were taken")
+
+        # Filter to actions that were actually executed: success=True AND not a noop
+        reversible = [
+            a for a in reversed(original_receipt.actions_taken)
+            if a.success and not a.output.get("already_done")
+        ]
+
+        # Best-effort: execute all rollbacks, collect results
+        rollback_results = []
+        for action in reversible:
+            result = execute_rollback_action(action, self._systems)
+            rollback_results.append(result)
+
+        # Determine overall outcome BEFORE building the receipt — decision depends on it
+        all_success = all(r.success for r in rollback_results) if rollback_results else True
+
+        # Build + sign + write rollback receipt
+        receipt = build_receipt(
+            workflow=f"rollback:{original_receipt.workflow}",
+            actor_email=original_receipt.actor_email,
+            payload={"original_run_id": run_id, "rollback": True},
+            policy_results=[],
+            decision="PASS" if all_success else "PARTIAL",
+            actions_taken=rollback_results,
+        )
+        receipt = sign_receipt(receipt, self._secret)
+        write_receipt(receipt, self._receipt_dir)
+        output = {r.action: r.output for r in rollback_results if r.success}
+        return (
+            RunResult(
+                success=all_success,
+                workflow=f"rollback:{original_receipt.workflow}",
+                output=output,
+            ),
+            receipt,
+        )
