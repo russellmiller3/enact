@@ -38,7 +38,7 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - License: ELv2 + no-resale clause (no managed service, no selling the software itself)
 
 ### What Exists (fully built + tested)
-96 tests, all passing. `dist/` contains built wheel + sdist ready to upload.
+96 tests, all passing. Published to PyPI as `enact-sdk 0.1.0`.
 
 ```
 enact/
@@ -60,9 +60,21 @@ Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
 Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
 ### Next Steps (priority order)
-1. **`PostgresConnector`** — `db_safe_insert` mocked; real connector needs psycopg2 + `select_rows()`, `insert_row()`, `delete_row()`. Works with Supabase/Neon/RDS.
-2. **`HubSpotConnector`** — `no_duplicate_contacts` already wired; just needs the connector class. Use HubSpot free sandbox.
-3. **Demo agent** — end-to-end script: triage issue → create branch → open PR. Good for README video / landing page.
+1. **Saga pattern** — if step 1 of a workflow succeeds and step 2 fails, a retry should skip step 1.
+   - Each step needs to be idempotent (e.g. "create branch if not exists" not "create branch")
+   - **Open question: where to store per-step state?**
+     - Can't be in-memory — lost on crash, defeats the point
+     - Can't be in the receipt — receipt is written at the *end* of a run, not during
+     - Options: (a) saga log file in `receipts/` keyed by `idempotency_key`, written step-by-step,
+       deleted on clean completion; (b) caller passes in a state store; (c) each connector action
+       checks its own side-effect before executing (e.g. GitHub: does branch exist? skip)
+     - Option (c) is the lightest — no new infrastructure, just smarter connector methods
+   - Caller supplies an optional `idempotency_key` on `enact.run()` — gets signed into receipt
+   - Start in `enact/workflows/agent_pr_workflow.py` as the concrete test case
+
+2. **`PostgresConnector`** — `db_safe_insert` mocked; real connector needs psycopg2 + `select_rows()`, `insert_row()`, `delete_row()`. Works with Supabase/Neon/RDS.
+3. **`HubSpotConnector`** — `no_duplicate_contacts` already wired; just needs the connector class. Use HubSpot free sandbox.
+4. **Demo agent** — end-to-end script: triage issue → create branch → open PR. Good for README video / landing page.
 
 ### Files to Reference
 - `SPEC.md` — full build plan with ✅/⏭️/🔜 status markers
