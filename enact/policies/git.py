@@ -1,11 +1,56 @@
 """
-Git policies — prevent dangerous git operations.
+Git policies — prevent dangerous git operations by AI agents.
+
+All policies in this module read from context.payload. The workflow calling
+enact.run() is responsible for putting the relevant fields in the payload
+before the run (e.g. "branch", "file_count"). Policies never call external
+APIs — they are pure functions over the context.
+
+Factory pattern
+----------------
+max_files_per_commit and require_branch_prefix are factory functions rather
+than plain policy functions. They accept configuration parameters and return
+a closure that satisfies the policy callable interface:
+
+    (WorkflowContext) -> PolicyResult
+
+This lets callers configure policies inline at EnactClient init time:
+
+    EnactClient(policies=[
+        no_push_to_main,                     # plain function — no config needed
+        max_files_per_commit(10),            # factory called with max=10
+        require_branch_prefix("agent/"),     # factory called with prefix
+    ])
+
+The factory is called once; the returned closure is stored and called
+on every subsequent run() call.
+
+Payload keys used by this module
+----------------------------------
+  "branch"     — branch name string (used by no_push_to_main, require_branch_prefix)
+  "file_count" — integer count of files in the commit (used by max_files_per_commit)
 """
 from enact.models import WorkflowContext, PolicyResult
 
 
 def no_push_to_main(context: WorkflowContext) -> PolicyResult:
-    """Block any direct push to main or master."""
+    """
+    Block any direct push or workflow targeting main or master.
+
+    Reads context.payload["branch"]. The check is case-insensitive so
+    "MAIN", "Main", "master", etc. are all caught. An empty or missing
+    branch field is allowed through — the policy can only block what it
+    can see.
+
+    Use this with agent_pr_workflow to ensure agents always go through
+    a PR rather than pushing directly.
+
+    Args:
+        context — WorkflowContext; reads context.payload.get("branch", "")
+
+    Returns:
+        PolicyResult — passed=False if branch is "main" or "master" (any case)
+    """
     branch = context.payload.get("branch", "")
     blocked = branch.lower() in ("main", "master")
     return PolicyResult(
@@ -20,9 +65,27 @@ def no_push_to_main(context: WorkflowContext) -> PolicyResult:
 
 
 def max_files_per_commit(max_files: int = 50):
-    """Factory: returns a policy that blocks commits touching too many files."""
+    """
+    Factory: return a policy that blocks commits touching more than max_files files.
+
+    Blast radius control — prevents an agent from making sweeping changes across
+    the entire codebase in a single commit. The caller sets the limit at init time:
+
+        EnactClient(policies=[max_files_per_commit(10)])  # no more than 10 files
+
+    The policy reads context.payload.get("file_count", 0). The workflow is
+    responsible for computing this value before calling enact.run().
+
+    Args:
+        max_files — maximum number of files allowed in the commit (inclusive); default 50
+
+    Returns:
+        callable — (WorkflowContext) -> PolicyResult
+    """
 
     def _policy(context: WorkflowContext) -> PolicyResult:
+        # Default to 0 if not provided — a workflow that forgets to set file_count
+        # will always pass this check, which is the safe default.
         file_count = context.payload.get("file_count", 0)
         passed = file_count <= max_files
         return PolicyResult(
@@ -39,7 +102,24 @@ def max_files_per_commit(max_files: int = 50):
 
 
 def require_branch_prefix(prefix: str = "agent/"):
-    """Factory: returns a policy that requires branches to start with a prefix."""
+    """
+    Factory: return a policy that requires branch names to start with a prefix.
+
+    Enforces naming conventions for agent-created branches. For example,
+    requiring all agent branches to start with "agent/" makes them easy to
+    identify in GitHub and enables separate branch protection rules.
+
+        EnactClient(policies=[require_branch_prefix("agent/")])
+
+    The policy reads context.payload.get("branch", ""). An empty branch name
+    fails this check (empty string does not start with any non-empty prefix).
+
+    Args:
+        prefix — required branch name prefix (default: "agent/")
+
+    Returns:
+        callable — (WorkflowContext) -> PolicyResult
+    """
 
     def _policy(context: WorkflowContext) -> PolicyResult:
         branch = context.payload.get("branch", "")
