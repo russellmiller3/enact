@@ -182,6 +182,8 @@ class TestInsertRow:
         assert result.output["email"] == "jane@acme.com"
         assert result.output["already_done"] is False
         conn.commit.assert_called_once()
+        assert result.rollback_data["table"] == "users"
+        assert result.rollback_data["inserted_row"] == {"id": 42, "email": "jane@acme.com", "name": "Jane"}
 
     def test_commits_transaction_on_success(self):
         description = [("id",)]
@@ -216,7 +218,13 @@ class TestInsertRow:
 
 class TestUpdateRow:
     def test_returns_rows_updated_count_with_already_done_false(self):
-        cursor = make_cursor(rowcount=1)
+        # Pre-SELECT sees the old row; UPDATE affects 1 row.
+        # Same cursor handles both: fetchall() returns old data, rowcount is used post-UPDATE.
+        cursor = make_cursor(
+            rows=[(1, "old@acme.com")],
+            description=[("id",), ("email",)],
+            rowcount=1,
+        )
         conn = make_conn(cursor)
         pg = make_pg(conn=conn)
 
@@ -227,6 +235,9 @@ class TestUpdateRow:
         assert result.system == "postgres"
         assert result.output["rows_updated"] == 1
         assert result.output["already_done"] is False
+        assert result.rollback_data["table"] == "users"
+        assert result.rollback_data["old_rows"] == [{"id": 1, "email": "old@acme.com"}]
+        assert result.rollback_data["where"] == {"id": 1}
         conn.commit.assert_called_once()
 
     def test_zero_rows_updated_still_succeeds_with_already_done_false(self):
@@ -264,7 +275,12 @@ class TestUpdateRow:
 
 class TestDeleteRow:
     def test_deletes_existing_row_returns_already_done_false(self):
-        cursor = make_cursor(rowcount=1)
+        # Pre-SELECT captures the row before deletion for rollback.
+        cursor = make_cursor(
+            rows=[(1, "jane@acme.com")],
+            description=[("id",), ("email",)],
+            rowcount=1,
+        )
         conn = make_conn(cursor)
         pg = make_pg(conn=conn)
 
@@ -275,10 +291,16 @@ class TestDeleteRow:
         assert result.system == "postgres"
         assert result.output["rows_deleted"] == 1
         assert result.output["already_done"] is False
+        assert result.rollback_data["table"] == "users"
+        assert result.rollback_data["deleted_rows"] == [{"id": 1, "email": "jane@acme.com"}]
         conn.commit.assert_called_once()
 
     def test_deletes_multiple_rows_returns_already_done_false(self):
-        cursor = make_cursor(rowcount=3)
+        cursor = make_cursor(
+            rows=[(1, "a@b.com"), (2, "c@d.com"), (3, "e@f.com")],
+            description=[("id",), ("email",)],
+            rowcount=3,
+        )
         conn = make_conn(cursor)
         pg = make_pg(conn=conn)
 
@@ -287,6 +309,7 @@ class TestDeleteRow:
         assert result.success is True
         assert result.output["rows_deleted"] == 3
         assert result.output["already_done"] is False
+        assert len(result.rollback_data["deleted_rows"]) == 3
 
     def test_zero_rows_deleted_returns_already_done_deleted(self):
         """
@@ -294,7 +317,7 @@ class TestDeleteRow:
         is already achieved. Return already_done='deleted' like GitHub's
         delete_branch does when the branch is already gone.
         """
-        cursor = make_cursor(rowcount=0)
+        cursor = make_cursor(rows=[], description=[("id",)], rowcount=0)
         conn = make_conn(cursor)
         pg = make_pg(conn=conn)
 
@@ -303,6 +326,7 @@ class TestDeleteRow:
         assert result.success is True
         assert result.output["rows_deleted"] == 0
         assert result.output["already_done"] == "deleted"
+        assert result.rollback_data["deleted_rows"] == []  # Nothing to restore — expected
 
     def test_rolls_back_and_returns_failure_on_error(self):
         conn = make_conn()

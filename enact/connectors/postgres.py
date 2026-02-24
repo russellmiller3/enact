@@ -197,6 +197,7 @@ class PostgresConnector:
                     system="postgres",
                     success=True,
                     output={**row_dict, "already_done": False},
+                    rollback_data={"table": table, "inserted_row": row_dict},
                 )
         except Exception as e:
             if conn:
@@ -230,17 +231,26 @@ class PostgresConnector:
         try:
             conn = self._get_connection()
             with conn.cursor() as cursor:
-                set_clause = pgsql.SQL(", ").join(
-                    pgsql.SQL("{} = {}").format(
-                        pgsql.Identifier(k), pgsql.Placeholder()
-                    )
-                    for k in data
-                )
                 where_clause = pgsql.SQL(" AND ").join(
                     pgsql.SQL("{} = {}").format(
                         pgsql.Identifier(k), pgsql.Placeholder()
                     )
                     for k in where
+                )
+                # --- Pre-SELECT: capture current state for rollback ---
+                pre_query = pgsql.SQL("SELECT * FROM {} WHERE {}").format(
+                    pgsql.Identifier(table), where_clause
+                )
+                cursor.execute(pre_query, list(where.values()))
+                old_rows_raw = cursor.fetchall()
+                old_cols = [desc[0] for desc in (cursor.description or [])]
+                old_rows = [dict(zip(old_cols, row)) for row in old_rows_raw]
+                # --- UPDATE ---
+                set_clause = pgsql.SQL(", ").join(
+                    pgsql.SQL("{} = {}").format(
+                        pgsql.Identifier(k), pgsql.Placeholder()
+                    )
+                    for k in data
                 )
                 query = pgsql.SQL("UPDATE {} SET {} WHERE {}").format(
                     pgsql.Identifier(table), set_clause, where_clause
@@ -252,6 +262,7 @@ class PostgresConnector:
                     system="postgres",
                     success=True,
                     output={"rows_updated": cursor.rowcount, "already_done": False},
+                    rollback_data={"table": table, "old_rows": old_rows, "where": where},
                 )
         except Exception as e:
             if conn:
@@ -290,6 +301,15 @@ class PostgresConnector:
                     )
                     for k in where
                 )
+                # --- Pre-SELECT: capture rows before deleting for rollback ---
+                pre_query = pgsql.SQL("SELECT * FROM {} WHERE {}").format(
+                    pgsql.Identifier(table), where_clause
+                )
+                cursor.execute(pre_query, list(where.values()))
+                rows_raw = cursor.fetchall()
+                cols = [desc[0] for desc in (cursor.description or [])]
+                deleted_rows = [dict(zip(cols, row)) for row in rows_raw]
+                # --- DELETE ---
                 query = pgsql.SQL("DELETE FROM {} WHERE {}").format(
                     pgsql.Identifier(table), where_clause
                 )
@@ -304,6 +324,7 @@ class PostgresConnector:
                         "rows_deleted": rows_deleted,
                         "already_done": "deleted" if rows_deleted == 0 else False,
                     },
+                    rollback_data={"table": table, "deleted_rows": deleted_rows},
                 )
         except Exception as e:
             if conn:
