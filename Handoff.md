@@ -32,8 +32,8 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ### Git State
 - Branch: `master`
-- Remote: `origin` → https://github.com/russellmiller3/enact (up to date)
-- `backup` remote → D:/backup/enact — drive does not exist on this machine, ignore
+- Remote: `origin` → https://github.com/russellmiller3/enact (up to date — last commit: landing page update)
+- `backup` remote → D:/backup/enact — user says D: drive is back, but bash still can't see it. Try remounting or check Disk Management. When it works: `git push backup master`
 - PyPI name: `enact-sdk` (plain `enact` was taken — different project, no traction)
 - License: ELv2 + no-resale clause (no managed service, no selling the software itself)
 
@@ -59,26 +59,33 @@ Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
 3. `python -m twine upload dist/*`
 Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
+### Landing Page — UPDATED ✅ (this session)
+`landing_page.html` now includes:
+- **MCP Gap section** — "tools vs rules" positioning, wraps any MCP server
+- **Framework compat strip** — Claude, OpenAI, LangChain, CrewAI, AutoGen, MCP
+- **Workflow library section** — Zapier-for-agents angle, live vs coming-soon workflows
+- **Coming Soon capabilities grid** — human-in-loop, rollback, vertical packs, compliance export, anomaly detection, multi-agent arbitration (amber badges)
+- **Updated OSS vs Cloud table** — new rows for coming-soon features
+- **Updated pricing cards** — amber coming-soon line items in Pro + Enterprise
+- **hello@enact.cloud** CTAs for early access (placeholder — set up that email when ready)
+
 ### Next Steps (priority order)
 1. **Saga pattern** — if step 1 of a workflow succeeds and step 2 fails, a retry should skip step 1.
-   - Each step needs to be idempotent (e.g. "create branch if not exists" not "create branch")
-   - **Open question: where to store per-step state?**
-     - Can't be in-memory — lost on crash, defeats the point
-     - Can't be in the receipt — receipt is written at the *end* of a run, not during
-     - Options: (a) saga log file in `receipts/` keyed by `idempotency_key`, written step-by-step,
-       deleted on clean completion; (b) caller passes in a state store; (c) each connector action
-       checks its own side-effect before executing (e.g. GitHub: does branch exist? skip)
-     - Option (c) is the lightest — no new infrastructure, just smarter connector methods
-   - Caller supplies an optional `idempotency_key` on `enact.run()` — gets signed into receipt
-   - Start in `enact/workflows/agent_pr_workflow.py` as the concrete test case
+   - **Decision made: Option (c)** — connector methods check their own side-effect before executing
+     (e.g. GitHub: does branch exist? return `already_existed=True`, don't fail)
+   - No new infrastructure. Each connector method becomes idempotent.
+   - Start in `enact/connectors/github.py` — add `create_branch_if_not_exists` pattern
+   - Test case: `enact/workflows/agent_pr_workflow.py`
 
 2. **`PostgresConnector`** — `db_safe_insert` mocked; real connector needs psycopg2 + `select_rows()`, `insert_row()`, `delete_row()`. Works with Supabase/Neon/RDS.
 3. **`HubSpotConnector`** — `no_duplicate_contacts` already wired; just needs the connector class. Use HubSpot free sandbox.
 4. **Demo agent** — end-to-end script: triage issue → create branch → open PR. Good for README video / landing page.
+5. **Set up hello@enact.cloud** — landing page CTAs point there for early access signups.
 
 ### Files to Reference
-- `SPEC.md` — full build plan with ✅/⏭️/🔜 status markers
+- `SPEC.md` — full build plan with ✅/⏭️/🔜 status markers + strategic thesis
 - `README.md` — install, quickstart, connector/policy reference
 - `examples/quickstart.py` — runnable PASS + BLOCK demo
+- `landing_page.html` — marketing page (open in browser to preview)
 </content>
 </invoke>
