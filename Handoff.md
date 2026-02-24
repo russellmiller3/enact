@@ -49,19 +49,20 @@ enact/
 LICENSE, README.md, SPEC.md, landing_page.html, pyproject.toml
 ```
 
-### PyPI Upload — BLOCKED on credentials
-Build is done (`dist/enact_sdk-0.1.0*` exists). Upload requires a PyPI API token.
-To unblock:
-1. Log in / register at https://pypi.org
-2. Create API token at https://pypi.org/manage/account/token/
-3. Run: `twine upload --username __token__ --password pypi-<your-token> dist/*`
-Or paste the token to Claude and it will run the upload.
+### PyPI — LIVE ✅
+`enact-sdk 0.1.0` published at https://pypi.org/project/enact-sdk/0.1.0/
+Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
+
+### Releasing a new version
+1. Bump `version` in `pyproject.toml`
+2. `python -m build`
+3. `python -m twine upload dist/*`
+Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
 ### Next Steps (priority order)
-1. **Finish PyPI publish** — just needs the API token (see above)
-2. **`PostgresConnector`** — `db_safe_insert` mocked; real connector needs psycopg2 + `select_rows()`, `insert_row()`, `delete_row()`. Works with Supabase/Neon/RDS.
-3. **`HubSpotConnector`** — `no_duplicate_contacts` already wired; just needs the connector class. Use HubSpot free sandbox.
-4. **Demo agent** — end-to-end script: triage issue → create branch → open PR. Good for README video / landing page.
+1. **`PostgresConnector`** — `db_safe_insert` mocked; real connector needs psycopg2 + `select_rows()`, `insert_row()`, `delete_row()`. Works with Supabase/Neon/RDS.
+2. **`HubSpotConnector`** — `no_duplicate_contacts` already wired; just needs the connector class. Use HubSpot free sandbox.
+3. **Demo agent** — end-to-end script: triage issue → create branch → open PR. Good for README video / landing page.
 
 ### Files to Reference
 - `SPEC.md` — full build plan with ✅/⏭️/🔜 status markers
