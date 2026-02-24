@@ -172,13 +172,16 @@ enact.run(workflow="agent_pr_workflow", actor_email="agent@co.com", payload={"re
 
 ---
 
-## Connectors (v0.1)
+## Connectors
 
 | System | Actions | Status |
 |--------|---------|--------|
 | GitHub | `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr` | ✅ v0.1 |
+| Postgres | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ v0.2 |
 
 GitHub connector works with any repo accessible via a personal access token or GitHub App.
+
+Postgres connector works with any Postgres-compatible host: Supabase, Neon, Railway, AWS RDS. Pass a standard libpq DSN: `"postgresql://user:pass@host:5432/dbname"`.
 
 ---
 
@@ -212,7 +215,7 @@ python examples/quickstart.py
 
 ```bash
 pytest tests/ -v
-# 102 tests, 0 failures
+# 123 tests, 0 failures
 ```
 
 ---

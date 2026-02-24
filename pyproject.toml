@@ -23,6 +23,7 @@ dev = [
     "pytest",
     "pytest-asyncio",
     "responses",
+    "psycopg2-binary",
 ]
 
 [tool.setuptools.packages.find]
