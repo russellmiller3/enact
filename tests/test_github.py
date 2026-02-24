@@ -280,3 +280,134 @@ class TestMergePRIdempotency:
         assert result.output["sha"] == "deadbeef"
         assert result.output["already_done"] == "merged"
         mock_pr.merge.assert_not_called()
+
+
+class TestClosePr:
+    def test_close_pr_success(self, connector):
+        connector._allowed_actions.add("close_pr")
+        mock_repo = MagicMock()
+        mock_pr = MagicMock()
+        mock_pr.state = "open"
+        mock_repo.get_pull.return_value = mock_pr
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.close_pr(repo="owner/repo", pr_number=42)
+
+        assert result.success is True
+        assert result.action == "close_pr"
+        assert result.output["pr_number"] == 42
+        assert result.output["already_done"] is False
+        mock_pr.edit.assert_called_once_with(state="closed")
+
+    def test_close_pr_already_closed(self, connector):
+        connector._allowed_actions.add("close_pr")
+        mock_repo = MagicMock()
+        mock_pr = MagicMock()
+        mock_pr.state = "closed"
+        mock_repo.get_pull.return_value = mock_pr
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.close_pr(repo="owner/repo", pr_number=42)
+
+        assert result.success is True
+        assert result.output["already_done"] == "closed"
+        mock_pr.edit.assert_not_called()
+
+    def test_close_pr_failure(self, connector):
+        connector._allowed_actions.add("close_pr")
+        connector._get_repo = MagicMock(side_effect=Exception("API error"))
+        result = connector.close_pr(repo="owner/repo", pr_number=42)
+        assert result.success is False
+        assert "API error" in result.output["error"]
+
+    def test_close_pr_not_in_default_allowlist(self):
+        """close_pr is a rollback operation — must be explicitly allowed."""
+        with patch("enact.connectors.github.Github"):
+            conn = GitHubConnector(token="fake")
+        assert "close_pr" not in conn._allowed_actions
+
+    def test_close_pr_blocked_without_allowlist(self, connector):
+        with patch("enact.connectors.github.Github"):
+            conn = GitHubConnector(token="fake", allowed_actions=["create_pr"])
+        with pytest.raises(PermissionError, match="not in allowlist"):
+            conn.close_pr(repo="owner/repo", pr_number=1)
+
+
+class TestCloseIssue:
+    def test_close_issue_success(self, connector):
+        connector._allowed_actions.add("close_issue")
+        mock_repo = MagicMock()
+        mock_issue = MagicMock()
+        mock_issue.state = "open"
+        mock_repo.get_issue.return_value = mock_issue
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.close_issue(repo="owner/repo", issue_number=7)
+
+        assert result.success is True
+        assert result.action == "close_issue"
+        assert result.output["issue_number"] == 7
+        assert result.output["already_done"] is False
+        mock_issue.edit.assert_called_once_with(state="closed")
+
+    def test_close_issue_already_closed(self, connector):
+        connector._allowed_actions.add("close_issue")
+        mock_repo = MagicMock()
+        mock_issue = MagicMock()
+        mock_issue.state = "closed"
+        mock_repo.get_issue.return_value = mock_issue
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.close_issue(repo="owner/repo", issue_number=7)
+
+        assert result.success is True
+        assert result.output["already_done"] == "closed"
+
+    def test_close_issue_failure(self, connector):
+        connector._allowed_actions.add("close_issue")
+        connector._get_repo = MagicMock(side_effect=Exception("not found"))
+        result = connector.close_issue(repo="owner/repo", issue_number=7)
+        assert result.success is False
+        assert "not found" in result.output["error"]
+
+
+class TestCreateBranchFromSha:
+    def test_create_branch_from_sha_success(self, connector):
+        connector._allowed_actions.add("create_branch_from_sha")
+        mock_repo = MagicMock()
+        mock_repo.get_branch.side_effect = Exception("not found")  # doesn't exist yet
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.create_branch_from_sha(
+            repo="owner/repo", branch="agent/restored", sha="deadbeef"
+        )
+
+        assert result.success is True
+        assert result.action == "create_branch_from_sha"
+        assert result.output["branch"] == "agent/restored"
+        assert result.output["already_done"] is False
+        mock_repo.create_git_ref.assert_called_once_with(
+            "refs/heads/agent/restored", "deadbeef"
+        )
+
+    def test_create_branch_from_sha_already_exists(self, connector):
+        connector._allowed_actions.add("create_branch_from_sha")
+        mock_repo = MagicMock()
+        mock_repo.get_branch.return_value = MagicMock()  # branch exists
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.create_branch_from_sha(
+            repo="owner/repo", branch="agent/restored", sha="deadbeef"
+        )
+
+        assert result.success is True
+        assert result.output["already_done"] == "created"
+
+    def test_create_branch_from_sha_failure(self, connector):
+        connector._allowed_actions.add("create_branch_from_sha")
+        connector._get_repo = MagicMock(side_effect=Exception("API error"))
+        result = connector.create_branch_from_sha(
+            repo="owner/repo", branch="agent/x", sha="abc"
+        )
+        assert result.success is False
+        assert "API error" in result.output["error"]

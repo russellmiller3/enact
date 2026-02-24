@@ -77,6 +77,8 @@ class GitHubConnector:
                 "delete_branch",
                 "create_issue",
                 "merge_pr",
+                # close_pr, close_issue, create_branch_from_sha are rollback operations
+                # — not included by default; must be explicitly added to allowed_actions
             ]
         )
 
@@ -319,6 +321,127 @@ class GitHubConnector:
         except Exception as e:
             return ActionResult(
                 action="merge_pr",
+                system="github",
+                success=False,
+                output={"error": str(e)},
+            )
+
+    def close_pr(self, repo: str, pr_number: int) -> ActionResult:
+        """
+        Close an open pull request without merging.
+        Used as the rollback inverse of create_pr.
+
+        Args:
+            repo      — "owner/repo" string
+            pr_number — integer PR number
+
+        Returns:
+            ActionResult — success=True with {"pr_number": int}, or
+                           success=False with {"error": str(e)}
+        """
+        self._check_allowed("close_pr")
+        try:
+            repo_obj = self._get_repo(repo)
+            pr = repo_obj.get_pull(pr_number)
+            if pr.state == "closed":
+                return ActionResult(
+                    action="close_pr",
+                    system="github",
+                    success=True,
+                    output={"pr_number": pr_number, "already_done": "closed"},
+                )
+            pr.edit(state="closed")
+            return ActionResult(
+                action="close_pr",
+                system="github",
+                success=True,
+                output={"pr_number": pr_number, "already_done": False},
+            )
+        except Exception as e:
+            return ActionResult(
+                action="close_pr",
+                system="github",
+                success=False,
+                output={"error": str(e)},
+            )
+
+    def close_issue(self, repo: str, issue_number: int) -> ActionResult:
+        """
+        Close an open issue.
+        Used as the rollback inverse of create_issue.
+
+        Args:
+            repo         — "owner/repo" string
+            issue_number — integer issue number
+
+        Returns:
+            ActionResult — success=True with {"issue_number": int}, or
+                           success=False with {"error": str(e)}
+        """
+        self._check_allowed("close_issue")
+        try:
+            repo_obj = self._get_repo(repo)
+            issue = repo_obj.get_issue(issue_number)
+            if issue.state == "closed":
+                return ActionResult(
+                    action="close_issue",
+                    system="github",
+                    success=True,
+                    output={"issue_number": issue_number, "already_done": "closed"},
+                )
+            issue.edit(state="closed")
+            return ActionResult(
+                action="close_issue",
+                system="github",
+                success=True,
+                output={"issue_number": issue_number, "already_done": False},
+            )
+        except Exception as e:
+            return ActionResult(
+                action="close_issue",
+                system="github",
+                success=False,
+                output={"error": str(e)},
+            )
+
+    def create_branch_from_sha(self, repo: str, branch: str, sha: str) -> ActionResult:
+        """
+        Create a branch pointing at a specific commit SHA.
+        Used as the rollback inverse of delete_branch — restores a deleted branch
+        to the SHA captured before deletion.
+
+        Args:
+            repo   — "owner/repo" string
+            branch — branch name to restore
+            sha    — commit SHA to point the new branch at
+
+        Returns:
+            ActionResult — success=True with {"branch": branch}, or
+                           success=False with {"error": str(e)}
+        """
+        self._check_allowed("create_branch_from_sha")
+        try:
+            repo_obj = self._get_repo(repo)
+            try:
+                repo_obj.get_branch(branch)
+                return ActionResult(
+                    action="create_branch_from_sha",
+                    system="github",
+                    success=True,
+                    output={"branch": branch, "already_done": "created"},
+                )
+            except Exception:
+                pass  # Branch doesn't exist — proceed to create
+            repo_obj.create_git_ref(f"refs/heads/{branch}", sha)
+            return ActionResult(
+                action="create_branch_from_sha",
+                system="github",
+                success=True,
+                output={"branch": branch, "already_done": False},
+            )
+        except Exception as e:
+            return ActionResult(
+                action="create_branch_from_sha",
                 system="github",
                 success=False,
                 output={"error": str(e)},
