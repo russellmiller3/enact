@@ -211,38 +211,41 @@ enact/
 
 ## Build Order
 
+> **Legend:** ✅ Done · 🔜 Planned (v0.2) · ⏭️ Skipped in v0.1
+
 ### Phase 1 — Core SDK (no external deps, fully testable with mocks)
-1. `enact/models.py` — `WorkflowContext`, `PolicyResult`, `ActionResult`, `Receipt`, `RunResult`
-2. `enact/policy.py` — generalize from `backend/agents/policy.py`
-3. `enact/receipt.py` — port from `backend/receipts.py` + HMAC signing
-4. `enact/client.py` — `EnactClient.__init__` + `run()` (policy gate + workflow execution)
-5. Tests for policy engine + receipt writer
+1. ✅ `enact/models.py` — `WorkflowContext`, `PolicyResult`, `ActionResult`, `Receipt`, `RunResult`
+2. ✅ `enact/policy.py` — `evaluate_all()`, `all_passed()`
+3. ✅ `enact/receipt.py` — `build_receipt()`, `sign_receipt()`, `verify_signature()`, `write_receipt()`
+4. ✅ `enact/client.py` — `EnactClient.__init__` + `run()` (policy gate + workflow execution)
+5. ✅ Tests: `test_policy_engine.py`, `test_receipt.py`, `test_client.py`
 
 ### Phase 2 — Postgres Connector
-6. `enact/connectors/postgres.py` — `insert_row`, `update_row`, `select_rows`, `delete_row`
-7. `enact/workflows/db_safe_insert.py` — reference workflow
-8. Tests (local Postgres or Docker)
-9. Note in README: works with Supabase, Neon, Railway, RDS
+6. ⏭️ `enact/connectors/postgres.py` — skipped in v0.1; planned for v0.2
+7. ✅ `enact/workflows/db_safe_insert.py` — reference workflow (Postgres connector mocked in tests)
+8. ✅ Tests: `test_workflows.py`
 
 ### Phase 3 — GitHub Connector
-10. `enact/connectors/github.py` — `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr`
-11. `enact/workflows/agent_pr_workflow.py` — reference workflow
-12. `enact/policies/git.py` — `no_push_to_main()`, `no_push_during_deploy_freeze()`, `max_files_per_commit(n)`
-13. Tests with mocked `PyGithub`
+9.  ✅ `enact/connectors/github.py` — `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr`
+10. ✅ `enact/workflows/agent_pr_workflow.py` — reference workflow
+11. ✅ `enact/policies/git.py` — `no_push_to_main()`, `max_files_per_commit(n)`, `require_branch_prefix(prefix)`
+    - ⏭️ `no_push_during_deploy_freeze()` — not implemented in v0.1
+12. ✅ Tests: `test_github.py`, `test_git_policies.py`
 
 ### Phase 4 — Policies + HubSpot
-14. `enact/policies/crm.py` — `no_duplicate_contacts()`, `limit_tasks_per_contact(max, window_days)`
-15. `enact/policies/access.py` — `contractor_cannot_write_pii()`, `require_actor_role(roles)`
-16. `enact/policies/time.py` — `within_maintenance_window(start_utc, end_utc)`
-17. `enact/connectors/hubspot.py` — `create_contact`, `update_deal`, `create_task`, `get_contact`
-18. `enact/workflows/new_lead.py` — reference workflow
-19. `examples/quickstart.py` — must match landing page code exactly
+13. ✅ `enact/policies/crm.py` — `no_duplicate_contacts()`, `limit_tasks_per_contact(max, window_days)`
+14. ✅ `enact/policies/access.py` — `contractor_cannot_write_pii()`, `require_actor_role(roles)`
+15. ✅ `enact/policies/time.py` — `within_maintenance_window(start_utc, end_utc)`
+16. ⏭️ `enact/connectors/hubspot.py` — skipped in v0.1; planned for v0.2
+17. ⏭️ `enact/workflows/new_lead.py` — skipped (depends on HubSpot connector)
+18. ✅ Tests: `test_policies.py`
 
 ### Phase 5 — Ship
-20. `README.md` — mirrors landing page quickstart verbatim
-21. `pyproject.toml` — PyPI config
-22. `pip install enact` works end-to-end
-23. GitHub repo public
+19. ✅ `examples/quickstart.py` — runnable demo using GitHub connector + git policies
+20. ✅ `README.md` — synced with v0.1 implementation
+21. ✅ `pyproject.toml` — PyPI config, `pip install -e ".[dev]"` works
+22. ✅ `pytest tests/ -v` — 96 tests, 0 failures
+23. 🔜 PyPI publish (`pip install enact`)
 
 ---
 

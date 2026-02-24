@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enact"
+version = "0.1.0"
+description = "An action firewall for AI agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+dependencies = [
+    "pydantic>=2.0",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+postgres = ["psycopg2-binary"]
+github = ["PyGithub"]
+hubspot = ["hubspot-api-client"]
+all = ["psycopg2-binary", "PyGithub", "hubspot-api-client"]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "responses",
+]
+
+[tool.setuptools.packages.find]
+include = ["enact*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

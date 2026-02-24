@@ -13,7 +13,7 @@ venv/
 .env
 
 # Generated receipts
-backend/receipts/*.txt
+receipts/
 
 # Test cache
 .pytest_cache/
@@ -24,4 +24,3 @@ Thumbs.db
 
 # Claude
 .claude/
-Handoff.md
