@@ -24,3 +24,7 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# Private planning docs — keep local only
+SPEC.md
+Handoff.md

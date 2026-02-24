@@ -106,8 +106,7 @@ enact/
 │   ├── policy.py           # policy engine — runs all checks, returns PolicyResult list
 │   ├── receipt.py          # builds, HMAC-signs, verifies, and writes receipts
 │   ├── connectors/
-│   │   ├── github.py       # GitHub: create_branch, create_pr, create_issue, delete_branch, merge_pr
-│   │   └── postgres.py     # Postgres: insert_row, update_row, select_rows, delete_row (planned v0.2)
+│   │   └── github.py       # GitHub: create_branch, create_pr, create_issue, delete_branch, merge_pr
 │   ├── workflows/
 │   │   ├── agent_pr_workflow.py   # create branch → open PR (never to main)
 │   │   └── db_safe_insert.py      # check constraints → insert row
@@ -176,8 +175,6 @@ enact.run(workflow="agent_pr_workflow", actor_email="agent@co.com", payload={"re
 | System | Actions | Status |
 |--------|---------|--------|
 | GitHub | `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr` | ✅ v0.1 |
-| Postgres | `insert_row`, `update_row`, `select_rows`, `delete_row` | 🔜 v0.2 |
-| HubSpot | `create_contact`, `update_deal`, `create_task`, `get_contact` | 🔜 v0.2 |
 
 GitHub connector works with any repo accessible via a personal access token or GitHub App.
 
