@@ -32,7 +32,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - **OS**: Windows 11
 - **Shell**: Use Unix shell syntax (bash) — forward slashes, `/dev/null`, etc.
 - **GitHub CLI**: `gh` is installed and authenticated
-- **Available skills**: `/commit`, `/commit-push-pr` for git workflows
+- **Available skills**: `commit-commands:commit-and-push` for git workflow (solo dev — commit + push to master, no branches, no PRs)
 
 ## Project Structure
 
@@ -56,11 +56,11 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 
 ## Git Workflow
 
-- Use `gh` for all GitHub operations
-- Use `/commit-push-pr` to commit, push, and open PRs in one shot
+- Solo dev — commit directly to `master`, no branches, no PRs
+- Use `/commit` to stage, commit, and push in one shot
 - Main branch: `master`
 - No need for backward compatibility — just change things
-- **End of feature checklist:** Before merging, always (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) delete dead code and stale files, (5) merge branch to master, (6) push to remote
+- **End of feature checklist:** Before committing, always (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) delete dead code and stale files, (5) push to remote
 
 ## File & Code Discipline
 
