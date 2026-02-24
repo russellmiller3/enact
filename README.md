@@ -65,6 +65,36 @@ agent calls enact.run()
 
 ---
 
+## What Enact Can Do Right Now
+
+### Policy enforcement
+- Block agents from pushing directly to `main` or `master`
+- Require branch names to match a prefix (e.g. `agent/`)
+- Cap how many files an agent can touch per commit
+- Restrict actions to a UTC time window (e.g. 2am–6am maintenance window), including midnight-crossing windows like 22:00–06:00
+- Block contractors from writing to PII fields
+- Require the actor to hold a specific role (`admin`, `engineer`, etc.)
+- Prevent duplicate contacts from being created in HubSpot (live lookup before the workflow runs)
+- Rate-limit how many tasks an agent creates per contact within a rolling time window
+
+### GitHub operations (via `GitHubConnector`)
+- Create a branch
+- Open a pull request
+- Create an issue
+- Delete a branch
+- Merge a pull request
+
+Every method is allowlisted at construction time — `GitHubConnector(token=..., allowlist=["create_branch", "create_pr"])` means the connector will refuse to call any method not on the list, even if the workflow tries.
+
+### Built-in workflows
+- **`agent_pr_workflow`** — creates a feature branch then opens a PR; aborts cleanly if branch creation fails so you never get a PR pointing at a non-existent branch
+- **`db_safe_insert`** — checks for a duplicate row before inserting; returns an explanatory failure instead of letting the database raise a constraint violation
+
+### Receipts
+Every run — pass or block — produces an HMAC-SHA256 signed JSON receipt written to `receipts/`. It captures: who ran what, the full payload, every policy result with its reason, the final decision, and a timestamp. `verify_signature()` lets you prove a receipt hasn't been tampered with after the fact.
+
+---
+
 ## File Structure
 
 ```
