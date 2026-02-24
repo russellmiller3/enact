@@ -129,6 +129,7 @@
         .feature-list li .fi { flex-shrink: 0; margin-top: 2px; }
         .fi-check { color: var(--green); }
         .fi-dash { color: var(--subtle); }
+        .fi-soon { color: var(--amber); }
         .pricing-btn { display: block; text-align: center; padding: 12px; border-radius: 7px; font-size: 14px; font-weight: 700; font-family: var(--mono); border: 2px solid var(--border); color: var(--muted); transition: all .2s; }
         .pricing-btn:hover { border-color: var(--accent); color: var(--text); }
         .pricing-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
@@ -137,6 +138,54 @@
         .value-item { padding: 24px; background: var(--surface); border-radius: 10px; border: 1px solid var(--border); }
         .value-item strong { display: block; font-size: 14px; margin-bottom: 8px; }
         .value-item p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+        /* ── COMING SOON BADGE ── */
+        .badge-soon { display: inline-block; padding: 2px 8px; background: rgba(217,119,6,.12); color: var(--amber); border: 1px solid rgba(217,119,6,.25); border-radius: 5px; font-size: 10px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; vertical-align: middle; margin-left: 6px; }
+        .badge-live { display: inline-block; padding: 2px 8px; background: rgba(5,150,105,.12); color: var(--green); border: 1px solid rgba(5,150,105,.25); border-radius: 5px; font-size: 10px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; vertical-align: middle; margin-left: 6px; }
+
+        /* ── FRAMEWORK COMPAT STRIP ── */
+        .compat-strip { padding: 28px 0; border-bottom: 1px solid var(--border); }
+        .compat-inner { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+        .compat-label { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); flex-shrink: 0; }
+        .compat-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+        .compat-badge { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 600; font-family: var(--mono); color: var(--muted); transition: border-color .2s; }
+        .compat-badge:hover { border-color: var(--accent); color: var(--text); }
+
+        /* ── MCP GAP SECTION ── */
+        .mcp-section { padding: 80px 0; }
+        .mcp-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+        .mcp-headline { font-size: 38px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 20px; }
+        .mcp-headline em { font-style: normal; color: var(--accent); }
+        .mcp-body { font-size: 16px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+        .mcp-compare { display: flex; flex-direction: column; gap: 12px; }
+        .mcp-row { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+        .mcp-row.theirs { border-color: var(--border); }
+        .mcp-row.ours { border-color: var(--accent); background: rgba(74,111,165,.06); }
+        .mcp-row-icon { font-family: var(--mono); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+        .mcp-row-content strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .mcp-row-content span { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+        /* ── WORKFLOW LIBRARY ── */
+        .workflow-intro { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; margin-bottom: 48px; }
+        .workflow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .workflow-item { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; display: flex; align-items: flex-start; gap: 14px; transition: border-color .2s; }
+        .workflow-item:hover { border-color: var(--accent); }
+        .workflow-item.soon { opacity: 0.7; }
+        .workflow-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+        .workflow-dot.live { background: var(--green); }
+        .workflow-dot.soon { background: var(--amber); }
+        .workflow-info strong { display: block; font-size: 14px; margin-bottom: 3px; }
+        .workflow-info span { font-size: 12px; color: var(--muted); }
+
+        /* ── CAPABILITY CARDS (Coming Soon) ── */
+        .capability-section-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 40px; }
+        .capability-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .capability-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; position: relative; overflow: hidden; transition: border-color .2s; }
+        .capability-card:hover { border-color: rgba(217,119,6,.4); }
+        .capability-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--amber) 0%, transparent 100%); opacity: 0.6; }
+        .cap-icon { width: 32px; height: 32px; color: var(--amber); margin-bottom: 14px; opacity: 0.85; }
+        .capability-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .capability-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
 
         /* ── FOOTER CTA ── */
         .footer-cta { padding: 80px 0; text-align: center; }
@@ -155,6 +204,8 @@
             .disaster-incidents, .problem-grid, .qs-steps, .pricing-grid, .value-row { grid-template-columns: 1fr; }
             nav .nav-cta { display: none; }
             .pillar-grid { grid-template-columns: 1fr !important; }
+            .mcp-inner, .workflow-intro, .workflow-grid, .capability-grid { grid-template-columns: 1fr; }
+            .mcp-headline { font-size: 28px; }
         }
     </style>
 </head>
@@ -170,6 +221,7 @@
             <nav>
                 <a href="#quickstart">Quickstart</a>
                 <a href="#receipt">See it work</a>
+                <a href="#roadmap">Roadmap</a>
                 <a href="#pricing">Pricing</a>
                 <a href="https://github.com/russellmiller3/enact">GitHub</a>
                 <a href="#" class="nav-cta">Start free trial →</a>
@@ -215,6 +267,71 @@
                 <i data-lucide="file-text" class="pillar-icon"></i>
                 <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Human-readable receipts</h3>
                 <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Every run returns who, what, why, every policy check pass/fail, and what changed. Hand it to your auditor, link it in a postmortem, paste it in Slack.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════
+     FRAMEWORK COMPAT STRIP
+════════════════════════════════════════════════════ -->
+<div class="compat-strip">
+    <div class="container">
+        <div class="compat-inner">
+            <div class="compat-label">Works with</div>
+            <div class="compat-badges">
+                <span class="compat-badge">Claude tool_use</span>
+                <span class="compat-badge">OpenAI Responses API</span>
+                <span class="compat-badge">LangChain</span>
+                <span class="compat-badge">CrewAI</span>
+                <span class="compat-badge">AutoGen</span>
+                <span class="compat-badge">MCP servers</span>
+                <span class="compat-badge">Any Python agent</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     MCP GAP — POSITIONING SECTION
+════════════════════════════════════════════════════ -->
+<section class="mcp-section">
+    <div class="container">
+        <div class="mcp-inner">
+            <div>
+                <div class="section-label">The governance gap</div>
+                <h2 class="mcp-headline">MCP gives your agents <em>tools.</em><br>Enact gives them <em>rules.</em></h2>
+                <p class="mcp-body">
+                    Model Context Protocol is great — it connects agents to every system you have.
+                    The problem: MCP has no opinion on what agents are <em>allowed</em> to do with that access.
+                    One misconfigured prompt away from a production database wipe.
+                </p>
+                <p class="mcp-body" style="margin-bottom:0;">
+                    Enact is the governance layer that sits between your agents and your systems.
+                    Every action is policy-gated before it touches anything real.
+                </p>
+            </div>
+            <div class="mcp-compare">
+                <div class="mcp-row theirs">
+                    <div class="mcp-row-icon" style="color:var(--muted);">⚡</div>
+                    <div class="mcp-row-content">
+                        <strong>MCP / tool_use alone</strong>
+                        <span>Connects agents to tools. Routes calls. Returns results. Does not answer: "Should this agent be doing this at all?"</span>
+                    </div>
+                </div>
+                <div style="text-align:center; font-size:20px; color:var(--border);">+</div>
+                <div class="mcp-row ours">
+                    <div class="mcp-row-icon" style="color:var(--accent);">🔒</div>
+                    <div class="mcp-row-content">
+                        <strong>Enact on top</strong>
+                        <span>Policy-gates every action before execution. Allowlists what's callable. Generates a signed receipt for every run. Blocks at 3:57am so you don't get paged.</span>
+                    </div>
+                </div>
+                <div style="padding: 16px 20px; border-radius: 8px; background: rgba(74,111,165,.06); border: 1px solid rgba(74,111,165,.2);">
+                    <p style="font-size:13px; color:var(--muted); line-height:1.6;">
+                        <strong style="color:var(--text);">Wrap any MCP server in Enact.</strong> Your agent calls <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.run()</code> instead of the tool directly. Same result — but now you have policy enforcement and a full audit trail.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -453,9 +570,108 @@ result, receipt = enact.<span class="fn">run</span>(
 </section>
 
 <!-- ═══════════════════════════════════════════════════
-     OSS vs CLOUD TABLE
+     WORKFLOW LIBRARY — "we write it for you"
 ════════════════════════════════════════════════════ -->
 <section>
+    <div class="container">
+        <div class="workflow-intro">
+            <div>
+                <div class="section-label">Workflow library</div>
+                <h2>Stop writing boilerplate connector code</h2>
+                <p style="font-size:16px; color:var(--muted); line-height:1.7; margin-bottom:20px;">
+                    Think Zapier — but for AI agents, built by engineers who've seen what goes wrong.
+                    Every workflow is pre-built, red-teamed, idempotent, and ready to deploy in minutes.
+                    We write them. We maintain them. You just register and run.
+                </p>
+                <p style="font-size:14px; color:var(--subtle); line-height:1.6;">
+                    No more figuring out connector quirks, handling rate limits, or writing the same
+                    duplicate-check logic for the fifth time. The library grows with every release.
+                </p>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:12px; padding:28px; background:var(--surface); border-radius:12px; border:1px solid var(--border);">
+                <div style="font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--subtle); margin-bottom:4px;">Why pre-built workflows matter</div>
+                <div style="display:flex; gap:12px; align-items:flex-start;">
+                    <span style="color:var(--green); font-size:16px; flex-shrink:0;">✓</span>
+                    <p style="font-size:13px; color:var(--muted); line-height:1.6;"><strong style="color:var(--text);">Idempotent by design.</strong> If step 1 succeeds and step 2 fails, a retry won't create duplicates. Every connector checks before it acts.</p>
+                </div>
+                <div style="display:flex; gap:12px; align-items:flex-start;">
+                    <span style="color:var(--green); font-size:16px; flex-shrink:0;">✓</span>
+                    <p style="font-size:13px; color:var(--muted); line-height:1.6;"><strong style="color:var(--text);">Red-teamed.</strong> We run adversarial prompts against every workflow before it ships. If an agent can break it, we fix it first.</p>
+                </div>
+                <div style="display:flex; gap:12px; align-items:flex-start;">
+                    <span style="color:var(--green); font-size:16px; flex-shrink:0;">✓</span>
+                    <p style="font-size:13px; color:var(--muted); line-height:1.6;"><strong style="color:var(--text);">Policy-ready.</strong> Every workflow ships with a recommended policy set. You can tighten them. You can't accidentally skip them.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="workflow-grid">
+            <!-- LIVE -->
+            <div class="workflow-item">
+                <div class="workflow-dot live"></div>
+                <div class="workflow-info">
+                    <strong>agent_pr_workflow <span class="badge-live">live</span></strong>
+                    <span>Create branch → open PR. Aborts if branch creation fails — never a PR pointing at nothing.</span>
+                </div>
+            </div>
+            <div class="workflow-item">
+                <div class="workflow-dot live"></div>
+                <div class="workflow-info">
+                    <strong>db_safe_insert <span class="badge-live">live</span></strong>
+                    <span>Check constraint → insert row. Returns explanatory failure instead of letting DB raise.</span>
+                </div>
+            </div>
+            <!-- COMING SOON -->
+            <div class="workflow-item soon">
+                <div class="workflow-dot soon"></div>
+                <div class="workflow-info">
+                    <strong>new_lead_workflow <span class="badge-soon">coming soon</span></strong>
+                    <span>Dedup check → create contact → create deal → assign task to AE. Full CRM pipeline.</span>
+                </div>
+            </div>
+            <div class="workflow-item soon">
+                <div class="workflow-dot soon"></div>
+                <div class="workflow-info">
+                    <strong>issue_triage_workflow <span class="badge-soon">coming soon</span></strong>
+                    <span>Label → assign → comment → create branch. Triage a GitHub issue in one agent call.</span>
+                </div>
+            </div>
+            <div class="workflow-item soon">
+                <div class="workflow-dot soon"></div>
+                <div class="workflow-info">
+                    <strong>deploy_to_staging <span class="badge-soon">coming soon</span></strong>
+                    <span>Policy gate → tag release → trigger deploy → verify health check. With rollback on failure.</span>
+                </div>
+            </div>
+            <div class="workflow-item soon">
+                <div class="workflow-dot soon"></div>
+                <div class="workflow-info">
+                    <strong>credential_rotation <span class="badge-soon">coming soon</span></strong>
+                    <span>Maintenance window check → rotate → verify → notify on-call. Never runs outside hours.</span>
+                </div>
+            </div>
+            <div class="workflow-item soon">
+                <div class="workflow-dot soon"></div>
+                <div class="workflow-info">
+                    <strong>deal_stage_update <span class="badge-soon">coming soon</span></strong>
+                    <span>Role check → update deal stage → create follow-up task → log to Slack.</span>
+                </div>
+            </div>
+            <div class="workflow-item soon">
+                <div class="workflow-dot soon"></div>
+                <div class="workflow-info">
+                    <strong>batch_data_export <span class="badge-soon">coming soon</span></strong>
+                    <span>Row-count gate → export → PII scrub → deliver. Agent can't export what it shouldn't.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════
+     OSS vs CLOUD TABLE
+════════════════════════════════════════════════════ -->
+<section class="alt">
     <div class="container">
         <h2>Self-Hosted vs Cloud</h2>
 
@@ -498,9 +714,93 @@ result, receipt = enact.<span class="fn">run</span>(
                     <td><span class="cross">✗</span></td>
                     <td><span class="check">✓</span> 90-day / 1-year · Splunk, Sentinel</td>
                 </tr>
+                <tr>
+                    <td>Human-in-loop gates <span class="badge-soon">coming soon</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span style="color:var(--amber);">◐</span> Pause workflow → Slack/email approval → resume or abort</td>
+                </tr>
+                <tr>
+                    <td>Rollback <span class="badge-soon">coming soon</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span style="color:var(--amber);">◐</span> One-command undo for any receipt-logged action</td>
+                </tr>
+                <tr>
+                    <td>Compliance export <span class="badge-soon">coming soon</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span style="color:var(--amber);">◐</span> SOC2 / ISO27001 / HIPAA-formatted report, one click</td>
+                </tr>
+                <tr>
+                    <td>Vertical policy packs <span class="badge-soon">coming soon</span></td>
+                    <td><span class="cross">✗</span></td>
+                    <td><span style="color:var(--amber);">◐</span> FinTech, Healthcare, DevOps — pre-built policy sets for your industry</td>
+                </tr>
             </tbody>
         </table>
 
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════
+     COMING SOON CAPABILITIES
+════════════════════════════════════════════════════ -->
+<section id="roadmap">
+    <div class="container">
+        <div class="section-label">Roadmap</div>
+        <div class="capability-section-header">
+            <h2 style="margin-bottom:0;">What's coming next</h2>
+            <span class="badge-soon" style="font-size:12px; padding:4px 10px;">v0.2+</span>
+        </div>
+        <p class="section-sub" style="margin-bottom:40px;">
+            These are the capabilities teams ask for most. Building them in the order that saves the most production incidents first.
+        </p>
+
+        <div class="capability-grid">
+
+            <div class="capability-card">
+                <i data-lucide="hand" class="cap-icon"></i>
+                <h3>Human-in-Loop Gates <span class="badge-soon">coming soon</span></h3>
+                <p>High-risk actions pause and wait for a human to approve before continuing. Slack DM, email, or web UI — your choice. Timeout = auto-abort with receipt. No more "the agent just did it while I was asleep."</p>
+            </div>
+
+            <div class="capability-card">
+                <i data-lucide="rotate-ccw" class="cap-icon"></i>
+                <h3>One-Step Rollback <span class="badge-soon">coming soon</span></h3>
+                <p>Every receipt-logged action can be undone in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(receipt_id)</code> reverses what the agent did, generates a rollback receipt, and notifies on-call. Your undo button for agent mistakes.</p>
+            </div>
+
+            <div class="capability-card">
+                <i data-lucide="layers" class="cap-icon"></i>
+                <h3>Vertical Policy Packs <span class="badge-soon">coming soon</span></h3>
+                <p>Pre-built policy sets for your industry — FinTech (no trading outside market hours, PII in transit controls), Healthcare (HIPAA field protection, PHI access audit), DevOps (prod deploy gates, blast-radius limits). Install, tune, done.</p>
+            </div>
+
+            <div class="capability-card">
+                <i data-lucide="file-check" class="cap-icon"></i>
+                <h3>Compliance Export <span class="badge-soon">coming soon</span></h3>
+                <p>Generate SOC2, ISO27001, or HIPAA audit reports directly from your receipt database. Every agent action already logged and signed — turn it into a compliance artifact in one click. Hand it to your auditor, not your engineers.</p>
+            </div>
+
+            <div class="capability-card">
+                <i data-lucide="activity" class="cap-icon"></i>
+                <h3>Anomaly Detection <span class="badge-soon">coming soon</span></h3>
+                <p>Learn your agents' normal behavior. Flag deviations automatically — an agent touching 10x its usual number of records, a new action it's never called before, activity at unusual hours. Catch the subtle stuff before it becomes a postmortem.</p>
+            </div>
+
+            <div class="capability-card">
+                <i data-lucide="git-merge" class="cap-icon"></i>
+                <h3>Multi-Agent Arbitration <span class="badge-soon">coming soon</span></h3>
+                <p>When multiple agents want to modify the same resource simultaneously, Enact serializes and arbitrates — not your database. Define merge strategies, conflict policies, and priority rules. Your agents stop stepping on each other.</p>
+            </div>
+
+        </div>
+
+        <div style="margin-top:32px; padding:24px 28px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <strong style="display:block; font-size:15px; margin-bottom:6px;">Want early access to any of these?</strong>
+                <p style="font-size:14px; color:var(--muted);">We're working with a handful of teams to validate each capability before shipping. Tell us which one you need most.</p>
+            </div>
+            <a href="mailto:hello@enact.cloud" class="btn btn-primary" style="flex-shrink:0;">Get early access →</a>
+        </div>
     </div>
 </section>
 
@@ -541,9 +841,11 @@ result, receipt = enact.<span class="fn">run</span>(
                     <li><span class="fi fi-check">✓</span> Everything in self-hosted</li>
                     <li><span class="fi fi-check">✓</span> <strong>Receipt search UI</strong> — filter by actor, date, outcome</li>
                     <li><span class="fi fi-check">✓</span> <strong>SMS + phone call alerts</strong> — know at 3:57am, not standup</li>
-                    <li><span class="fi fi-check">✓</span> <strong>Red-teamed workflows</strong> — validated, versioned, maintained</li>
+                    <li><span class="fi fi-check">✓</span> <strong>Red-teamed workflow library</strong> — validated, versioned, maintained</li>
                     <li><span class="fi fi-check">✓</span> 90-day retention (compliance-ready)</li>
                     <li><span class="fi fi-check">✓</span> Up to 50,000 receipts/month</li>
+                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Human-in-loop gates <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Rollback <span class="badge-soon">coming soon</span></span></li>
                     <li><span class="fi fi-check">✓</span> Email support (24hr response)</li>
                 </ul>
                 <a href="#" class="pricing-btn primary">Start free trial →</a>
@@ -560,11 +862,13 @@ result, receipt = enact.<span class="fn">run</span>(
                     <li><span class="fi fi-check">✓</span> 1+ year retention (audit trails)</li>
                     <li><span class="fi fi-check">✓</span> SIEM export (Splunk, Sentinel)</li>
                     <li><span class="fi fi-check">✓</span> SSO (SAML, Okta, Google)</li>
-                    <li><span class="fi fi-check">✓</span> Custom integrations</li>
+                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">SOC2 / ISO27001 compliance export <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Vertical policy packs <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Anomaly detection <span class="badge-soon">coming soon</span></span></li>
                     <li><span class="fi fi-check">✓</span> Unlimited receipts</li>
                     <li><span class="fi fi-check">✓</span> Priority support (4hr response)</li>
                 </ul>
-                <a href="#" class="pricing-btn">Contact sales</a>
+                <a href="mailto:hello@enact.cloud" class="pricing-btn">Contact sales</a>
             </div>
         </div>
 
