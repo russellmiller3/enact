@@ -94,21 +94,55 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
 - **Plan written**: `plans/2026-02-25-filesystem-connector.md` (Template A)
 - Total: 272 tests (210 → 272)
 
+### What Was Done This Session (landing page)
+- **`landing_page.html` updated** ✅ — source of truth for shipped features:
+  - Step 2: "HubSpot, Salesforce, Postgres" → "GitHub, Postgres, Filesystem"
+  - Quickstart code block: replaced HubSpot example with real shipped API (GitHubConnector, PostgresConnector, FilesystemConnector + no_push_to_main, no_merge_to_main, no_delete_without_where, no_delete_file, restrict_paths)
+  - LangChain wrapper: `new_lead_workflow` → `agent_pr_workflow`
+  - Roadmap badge: `v0.2+` → `v0.3+`, heading: "What's coming next" → "Coming in v0.3"
+  - Rollback capability card: marked `badge-live`, green border, icon color — no longer amber/coming-soon
+- **PyPI 0.2.0 published** ✅ — `enact-sdk 0.2.0` live at https://pypi.org/project/enact-sdk/
+
 ### Next Steps (priority order)
-1. **Bump PyPI to 0.2.0** — `pyproject.toml` already at 0.2.0. `python -m build && python -m twine upload dist/*`
-2. **Decide on landing_page_v2.html** — review in browser, swap it in as `landing_page.html` when satisfied.
+1. **ABAC + sensitive-read policies** (Template B) — see design notes below. ~2-3 hours.
+2. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
 3. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`.
-4. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
-5. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
+4. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
+
+### NEXT TASK: ABAC + Sensitive-Read Policies (Template B)
+
+**The problem:** Agents can READ anything — `read_file("/etc/passwd")`, `select_rows("credit_cards")` — no policy gate exists for reads. We also have no Attribute-Based Access Control: policies can't check WHO the actor is (role, clearance, department) against WHAT they're accessing.
+
+**The fix — two parts:**
+
+**Part 1: Add `actor_attributes` to `WorkflowContext`** (`enact/models.py`)
+```python
+class WorkflowContext(BaseModel):
+    workflow: str
+    actor_email: str
+    payload: dict = {}
+    actor_attributes: dict = {}  # NEW — role, clearance_level, dept, etc.
+    systems: dict = {}
+```
+Pass it through `EnactClient.run()` as a new kwarg: `actor_attributes={"role": "engineer", "clearance_level": 2}`.
+
+**Part 2: New policies in `enact/policies/access.py`**
+- `no_read_sensitive_tables(tables: list[str])` — factory; blocks `select_rows` when `payload["table"]` is in blocked set
+- `no_read_sensitive_paths(paths: list[str])` — factory; blocks `read_file` when `payload["path"]` starts with any sensitive prefix
+- `require_clearance_for_path(paths: list[str], min_clearance: int)` — ABAC; blocks if `actor_attributes["clearance_level"] < min_clearance` for sensitive paths
+- `require_actor_role(*allowed_roles)` — ABAC factory; blocks if `actor_attributes["role"]` not in allowed set
+
+**Reference:** `C:\Users\user\Desktop\programming\visa\backend\config\policies.py` — Russell's existing ABAC patterns (check_role_authorization, check_clearance_level, check_pii_restriction etc.)
+
+**Plan template:** Template B (small feature, ~2 files, ~100 lines + tests)
 
 ### Files to Reference
-- `docs/plans/2026-02-24-demo-evidence-and-gif.md` — NEXT TASK: demo evidence + GIF plan
 - `SPEC.md` — full build plan with ✅/⏭️ status markers + strategic thesis
 - `README.md` — install, quickstart, connector/policy reference
 - `CLAUDE.md` — conventions, design philosophy, git workflow
 - `PLAN-TEMPLATE.md` — how to write implementation plans
 - `examples/demo.py` — 3-act demo: BLOCK + PASS + ROLLBACK (no credentials)
 - `examples/quickstart.py` — minimal PASS + BLOCK demo
-- `landing_page_v2.html` — updated marketing page (open in browser to preview)
+- `enact/policies/access.py` — existing ABAC-adjacent policies (contractor_cannot_write_pii, require_actor_role)
 </content>
 </invoke>

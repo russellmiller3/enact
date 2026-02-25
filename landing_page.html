@@ -398,7 +398,7 @@
             <div class="qs-step">
                 <div class="qs-num">2</div>
                 <h3>Connect your systems</h3>
-                <p>HubSpot, Salesforce, Postgres — pass your credentials, get canonical actions back.</p>
+                <p>GitHub, Postgres, Filesystem — pass your credentials, get policy-gated, receipt-backed actions back.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
@@ -416,26 +416,37 @@
 pip install enact-sdk
 
 <span class="cm"># Step 2–4 — in your agent code</span>
-<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>, workflows, policies
+<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
+<span class="kw">from</span> enact.connectors.github <span class="kw">import</span> <span class="fn">GitHubConnector</span>
+<span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
+<span class="kw">from</span> enact.connectors.filesystem <span class="kw">import</span> <span class="fn">FilesystemConnector</span>
+<span class="kw">from</span> enact.policies.git <span class="kw">import</span> no_push_to_main, no_merge_to_main
+<span class="kw">from</span> enact.policies.db <span class="kw">import</span> no_delete_without_where
+<span class="kw">from</span> enact.policies.filesystem <span class="kw">import</span> no_delete_file, restrict_paths
+<span class="kw">from</span> enact.workflows.agent_pr_workflow <span class="kw">import</span> agent_pr_workflow
 
 enact = <span class="fn">EnactClient</span>(
-    systems=[
-        <span class="fn">HubSpot</span>(api_key=<span class="str">"..."</span>),
-        <span class="fn">Postgres</span>(dsn=<span class="str">"postgresql://..."</span>),
-    ],
+    secret=<span class="str">"your-hmac-secret"</span>,
+    systems={
+        <span class="str">"github"</span>:     <span class="fn">GitHubConnector</span>(token=<span class="str">"..."</span>, allowed_actions=[<span class="str">"create_branch"</span>, <span class="str">"create_pr"</span>]),
+        <span class="str">"postgres"</span>:   <span class="fn">PostgresConnector</span>(dsn=<span class="str">"postgresql://..."</span>),
+        <span class="str">"filesystem"</span>: <span class="fn">FilesystemConnector</span>(base_dir=<span class="str">"/workspace"</span>),
+    },
     policies=[
-        policies.<span class="fn">no_duplicate_contacts</span>(),
-        policies.<span class="fn">contractor_cannot_write_pii</span>(),
-        policies.<span class="fn">limit_tasks_per_contact</span>(max_tasks=<span class="str">3</span>, window_days=<span class="str">7</span>),
+        no_push_to_main,          <span class="cm"># blocks direct pushes to main</span>
+        no_merge_to_main,         <span class="cm"># blocks PRs targeting main or master</span>
+        no_delete_without_where,  <span class="cm"># blocks unsafe bulk deletes</span>
+        no_delete_file,           <span class="cm"># blocks all file deletions</span>
+        restrict_paths([<span class="str">"/workspace/src"</span>]),  <span class="cm"># path confinement</span>
     ],
-    workflows=[workflows.new_lead_workflow],
+    workflows=[agent_pr_workflow],
 )
 
 <span class="cm"># Your agent calls this one function</span>
 result, receipt = enact.<span class="fn">run</span>(
-    workflow=<span class="str">"new_lead_workflow"</span>,
+    workflow=<span class="str">"agent_pr_workflow"</span>,
     actor_email=<span class="str">"agent@company.com"</span>,
-    payload={<span class="str">"email"</span>: <span class="str">"jane@acme.com"</span>, <span class="str">"company"</span>: <span class="str">"Acme Inc"</span>},
+    payload={<span class="str">"repo"</span>: <span class="str">"myorg/myapp"</span>, <span class="str">"branch"</span>: <span class="str">"agent/fix-123"</span>, <span class="str">"title"</span>: <span class="str">"Fix bug"</span>},
 )
 
 <span class="cm"># Works with any framework that can call a Python function</span></code></pre>
@@ -444,10 +455,10 @@ result, receipt = enact.<span class="fn">run</span>(
             <p style="font-size:14px; color:var(--muted); margin-bottom:14px;"><strong style="color:var(--text);">Using LangChain, Claude tool_use, or OpenAI?</strong> Wrap it in a tool:</p>
 <pre><code><span class="kw">from</span> langchain_core.tools <span class="kw">import</span> tool
 
-<span class="fn">@tool</span>(<span class="str">"enact_new_lead"</span>)
-<span class="kw">def</span> <span class="fn">enact_new_lead</span>(payload: dict) -> dict:
-    <span class="str">"""Safely run the new_lead_workflow via Enact"""</span>
-    result, _ = enact.<span class="fn">run</span>(workflow=<span class="str">"new_lead_workflow"</span>, actor_email=<span class="str">"agent@company.com"</span>, payload=payload)
+<span class="fn">@tool</span>(<span class="str">"enact_open_pr"</span>)
+<span class="kw">def</span> <span class="fn">enact_open_pr</span>(payload: dict) -> dict:
+    <span class="str">"""Safely create a branch and open a PR via Enact"""</span>
+    result, _ = enact.<span class="fn">run</span>(workflow=<span class="str">"agent_pr_workflow"</span>, actor_email=<span class="str">"agent@company.com"</span>, payload=payload)
     <span class="kw">return</span> result
 
 <span class="cm"># Same pattern works with Claude tool_use, OpenAI Responses API, CrewAI, AutoGen, etc.</span></code></pre>
@@ -799,8 +810,8 @@ result, receipt = enact.<span class="fn">run</span>(
     <div class="container">
         <div class="section-label">Roadmap</div>
         <div class="capability-section-header">
-            <h2 style="margin-bottom:0;">What's coming next</h2>
-            <span class="badge-soon" style="font-size:12px; padding:4px 10px;">v0.2+</span>
+            <h2 style="margin-bottom:0;">Coming in v0.3</h2>
+            <span class="badge-soon" style="font-size:12px; padding:4px 10px;">v0.3+</span>
         </div>
         <p class="section-sub" style="margin-bottom:40px;">
             These are the capabilities teams ask for most. Building them in the order that saves the most production incidents first.
@@ -814,10 +825,10 @@ result, receipt = enact.<span class="fn">run</span>(
                 <p>High-risk actions pause and wait for a human to approve before continuing. Slack DM, email, or web UI — your choice. Timeout = auto-abort with receipt. No more "the agent just did it while I was asleep."</p>
             </div>
 
-            <div class="capability-card">
-                <i data-lucide="rotate-ccw" class="cap-icon"></i>
-                <h3>One-Step Rollback</h3>
-                <p>Undo reversible agent actions in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PASS</code> / <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
+            <div class="capability-card" style="border-color: rgba(5,150,105,.3); background: rgba(5,150,105,.04);">
+                <i data-lucide="rotate-ccw" class="cap-icon" style="color: var(--green);"></i>
+                <h3>One-Step Rollback <span class="badge-live">live</span></h3>
+                <p>Undo reversible agent actions in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PASS</code> / <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">
