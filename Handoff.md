@@ -70,7 +70,7 @@ Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
 Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
 ### What Was Done This Session
-- **Rollback feature — SHIPPED** ✅
+- **Rollback feature — SHIPPED + DOCS UPDATED** ✅
   - `enact/models.py`: `rollback_data: dict` field on `ActionResult`; `"PARTIAL"` added to `Receipt.decision` Literal
   - `enact/receipt.py`: `load_receipt(run_id, directory)` added
   - `enact/rollback.py`: NEW — `execute_rollback_action()` with `_rollback_github()` and `_rollback_postgres()` dispatch
@@ -78,6 +78,9 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
   - `enact/connectors/github.py`: `rollback_data` in all 5 mutating methods; new rollback-only actions: `close_pr`, `close_issue`, `create_branch_from_sha`
   - `enact/connectors/postgres.py`: pre-SELECT in `update_row` and `delete_row`; `rollback_data` in all 3 mutating methods
   - 40 new tests (123 → 163)
+  - README: added rollback section, updated file structure, updated test count to 163
+  - landing_page.html: removed 3 "coming soon" badges for rollback (comparison table, capability card, pricing tier)
+  - CLAUDE.md: added `landing_page.html` update to end-of-feature checklist
 
 ### Next Steps (priority order)
 1. **Bump PyPI to 0.2.0** — rollback is a significant feature. Bump `pyproject.toml`, build, upload.

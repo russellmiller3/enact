@@ -772,9 +772,9 @@ result, receipt = enact.<span class="fn">run</span>(
                     <td><span style="color:var(--amber);">◐</span> Pause workflow → Slack/email approval → resume or abort</td>
                 </tr>
                 <tr>
-                    <td>Rollback <span class="badge-soon">coming soon</span></td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span style="color:var(--amber);">◐</span> One-command undo for reversible receipt-logged actions. Irreversible actions (merged PRs, sent emails) recorded in rollback receipt — you know exactly what still needs manual cleanup.</td>
+                    <td>Rollback</td>
+                    <td><span class="check">✓</span></td>
+                    <td><span class="check">✓</span> <code style="font-family:var(--mono); font-size:12px;">enact.rollback(run_id)</code> reverses all reversible actions in one call. Irreversible actions (merged PRs, pushed commits) are recorded in the rollback receipt with honest limits.</td>
                 </tr>
                 <tr>
                     <td>Compliance export <span class="badge-soon">coming soon</span></td>
@@ -816,8 +816,8 @@ result, receipt = enact.<span class="fn">run</span>(
 
             <div class="capability-card">
                 <i data-lucide="rotate-ccw" class="cap-icon"></i>
-                <h3>One-Step Rollback <span class="badge-soon">coming soon</span></h3>
-                <p>Undo reversible agent actions in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(receipt_id)</code> reverses what it can (branches, DB rows, open PRs), explicitly records what it can't (merged PRs, pushed commits, sent emails), and generates a signed rollback receipt. Your undo button — with honest limits.</p>
+                <h3>One-Step Rollback</h3>
+                <p>Undo reversible agent actions in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PASS</code> / <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">
@@ -897,7 +897,7 @@ result, receipt = enact.<span class="fn">run</span>(
                     <li><span class="fi fi-check">✓</span> 90-day retention (compliance-ready)</li>
                     <li><span class="fi fi-check">✓</span> Up to 50,000 receipts/month</li>
                     <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Human-in-loop gates <span class="badge-soon">coming soon</span></span></li>
-                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Rollback <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-check">✓</span> <span>Rollback (<code style="font-family:var(--mono); font-size:11px;">enact.rollback(run_id)</code>)</span></li>
                     <li><span class="fi fi-check">✓</span> Email support (24hr response)</li>
                 </ul>
                 <a href="#" class="pricing-btn primary">Start free trial →</a>

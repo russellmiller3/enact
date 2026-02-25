@@ -67,6 +67,30 @@ agent calls enact.run()
 
 ## What Enact Can Do Right Now
 
+### Rollback
+
+```python
+enact = EnactClient(
+    systems={"github": GitHubConnector(token="...", allowed_actions=["create_branch", "create_pr", "close_pr"])},
+    policies=[...],
+    workflows=[my_workflow],
+    rollback_enabled=True,   # premium gate — off by default
+)
+
+result, receipt = enact.run(workflow="my_workflow", ...)
+
+# Later — undo everything that run did
+rollback_result, rollback_receipt = enact.rollback(receipt.run_id)
+```
+
+`rollback(run_id)` walks the original receipt in reverse, undoes each action (delete the branch, close the PR, restore the DB row), skips irreversible actions (merged PRs, pushed commits), and produces a signed `PASS` or `PARTIAL` rollback receipt. Every connector method captures pre-action state in `rollback_data` at execution time, so nothing needs to be fetched retroactively.
+
+**Supported:** GitHub (`create_branch`, `create_pr`, `create_issue`, `delete_branch`), Postgres (`insert_row`, `update_row`, `delete_row`)
+
+**Irreversible (recorded but not reversed):** `merge_pr`, `push_commit`
+
+---
+
 ### Policy enforcement
 - Block agents from pushing directly to `main` or `master`
 - Require branch names to match a prefix (e.g. `agent/`)
@@ -104,11 +128,13 @@ enact/
 ├── enact/                  # pip-installable package
 │   ├── __init__.py         # exports: EnactClient, all models
 │   ├── models.py           # data shapes for every object in a run
-│   ├── client.py           # EnactClient — orchestrates the full run() loop
+│   ├── client.py           # EnactClient — orchestrates run() + rollback()
 │   ├── policy.py           # policy engine — runs all checks, returns PolicyResult list
-│   ├── receipt.py          # builds, HMAC-signs, verifies, and writes receipts
+│   ├── receipt.py          # builds, HMAC-signs, verifies, writes, and loads receipts
+│   ├── rollback.py         # execute_rollback_action() — dispatch logic for reversal
 │   ├── connectors/
-│   │   └── github.py       # GitHub: create_branch, create_pr, create_issue, delete_branch, merge_pr
+│   │   ├── github.py       # GitHub: create_branch, create_pr, create_issue, delete_branch, merge_pr + rollback actions
+│   │   └── postgres.py     # Postgres: select_rows, insert_row, update_row, delete_row
 │   ├── workflows/
 │   │   ├── agent_pr_workflow.py   # create branch → open PR (never to main)
 │   │   └── db_safe_insert.py      # check constraints → insert row
@@ -122,6 +148,8 @@ enact/
 │   ├── test_receipt.py
 │   ├── test_client.py
 │   ├── test_github.py
+│   ├── test_postgres.py
+│   ├── test_rollback.py
 │   ├── test_git_policies.py
 │   ├── test_policies.py
 │   └── test_workflows.py
@@ -135,11 +163,12 @@ enact/
 
 | File | Job |
 |------|-----|
-| `models.py` | Defines data shapes. `WorkflowContext` (inputs), `PolicyResult` (one policy check), `ActionResult` (one workflow action), `Receipt` (full signed run record), `RunResult` (what the agent gets back). |
-| `client.py` | The main entry point. `EnactClient.run()` builds context, runs policies, executes the workflow if PASS, writes the receipt, returns `RunResult`. |
+| `models.py` | Defines data shapes. `WorkflowContext` (inputs), `PolicyResult` (one policy check), `ActionResult` (one workflow action, includes `rollback_data`), `Receipt` (full signed run record), `RunResult` (what the agent gets back). |
+| `client.py` | The main entry point. `EnactClient.run()` builds context, runs policies, executes the workflow if PASS, writes the receipt, returns `RunResult`. `EnactClient.rollback(run_id)` reverses a prior run. |
 | `policy.py` | Runs every registered policy against `WorkflowContext`. Returns `list[PolicyResult]`. Never bails early — always runs all checks. |
-| `receipt.py` | Takes policy results + action results, builds a `Receipt`, signs it with HMAC-SHA256, writes it to `receipts/`. |
-| `connectors/` | Thin wrappers around vendor SDKs. Each connector exposes named actions (`create_branch`, `insert_row`, etc.) that workflows call. |
+| `receipt.py` | Takes policy results + action results, builds a `Receipt`, signs it with HMAC-SHA256, writes it to `receipts/`. `load_receipt(run_id)` reads one back for rollback. |
+| `rollback.py` | `execute_rollback_action()` — dispatches a single rollback step to the right connector. Classifies actions as reversible, irreversible, or read-only. |
+| `connectors/` | Thin wrappers around vendor SDKs. Each connector exposes named actions (`create_branch`, `insert_row`, etc.) that workflows call. Every mutating action captures pre-action state in `rollback_data`. |
 | `workflows/` | Python functions that orchestrate connector actions. Each workflow step produces an `ActionResult`. |
 | `policies/` | Built-in reusable policy functions (ships with `pip install enact`). Each takes a `WorkflowContext` and returns a `PolicyResult`. |
 
@@ -215,7 +244,7 @@ python examples/quickstart.py
 
 ```bash
 pytest tests/ -v
-# 123 tests, 0 failures
+# 163 tests, 0 failures
 ```
 
 ---

@@ -60,7 +60,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - When Russell says **"commit"** or **"git workflow"**: invoke `commit-commands:commit-and-push` skill
 - Main branch: `master`
 - No need for backward compatibility — just change things
-- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) delete dead code and stale files, (5) push to remote
+- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `landing_page.html` — remove any "coming soon" badges for shipped features, (5) delete dead code and stale files, (6) push to remote
 
 ## File & Code Discipline
 
