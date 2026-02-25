@@ -533,3 +533,77 @@ class TestRollbackSignatureVerification:
         )
         with pytest.raises(ValueError, match="signature verification failed"):
             client.rollback(run_id)
+
+
+# ── Filesystem rollback dispatch ──────────────────────────────────────────────
+
+class TestRollbackFilesystem:
+    def _make_fs_connector(self):
+        connector = MagicMock()
+        connector.write_file.return_value = ActionResult(
+            action="write_file", system="filesystem", success=True,
+            output={"path": "src/main.py", "already_done": False},
+        )
+        connector.delete_file.return_value = ActionResult(
+            action="delete_file", system="filesystem", success=True,
+            output={"path": "src/main.py", "already_done": False},
+        )
+        return connector
+
+    def test_rollback_write_file_restores_previous_content(self):
+        """write_file rollback: restore old content via write_file."""
+        fs = self._make_fs_connector()
+        original = ActionResult(
+            action="write_file", system="filesystem", success=True,
+            output={"path": "src/main.py", "already_done": False},
+            rollback_data={"path": "src/main.py", "previous_content": "old content"},
+        )
+        result = execute_rollback_action(original, {"filesystem": fs})
+        fs.write_file.assert_called_once_with("src/main.py", "old content")
+        assert result.success is True
+
+    def test_rollback_write_file_deletes_if_no_previous_content(self):
+        """write_file rollback: file was new → delete it to undo creation."""
+        fs = self._make_fs_connector()
+        original = ActionResult(
+            action="write_file", system="filesystem", success=True,
+            output={"path": "src/new.py", "already_done": False},
+            rollback_data={"path": "src/new.py", "previous_content": None},
+        )
+        result = execute_rollback_action(original, {"filesystem": fs})
+        fs.delete_file.assert_called_once_with("src/new.py")
+        assert result.success is True
+
+    def test_rollback_delete_file_recreates_file(self):
+        """delete_file rollback: recreate file with stored content."""
+        fs = self._make_fs_connector()
+        original = ActionResult(
+            action="delete_file", system="filesystem", success=True,
+            output={"path": "important.txt", "already_done": False},
+            rollback_data={"path": "important.txt", "content": "precious data"},
+        )
+        result = execute_rollback_action(original, {"filesystem": fs})
+        fs.write_file.assert_called_once_with("important.txt", "precious data")
+        assert result.success is True
+
+    def test_rollback_read_file_is_skipped(self):
+        """read_file is read-only — rollback skips it."""
+        fs = self._make_fs_connector()
+        original = ActionResult(
+            action="read_file", system="filesystem", success=True,
+            output={"content": "data"}, rollback_data={},
+        )
+        result = execute_rollback_action(original, {"filesystem": fs})
+        assert result.success is True
+        assert result.output.get("already_done") == "skipped"
+
+    def test_rollback_list_dir_is_skipped(self):
+        """list_dir is read-only — rollback skips it."""
+        fs = self._make_fs_connector()
+        original = ActionResult(
+            action="list_dir", system="filesystem", success=True,
+            output={"entries": ["a.txt"]}, rollback_data={},
+        )
+        result = execute_rollback_action(original, {"filesystem": fs})
+        assert result.success is True
+        assert result.output.get("already_done") == "skipped"

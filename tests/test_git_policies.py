@@ -3,7 +3,7 @@ Tests for git safety policies and the agent_pr_workflow.
 """
 import pytest
 from unittest.mock import MagicMock
-from enact.policies.git import no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch
+from enact.policies.git import no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
 from enact.workflows.agent_pr_workflow import agent_pr_workflow
 from enact.models import WorkflowContext, ActionResult
 
@@ -152,6 +152,49 @@ class TestNoDeleteBranch:
         ctx = make_context()
         result = no_delete_branch(ctx)
         assert result.policy == "no_delete_branch"
+
+
+class TestNoMergeToMain:
+    def test_blocks_merge_to_main(self):
+        ctx = make_context({"base": "main"})
+        result = no_merge_to_main(ctx)
+        assert result.passed is False
+
+    def test_blocks_merge_to_master(self):
+        ctx = make_context({"base": "master"})
+        result = no_merge_to_main(ctx)
+        assert result.passed is False
+
+    def test_blocks_case_insensitive(self):
+        ctx = make_context({"base": "MAIN"})
+        result = no_merge_to_main(ctx)
+        assert result.passed is False
+
+    def test_allows_merge_to_staging(self):
+        ctx = make_context({"base": "staging"})
+        result = no_merge_to_main(ctx)
+        assert result.passed is True
+
+    def test_allows_merge_to_feature_branch(self):
+        ctx = make_context({"base": "agent/release-candidate"})
+        result = no_merge_to_main(ctx)
+        assert result.passed is True
+
+    def test_allows_empty_base(self):
+        """Missing base → can't determine target → pass through."""
+        ctx = make_context({})
+        result = no_merge_to_main(ctx)
+        assert result.passed is True
+
+    def test_reason_mentions_blocked_on_block(self):
+        ctx = make_context({"base": "main"})
+        result = no_merge_to_main(ctx)
+        assert "blocked" in result.reason.lower()
+
+    def test_policy_name(self):
+        ctx = make_context({"base": "main"})
+        result = no_merge_to_main(ctx)
+        assert result.policy == "no_merge_to_main"
 
 
 class TestAgentPrWorkflow:

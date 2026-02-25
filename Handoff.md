@@ -38,20 +38,23 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - License: ELv2 + no-resale clause (no managed service, no selling the software itself)
 
 ### What Exists (fully built + tested)
-210 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (rollback + security hardening + db policies not yet published — bump to 0.2.0 is next).
+272 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (everything since rollback not yet published — bump to 0.2.0 is next).
 
 ```
 enact/
   models.py, policy.py, receipt.py, client.py
-  rollback.py                   # execute_rollback_action() dispatch for GitHub + Postgres
+  rollback.py                   # execute_rollback_action() dispatch for GitHub + Postgres + Filesystem
   connectors/github.py          # rollback_data populated; close_pr, close_issue, create_branch_from_sha added
   connectors/postgres.py        # pre-SELECT in update_row/delete_row; rollback_data populated
-  policies/git.py               # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch
-  policies/db.py                # NEW — no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
+  connectors/filesystem.py      # NEW — read_file, write_file, delete_file, list_dir; base_dir path confinement
+  policies/git.py               # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
+  policies/db.py                # no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
+  policies/filesystem.py        # NEW — no_delete_file, restrict_paths, block_extensions
   policies/crm.py, access.py, time.py
   workflows/agent_pr_workflow.py, db_safe_insert.py
 CLAUDE.md, README.md, SPEC.md, PLAN-TEMPLATE.md
 plans/2026-02-24-rollback.md
+plans/2026-02-25-filesystem-connector.md
 plans/guides/RED-TEAM-MODE-GUIDE.md
 LICENSE, landing_page.html, pyproject.toml
 ```
@@ -72,26 +75,31 @@ Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
 Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
 ### What Was Done This Session
-- **New db policies** ✅ (`enact/policies/db.py` — new file)
-  - `no_delete_row` — sentinel, unconditional block on all row deletions
-  - `no_delete_without_where` — blocks DELETE without a non-empty WHERE clause
-  - `no_update_without_where` — blocks UPDATE without a non-empty WHERE clause
-  - `protect_tables(list)` — factory; blocks any operation targeting a listed table (exact, case-sensitive)
-  - 29 new tests in `tests/test_db_policies.py` (181 → 210)
-- **`no_delete_branch`** added to `enact/policies/git.py` ✅
-  - 5 new tests in `tests/test_git_policies.py`
-- `README.md` policy table updated to v0.2; test count updated to 210; tree updated
-- `Handoff.md` updated
-
-- **Security hardening (previous session)** ✅
-  - `enact/receipt.py`: path traversal + HMAC full-field coverage
-  - `enact/client.py`: required secret, TOCTOU fix in rollback
+- **`FilesystemConnector`** ✅ (`enact/connectors/filesystem.py` — new file)
+  - `read_file`, `write_file`, `delete_file`, `list_dir`
+  - `base_dir` path confinement — traversal blocked at connector level
+  - `already_done` + `rollback_data` on all mutating actions
+  - 29 tests in `tests/test_filesystem.py`
+- **Filesystem policies** ✅ (`enact/policies/filesystem.py` — new file)
+  - `no_delete_file` — sentinel, unconditional
+  - `restrict_paths(list)` — factory; blocks if path not within any allowed dir (traversal-safe)
+  - `block_extensions(list)` — factory; case-insensitive, handles dotfiles (.env)
+  - 20 tests in `tests/test_filesystem_policies.py`
+- **Filesystem rollback** ✅ (`enact/rollback.py` updated)
+  - `write_file` rollback: restore previous content, or delete if file was new
+  - `delete_file` rollback: recreate file with stored content
+  - `read_file`, `list_dir`: read-only, skipped
+  - 5 tests in `tests/test_rollback.py::TestRollbackFilesystem`
+- **`no_merge_to_main`** added to `enact/policies/git.py` ✅ — reads `payload["base"]`; 8 tests
+- **Plan written**: `plans/2026-02-25-filesystem-connector.md` (Template A)
+- Total: 272 tests (210 → 272)
 
 ### Next Steps (priority order)
-1. **Bump PyPI to 0.2.0** — all the above warrants a publish. Bump `pyproject.toml` (already at 0.2.0), `python -m build`, `python -m twine upload dist/*`.
+1. **Bump PyPI to 0.2.0** — `pyproject.toml` already at 0.2.0. `python -m build && python -m twine upload dist/*`
 2. **Decide on landing_page_v2.html** — review in browser, swap it in as `landing_page.html` when satisfied.
-3. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`. Add row-level evidence to Act 3, record terminal GIF, embed on landing page + README.
+3. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`.
 4. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
+5. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
 
 ### Files to Reference
 - `docs/plans/2026-02-24-demo-evidence-and-gif.md` — NEXT TASK: demo evidence + GIF plan

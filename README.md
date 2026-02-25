@@ -135,13 +135,15 @@ enact/
 │   ├── rollback.py         # execute_rollback_action() — dispatch logic for reversal
 │   ├── connectors/
 │   │   ├── github.py       # GitHub: create_branch, create_pr, create_issue, delete_branch, merge_pr + rollback actions
-│   │   └── postgres.py     # Postgres: select_rows, insert_row, update_row, delete_row
+│   │   ├── postgres.py     # Postgres: select_rows, insert_row, update_row, delete_row
+│   │   └── filesystem.py   # Filesystem: read_file, write_file, delete_file, list_dir
 │   ├── workflows/
 │   │   ├── agent_pr_workflow.py   # create branch → open PR (never to main)
 │   │   └── db_safe_insert.py      # check constraints → insert row
 │   └── policies/
-│       ├── git.py          # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch
+│       ├── git.py          # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
 │       ├── db.py           # no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
+│       ├── filesystem.py   # no_delete_file, restrict_paths, block_extensions
 │       ├── crm.py          # no_duplicate_contacts, limit_tasks_per_contact
 │       ├── access.py       # contractor_cannot_write_pii, require_actor_role
 │       └── time.py         # within_maintenance_window
@@ -227,10 +229,14 @@ Postgres connector works with any Postgres-compatible host: Supabase, Neon, Rail
 | `git.py` | `max_files_per_commit(n)` | Commits touching more than n files (blast radius) |
 | `git.py` | `require_branch_prefix(p)` | Agent branches not starting with prefix p |
 | `git.py` | `no_delete_branch` | All branch deletions — sentinel, unconditional |
+| `git.py` | `no_merge_to_main` | PR merges whose target branch is main or master |
 | `db.py` | `no_delete_row` | All row deletions — sentinel, unconditional |
 | `db.py` | `no_delete_without_where` | DELETE with empty or missing WHERE clause |
 | `db.py` | `no_update_without_where` | UPDATE with empty or missing WHERE clause |
 | `db.py` | `protect_tables(list)` | Any operation targeting a protected table |
+| `filesystem.py` | `no_delete_file` | All file deletions — sentinel, unconditional |
+| `filesystem.py` | `restrict_paths(list)` | Operations on paths outside allowed directories |
+| `filesystem.py` | `block_extensions(list)` | Operations on files with sensitive extensions (.env, .key, .pem) |
 | `crm.py` | `no_duplicate_contacts` | Creating a contact that already exists |
 | `crm.py` | `limit_tasks_per_contact` | Too many tasks created in a time window |
 | `access.py` | `contractor_cannot_write_pii` | Contractors writing PII fields |
@@ -262,7 +268,7 @@ Three scenarios in ~10 seconds: an agent blocked from pushing to main (the Kiro 
 
 ```bash
 pytest tests/ -v
-# 210 tests, 0 failures
+# 272 tests, 0 failures
 ```
 
 ---

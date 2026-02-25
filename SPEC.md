@@ -229,8 +229,9 @@ enact/
 │       ├── __init__.py
 │       ├── crm.py            # no_duplicate_contacts, limit_tasks_per_contact
 │       ├── access.py         # contractor_cannot_write_pii, require_actor_role
-│       ├── git.py            # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch
+│       ├── git.py            # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
 │       ├── db.py             # no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
+│       ├── filesystem.py     # no_delete_file, restrict_paths, block_extensions
 │       └── time.py           # within_maintenance_window
 ├── tests/
 │   ├── test_policy_engine.py # Port + expand from test_policy_agent.py
@@ -266,7 +267,7 @@ enact/
 ### Phase 3 — GitHub Connector
 9.  ✅ `enact/connectors/github.py` — `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr`
 10. ✅ `enact/workflows/agent_pr_workflow.py` — reference workflow
-11. ✅ `enact/policies/git.py` — `no_push_to_main()`, `max_files_per_commit(n)`, `require_branch_prefix(prefix)`, `no_delete_branch()`
+11. ✅ `enact/policies/git.py` — `no_push_to_main()`, `max_files_per_commit(n)`, `require_branch_prefix(prefix)`, `no_delete_branch()`, `no_merge_to_main()`
     - ⏭️ `no_push_during_deploy_freeze()` — not implemented in v0.1
 12. ✅ Tests: `test_github.py`, `test_git_policies.py`
 
@@ -286,13 +287,16 @@ enact/
 22. ✅ `pytest tests/ -v` — 123 tests, 0 failures
 23. ✅ PyPI publish — `pip install enact-sdk` live at https://pypi.org/project/enact-sdk/0.1.0/
 
-### Phase 6 — Security Hardening + DB Policies (v0.2)
+### Phase 6 — Security Hardening + DB + Filesystem Policies (v0.2)
 24. ✅ `enact/receipt.py` — path traversal protection (`_validate_run_id()`); HMAC now covers ALL fields via `_build_signature_message()`
 25. ✅ `enact/client.py` — required secret (no default); `allow_insecure_secret` escape hatch; rollback verifies signature before executing (TOCTOU fix)
-26. ✅ `enact/rollback.py` — `execute_rollback_action()` dispatch for GitHub + Postgres
+26. ✅ `enact/rollback.py` — `execute_rollback_action()` dispatch for GitHub + Postgres + Filesystem
 27. ✅ `enact/policies/db.py` — `no_delete_row()`, `no_delete_without_where()`, `no_update_without_where()`, `protect_tables(list)`
-28. ✅ Tests: `test_db_policies.py` — 210 tests total, 0 failures
-29. 🔜 PyPI publish — bump to `enact-sdk 0.2.0`
+28. ✅ `enact/policies/git.py` — added `no_delete_branch()`, `no_merge_to_main()`
+29. ✅ `enact/connectors/filesystem.py` — `read_file`, `write_file`, `delete_file`, `list_dir`; base_dir path confinement; rollback_data on mutating actions
+30. ✅ `enact/policies/filesystem.py` — `no_delete_file()`, `restrict_paths(list)`, `block_extensions(list)`
+31. ✅ Tests: 272 tests total, 0 failures
+32. 🔜 PyPI publish — bump to `enact-sdk 0.2.0`
 
 ---
 

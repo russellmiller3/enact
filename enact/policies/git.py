@@ -161,3 +161,41 @@ def no_delete_branch(context: WorkflowContext) -> PolicyResult:
         passed=False,
         reason="Branch deletion is not permitted on this client",
     )
+
+
+def no_merge_to_main(context: WorkflowContext) -> PolicyResult:
+    """
+    Block any merge_pr operation whose target branch is main or master.
+
+    Reads context.payload["base"] — the branch the PR merges INTO. The
+    workflow is responsible for populating this field before calling enact.run():
+
+        enact.run(context=WorkflowContext(
+            workflow="merge_approved_pr",
+            payload={"base": pr.base.ref, "pr_number": 42},
+            ...
+        ))
+
+    The check is case-insensitive. An empty or missing base is allowed through
+    — the policy can only block what it can see.
+
+    Use alongside no_push_to_main to prevent both direct pushes and PR merges
+    to the protected branch.
+
+    Args:
+        context — WorkflowContext; reads context.payload.get("base", "")
+
+    Returns:
+        PolicyResult — passed=False if base is "main" or "master" (any case)
+    """
+    base = context.payload.get("base", "")
+    blocked = base.lower() in ("main", "master")
+    return PolicyResult(
+        policy="no_merge_to_main",
+        passed=not blocked,
+        reason=(
+            f"Merge into '{base}' is blocked — PRs must target a non-protected branch"
+            if blocked
+            else "Merge target is not main/master"
+        ),
+    )

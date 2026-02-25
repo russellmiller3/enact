@@ -5,16 +5,21 @@ execute_rollback_action() takes a single ActionResult and the systems dict,
 and dispatches to the appropriate connector inverse method using rollback_data.
 
 Inverse map:
-    github.create_branch     -> github.delete_branch
-    github.delete_branch     -> github.create_branch_from_sha
-    github.create_pr         -> github.close_pr
-    github.create_issue      -> github.close_issue
-    github.merge_pr          -> (irreversible — cannot unmerge)
-    github.push_commit       -> (irreversible — cannot un-push without destructive force)
-    postgres.insert_row      -> postgres.delete_row  (using id or first col as PK)
-    postgres.update_row      -> postgres.update_row  (with old_rows from rollback_data)
-    postgres.delete_row      -> postgres.insert_row  (for each deleted row)
-    postgres.select_rows     -> (read-only, skipped)
+    github.create_branch        -> github.delete_branch
+    github.delete_branch        -> github.create_branch_from_sha
+    github.create_pr            -> github.close_pr
+    github.create_issue         -> github.close_issue
+    github.merge_pr             -> (irreversible — cannot unmerge)
+    github.push_commit          -> (irreversible — cannot un-push without destructive force)
+    postgres.insert_row         -> postgres.delete_row  (using id or first col as PK)
+    postgres.update_row         -> postgres.update_row  (with old_rows from rollback_data)
+    postgres.delete_row         -> postgres.insert_row  (for each deleted row)
+    postgres.select_rows        -> (read-only, skipped)
+    filesystem.write_file       -> filesystem.write_file (restore previous_content)
+                                   OR filesystem.delete_file (if previous_content is None)
+    filesystem.delete_file      -> filesystem.write_file (recreate with stored content)
+    filesystem.read_file        -> (read-only, skipped)
+    filesystem.list_dir         -> (read-only, skipped)
 """
 from enact.models import ActionResult
 
@@ -31,6 +36,8 @@ _IRREVERSIBLE = {
 # Read-only actions — nothing to undo, rollback skips them gracefully
 _READ_ONLY = {
     ("postgres", "select_rows"),
+    ("filesystem", "read_file"),
+    ("filesystem", "list_dir"),
 }
 
 
@@ -81,6 +88,8 @@ def execute_rollback_action(action_result: ActionResult, systems: dict) -> Actio
         return _rollback_github(action_result.action, rd, connector)
     elif action_result.system == "postgres":
         return _rollback_postgres(action_result.action, rd, connector)
+    elif action_result.system == "filesystem":
+        return _rollback_filesystem(action_result.action, rd, connector)
     else:
         return ActionResult(
             action=f"rollback_{action_result.action}",
@@ -177,4 +186,35 @@ def _rollback_postgres(action: str, rd: dict, connector) -> ActionResult:
             system="postgres",
             success=False,
             output={"error": f"Rollback failed for postgres.{action}: {str(e)}"},
+        )
+
+
+def _rollback_filesystem(action: str, rd: dict, connector) -> ActionResult:
+    try:
+        if action == "write_file":
+            previous_content = rd.get("previous_content")
+            if previous_content is None:
+                # File was new — delete it to undo the creation
+                return connector.delete_file(rd["path"])
+            else:
+                # File existed — restore its previous content
+                return connector.write_file(rd["path"], previous_content)
+
+        elif action == "delete_file":
+            # Recreate the file with the content that was stored before deletion
+            return connector.write_file(rd["path"], rd["content"])
+
+        else:
+            return ActionResult(
+                action=f"rollback_{action}",
+                system="filesystem",
+                success=False,
+                output={"error": f"No rollback handler for filesystem.{action}"},
+            )
+    except Exception as e:
+        return ActionResult(
+            action=f"rollback_{action}",
+            system="filesystem",
+            success=False,
+            output={"error": f"Rollback failed for filesystem.{action}: {str(e)}"},
         )
