@@ -3,7 +3,7 @@ Tests for git safety policies and the agent_pr_workflow.
 """
 import pytest
 from unittest.mock import MagicMock
-from enact.policies.git import no_push_to_main, max_files_per_commit, require_branch_prefix
+from enact.policies.git import no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch
 from enact.workflows.agent_pr_workflow import agent_pr_workflow
 from enact.models import WorkflowContext, ActionResult
 
@@ -120,6 +120,38 @@ class TestRequireBranchPrefix:
         ctx = make_context({"branch": "agent/x"})
         result = policy(ctx)
         assert result.policy == "require_branch_prefix"
+
+
+class TestNoDeleteBranch:
+    def test_always_blocks(self):
+        """Sentinel policy — blocks regardless of payload."""
+        ctx = make_context()
+        result = no_delete_branch(ctx)
+        assert result.passed is False
+
+    def test_blocks_even_for_agent_branches(self):
+        """Even agent-prefixed branches cannot be deleted on this client."""
+        ctx = make_context({"branch": "agent/old-feature"})
+        result = no_delete_branch(ctx)
+        assert result.passed is False
+
+    def test_blocks_any_workflow(self):
+        ctx = WorkflowContext(
+            workflow="branch_cleanup", actor_email="agent@test.com",
+            payload={"branch": "stale/branch"}, systems={},
+        )
+        result = no_delete_branch(ctx)
+        assert result.passed is False
+
+    def test_reason_mentions_deletion(self):
+        ctx = make_context()
+        result = no_delete_branch(ctx)
+        assert "deletion" in result.reason.lower()
+
+    def test_policy_name(self):
+        ctx = make_context()
+        result = no_delete_branch(ctx)
+        assert result.policy == "no_delete_branch"
 
 
 class TestAgentPrWorkflow:

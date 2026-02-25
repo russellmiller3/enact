@@ -27,7 +27,7 @@ on every subsequent run() call.
 
 Payload keys used by this module
 ----------------------------------
-  "branch"     — branch name string (used by no_push_to_main, require_branch_prefix)
+  "branch"     — branch name string (used by no_push_to_main, no_delete_branch, require_branch_prefix)
   "file_count" — integer count of files in the commit (used by max_files_per_commit)
 """
 from enact.models import WorkflowContext, PolicyResult
@@ -135,3 +135,29 @@ def require_branch_prefix(prefix: str = "agent/"):
         )
 
     return _policy
+
+
+def no_delete_branch(context: WorkflowContext) -> PolicyResult:
+    """
+    Block all branch deletion on this client — regardless of branch name.
+
+    Sentinel policy: register this on any client where delete_branch should
+    never run. Useful for agents whose only job is to create branches and open
+    PRs — they have no business deleting anything. No payload keys are read;
+    the block is unconditional.
+
+    If you have a legitimate branch-cleanup workflow, create a separate
+    EnactClient for it without this policy rather than trying to conditionally
+    allow deletion on a shared client.
+
+    Args:
+        context — WorkflowContext (payload not inspected)
+
+    Returns:
+        PolicyResult — always passed=False
+    """
+    return PolicyResult(
+        policy="no_delete_branch",
+        passed=False,
+        reason="Branch deletion is not permitted on this client",
+    )

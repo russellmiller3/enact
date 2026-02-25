@@ -38,15 +38,17 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - License: ELv2 + no-resale clause (no managed service, no selling the software itself)
 
 ### What Exists (fully built + tested)
-181 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (rollback + security hardening not yet published).
+210 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (rollback + security hardening + db policies not yet published — bump to 0.2.0 is next).
 
 ```
 enact/
   models.py, policy.py, receipt.py, client.py
-  rollback.py                   # NEW — execute_rollback_action() dispatch for GitHub + Postgres
+  rollback.py                   # execute_rollback_action() dispatch for GitHub + Postgres
   connectors/github.py          # rollback_data populated; close_pr, close_issue, create_branch_from_sha added
   connectors/postgres.py        # pre-SELECT in update_row/delete_row; rollback_data populated
-  policies/git.py, crm.py, access.py, time.py
+  policies/git.py               # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch
+  policies/db.py                # NEW — no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
+  policies/crm.py, access.py, time.py
   workflows/agent_pr_workflow.py, db_safe_insert.py
 CLAUDE.md, README.md, SPEC.md, PLAN-TEMPLATE.md
 plans/2026-02-24-rollback.md
@@ -70,19 +72,23 @@ Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
 Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
 ### What Was Done This Session
-- **Security hardening — 4 vulnerabilities fixed** ✅
-  - `enact/receipt.py`: path traversal protection (`_validate_run_id()` UUID regex + path resolve check in `write_receipt`/`load_receipt`); HMAC signature now covers ALL fields (payload, policy_results, actions_taken) via JSON canonicalization; `_build_signature_message()` helper
-  - `enact/client.py`: removed `"enact-default-secret"` fallback — secret is now required (explicit param or `ENACT_SECRET` env var, min 32 chars); `allow_insecure_secret=True` escape hatch for tests; `rollback()` now calls `verify_signature()` before executing to prevent TOCTOU attacks
-  - 18 new security tests (163 → 181): `TestPathTraversalProtection`, `TestHMACFullCoverage`, `TestSecretValidation`, `TestRollbackSignatureVerification`
-  - `README.md`: security section added, env var table updated, test count updated
-  - `SPEC.md`: Security Hardening section added
-  - `examples/demo.py` + `examples/quickstart.py`: updated for required secret (`allow_insecure_secret=True`)
+- **New db policies** ✅ (`enact/policies/db.py` — new file)
+  - `no_delete_row` — sentinel, unconditional block on all row deletions
+  - `no_delete_without_where` — blocks DELETE without a non-empty WHERE clause
+  - `no_update_without_where` — blocks UPDATE without a non-empty WHERE clause
+  - `protect_tables(list)` — factory; blocks any operation targeting a listed table (exact, case-sensitive)
+  - 29 new tests in `tests/test_db_policies.py` (181 → 210)
+- **`no_delete_branch`** added to `enact/policies/git.py` ✅
+  - 5 new tests in `tests/test_git_policies.py`
+- `README.md` policy table updated to v0.2; test count updated to 210; tree updated
+- `Handoff.md` updated
 
-- **Demo + landing page v2 — DONE, uncommitted** (prior session)
-  - `examples/demo.py`, `landing_page_v1/v2.html`, `plans/2026-02-24-demo-and-landing-v2.md` — see previous Handoff for details
+- **Security hardening (previous session)** ✅
+  - `enact/receipt.py`: path traversal + HMAC full-field coverage
+  - `enact/client.py`: required secret, TOCTOU fix in rollback
 
 ### Next Steps (priority order)
-1. **Bump PyPI to 0.2.0** — rollback + security hardening warrant a version bump. Bump `pyproject.toml`, `python -m build`, `python -m twine upload dist/*`.
+1. **Bump PyPI to 0.2.0** — all the above warrants a publish. Bump `pyproject.toml` (already at 0.2.0), `python -m build`, `python -m twine upload dist/*`.
 2. **Decide on landing_page_v2.html** — review in browser, swap it in as `landing_page.html` when satisfied.
 3. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`. Add row-level evidence to Act 3, record terminal GIF, embed on landing page + README.
 4. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
