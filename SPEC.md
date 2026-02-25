@@ -13,6 +13,9 @@
 - 89% have implemented observability — they know they need visibility, but observability tells you what happened *after*. Enact tells you what's allowed *before*, and proves it after. Different product, different buyer (CISO not DevOps).
 - Microsoft published a formal taxonomy of agent failure modes in 2025. When Microsoft writes a whitepaper about your problem space, enterprise security teams start budgeting for it.
 - Nearly 50% of YC's latest batch are AI agent companies — your early adopter base is being minted right now.
+- **The viral pain is in coding agents, not CRM.** Every major AI agent disaster in 2025-2026 involves coding agents + databases: Replit (deleted production database, July 2025), Amazon Kiro (deleted EC2 systems, 13-hour AWS outage, Dec 2025), Claude Code (`rm -rf` home directory, Dec 2025). Zero CRM stories go viral. The ICP engineer's fear is their coding agent breaking production — lead with that.
+- **Rollback is the unique differentiator.** No competitor has it. AgentBouncr (HN, Feb 2026) got 1 point / 3 comments with the same governance pitch. The difference: Enact has rollback — the Replit story ends differently with Enact. Lead with that.
+- **Competitors are weak right now.** AgentBouncr and Nucleus both launched "Show HN" in Feb 2026 with near-zero traction. The governance layer space is hot but no one has a compelling demo. First credible demo wins the HN slot.
 
 **Why this is the right abstraction.**
 Enact sits at the *action layer*, not the model layer. Models change constantly (GPT-5, Claude, Gemini, Llama). The actions agents take (write to database, open PR, create contact, send email) are stable. LLM-vendor-independence isn't a feature — it's the architecture. Same with Temporal and other orchestration tools: Enact is a library that composes with whatever stack the customer uses, not a competing platform.
@@ -35,6 +38,8 @@ Each of those is a billion-dollar company. Enact is the one product that does al
 - Eventually: ML model trained on real agent failure modes. Predicts which workflows will fail, which policy configs are too loose, which actors are behaving anomalously.
 
 **Build sequencing principle.** Ship 20 hardened workflows before building the ML model. Workflows are the data collection points and the reason to subscribe. The model comes after the data exists.
+
+**Demo before connectors.** The most important next artifact is `examples/demo.py` — a self-contained, zero-credential 3-act script showing the Kiro scenario (BLOCK), normal operation (PASS + receipt), and the Replit scenario (PASS + rollback). This is what lands on HN and converts GitHub stars to trials. HubSpot connector comes after the demo is sharp.
 
 **The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records. Enact's saga approach (connector methods that check-before-act) directly addresses this. Ship in v0.2 as a named feature, not an implementation detail.
 
@@ -83,10 +88,7 @@ result, receipt = enact.run(
 | `backend/agents/notify.py` | ⚠️ Partial | Pattern reusable for Cloud alerting |
 | `backend/workflow.py` | ⚠️ Partial | Orchestrator pattern reusable |
 
-**Deleted (Visa-specific):**
-- `agents/discovery.py`, `agents/intake.py`, `agents/provision.py`
-- `config/datasets.json`, `config/users.json`
-- All frontend prototypes, plans/, screenshots
+
 
 ---
 
@@ -271,6 +273,7 @@ enact/
 13. ✅ `enact/policies/crm.py` — `no_duplicate_contacts()`, `limit_tasks_per_contact(max, window_days)`
 14. ✅ `enact/policies/access.py` — `contractor_cannot_write_pii()`, `require_actor_role(roles)`
 15. ✅ `enact/policies/time.py` — `within_maintenance_window(start_utc, end_utc)`
+15b. ✅ `examples/demo.py` — 3-act self-contained demo (zero credentials). DemoGitHubConnector + DemoPostgresConnector inline. Shows BLOCK → PASS → ROLLBACK narrative.
 16. ⏭️ `enact/connectors/hubspot.py` — skipped in v0.1; planned for v0.2
 17. ⏭️ `enact/workflows/new_lead.py` — skipped (depends on HubSpot connector)
 18. ✅ Tests: `test_policies.py`
@@ -375,6 +378,8 @@ Post "Show HN: Enact — an action firewall for AI agents" when you have a clean
 - Target: engineers who have already been burned by an agent doing something wrong
 - What makes it land: concrete horror story in the opening line ("our agent created 847 duplicate Jira tickets")
 - The comments will tell you exactly what the market wants
+- **Timing: now.** Competitors (AgentBouncr, Nucleus) just launched with near-zero traction. The window is open. `examples/demo.py` is the clean demo — ship it and post.
+- **Hook:** "Our demo shows the Replit database deletion with a happy ending — `enact.rollback(run_id)` restores every deleted row. Built with zero LLMs in the decision path."
 
 ### Channel 2 — YC companies (warm, fast-moving)
 Nearly 50% of the current YC batch are agent companies. They're shipping fast, hitting edge cases, and have budget. Find them via:
@@ -438,3 +443,35 @@ Keep for Cloud layer: `fastapi`, `uvicorn`
 **Workflows are thin.** Reference implementations show the pattern. Cloud sells the validated, red-teamed versions.
 
 **PyPI first.** `pip install enact` must work before anything else.
+
+---
+
+## Security Hardening (v0.1.1)
+
+Security audit completed 2026-02-25. Four vulnerabilities fixed, 181 tests passing.
+
+### Receipt Integrity
+- **HMAC covers all fields.** Signature now includes payload, policy_results, and actions_taken via JSON canonicalization (sorted keys, compact separators). Tampering with any field invalidates the signature.
+- **No default secret.** `EnactClient` requires an explicit `secret` parameter or `ENACT_SECRET` env var. No fallback to a hardcoded value. Secrets must be 32+ characters unless `allow_insecure_secret=True` (dev/testing only).
+- **Rollback verifies signatures.** `rollback()` calls `verify_signature()` immediately after loading a receipt, before executing any actions. Prevents TOCTOU attacks via tampered receipt files.
+
+### Path Traversal Protection
+- `write_receipt()` and `load_receipt()` validate that `run_id` matches UUID v4 format (`^[0-9a-f]{8}-...`). Rejects `../`, `..\\`, embedded slashes, and any non-UUID input.
+- Belt-and-suspenders: `write_receipt()` also resolves the final path and verifies it stays inside the target directory.
+
+### What's Not Fixed (Backlog)
+- **Postgres table allowlist** (Risk #5) — `allowed_tables` parameter not yet added; low priority since connector already requires explicit `allowed_actions`
+- **Rate limiting** (Risk #6) — belongs in the application layer, not the SDK
+- **Payload size validation** (Risk #7) — caller controls payloads; not untrusted input in typical SDK usage
+- **Broad exception handling** (Risk #8) — GitHub connector `except Exception` blocks; minor cleanup
+
+### For Production Deployments
+1. Set `ENACT_SECRET` to a strong 64+ character random string
+2. Never use `allow_insecure_secret=True` outside of tests
+3. Store receipts on append-only storage if compliance requires tamper-proof audit trails
+4. Monitor for failed signature verifications (indicates tampering attempts)
+
+---
+
+**Generating the terminal recording (asciinema .cast).**
+`examples/record_demo.py` captures `demo.py` output and writes `examples/demo.cast` (asciicast v2 JSON lines format). The landing page plays it with asciinema-player. Key gotcha: we generate the .cast without a real Unix PTY (which would provide `onlcr` to convert `\n` → `\r\n`). Without `\r`, the terminal emulator treats `\n` as raw line feed — cursor goes down but stays at the same column, causing every line to drift right and wrap. Fix: `record_demo.py` merges `\r\n` into each text event. If you regenerate the .cast and lines look shifted right in the player, you forgot the `\r`. Run: `python examples/record_demo.py` then serve with `python -m http.server 8000`.

@@ -191,8 +191,9 @@ class TestLoadReceipt:
         assert loaded.signature == receipt.signature
 
     def test_load_receipt_raises_for_missing_run_id(self, tmp_path):
+        # Must use a valid UUID format — non-UUID strings now raise ValueError
         with pytest.raises(FileNotFoundError, match="No receipt found for run_id"):
-            load_receipt("nonexistent-uuid", str(tmp_path))
+            load_receipt("00000000-0000-0000-0000-000000000000", str(tmp_path))
 
 
 class TestActionResultRollbackData:
@@ -225,3 +226,87 @@ class TestActionResultRollbackData:
             decision="PARTIAL",
         )
         assert receipt.decision == "PARTIAL"
+
+
+# ── Security: Path traversal protection (Risk #1) ───────────────────────────
+
+class TestPathTraversalProtection:
+    def test_load_receipt_rejects_unix_traversal(self, tmp_path):
+        with pytest.raises(ValueError, match="Invalid run_id"):
+            load_receipt("../../etc/passwd", str(tmp_path))
+
+    def test_load_receipt_rejects_windows_traversal(self, tmp_path):
+        with pytest.raises(ValueError, match="Invalid run_id"):
+            load_receipt("..\\..\\Windows\\System32", str(tmp_path))
+
+    def test_load_receipt_rejects_embedded_slash(self, tmp_path):
+        with pytest.raises(ValueError, match="Invalid run_id"):
+            load_receipt("foo/bar", str(tmp_path))
+
+    def test_load_receipt_rejects_dot_dot(self, tmp_path):
+        with pytest.raises(ValueError, match="Invalid run_id"):
+            load_receipt("..", str(tmp_path))
+
+    def test_load_receipt_rejects_non_uuid_string(self, tmp_path):
+        with pytest.raises(ValueError, match="Invalid run_id"):
+            load_receipt("not-a-uuid-at-all", str(tmp_path))
+
+    def test_write_receipt_rejects_crafted_run_id(self, tmp_path, sample_policy_results):
+        """Manually crafted Receipt with malicious run_id is rejected at write time."""
+        receipt = build_receipt(
+            workflow="test", actor_email="a@b.com", payload={},
+            policy_results=sample_policy_results, decision="PASS",
+        )
+        evil = receipt.model_copy(update={"run_id": "../../evil"})
+        evil = sign_receipt(evil, "test-secret-key")
+        with pytest.raises(ValueError, match="Invalid run_id"):
+            write_receipt(evil, str(tmp_path))
+
+    def test_valid_uuid_roundtrips(self, tmp_path, sample_policy_results):
+        """Legitimate UUID run_ids still work correctly after validation."""
+        receipt = build_receipt(
+            workflow="test", actor_email="a@b.com", payload={},
+            policy_results=sample_policy_results, decision="PASS",
+        )
+        signed = sign_receipt(receipt, "test-secret-key")
+        write_receipt(signed, str(tmp_path))
+        loaded = load_receipt(receipt.run_id, str(tmp_path))
+        assert loaded.run_id == receipt.run_id
+
+
+# ── Security: HMAC covers all fields (Risk #3) ──────────────────────────────
+
+class TestHMACFullCoverage:
+    def test_tampered_payload_fails_verification(self, sample_policy_results):
+        """Modifying payload after signing invalidates the signature."""
+        receipt = build_receipt(
+            workflow="test", actor_email="a@b.com",
+            payload={"key": "original"},
+            policy_results=sample_policy_results, decision="PASS",
+        )
+        signed = sign_receipt(receipt, "test-secret")
+        tampered = signed.model_copy(update={"payload": {"key": "modified"}})
+        assert verify_signature(tampered, "test-secret") is False
+
+    def test_tampered_policy_results_fails_verification(self, sample_policy_results):
+        """Modifying policy_results after signing invalidates the signature."""
+        receipt = build_receipt(
+            workflow="test", actor_email="a@b.com", payload={},
+            policy_results=sample_policy_results, decision="PASS",
+        )
+        signed = sign_receipt(receipt, "test-secret")
+        tampered = signed.model_copy(update={
+            "policy_results": [PolicyResult(policy="evil", passed=True, reason="forged")]
+        })
+        assert verify_signature(tampered, "test-secret") is False
+
+    def test_tampered_actions_taken_fails_verification(self, sample_policy_results, sample_actions):
+        """Modifying actions_taken after signing invalidates the signature."""
+        receipt = build_receipt(
+            workflow="test", actor_email="a@b.com", payload={},
+            policy_results=sample_policy_results, decision="PASS",
+            actions_taken=sample_actions,
+        )
+        signed = sign_receipt(receipt, "test-secret")
+        tampered = signed.model_copy(update={"actions_taken": []})
+        assert verify_signature(tampered, "test-secret") is False

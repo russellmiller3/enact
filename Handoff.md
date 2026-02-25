@@ -38,7 +38,7 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - License: ELv2 + no-resale clause (no managed service, no selling the software itself)
 
 ### What Exists (fully built + tested)
-163 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (rollback not yet published — still on 0.1.0).
+181 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (rollback + security hardening not yet published).
 
 ```
 enact/
@@ -70,30 +70,31 @@ Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
 Credentials read from `~/.pypirc` automatically — no token needed in the command.
 
 ### What Was Done This Session
-- **Rollback feature — SHIPPED + DOCS UPDATED** ✅
-  - `enact/models.py`: `rollback_data: dict` field on `ActionResult`; `"PARTIAL"` added to `Receipt.decision` Literal
-  - `enact/receipt.py`: `load_receipt(run_id, directory)` added
-  - `enact/rollback.py`: NEW — `execute_rollback_action()` with `_rollback_github()` and `_rollback_postgres()` dispatch
-  - `enact/client.py`: `rollback_enabled=False` param + `rollback(run_id)` premium method
-  - `enact/connectors/github.py`: `rollback_data` in all 5 mutating methods; new rollback-only actions: `close_pr`, `close_issue`, `create_branch_from_sha`
-  - `enact/connectors/postgres.py`: pre-SELECT in `update_row` and `delete_row`; `rollback_data` in all 3 mutating methods
-  - 40 new tests (123 → 163)
-  - README: added rollback section, updated file structure, updated test count to 163
-  - landing_page.html: removed 3 "coming soon" badges for rollback (comparison table, capability card, pricing tier)
-  - CLAUDE.md: added `landing_page.html` update to end-of-feature checklist
+- **Security hardening — 4 vulnerabilities fixed** ✅
+  - `enact/receipt.py`: path traversal protection (`_validate_run_id()` UUID regex + path resolve check in `write_receipt`/`load_receipt`); HMAC signature now covers ALL fields (payload, policy_results, actions_taken) via JSON canonicalization; `_build_signature_message()` helper
+  - `enact/client.py`: removed `"enact-default-secret"` fallback — secret is now required (explicit param or `ENACT_SECRET` env var, min 32 chars); `allow_insecure_secret=True` escape hatch for tests; `rollback()` now calls `verify_signature()` before executing to prevent TOCTOU attacks
+  - 18 new security tests (163 → 181): `TestPathTraversalProtection`, `TestHMACFullCoverage`, `TestSecretValidation`, `TestRollbackSignatureVerification`
+  - `README.md`: security section added, env var table updated, test count updated
+  - `SPEC.md`: Security Hardening section added
+  - `examples/demo.py` + `examples/quickstart.py`: updated for required secret (`allow_insecure_secret=True`)
+
+- **Demo + landing page v2 — DONE, uncommitted** (prior session)
+  - `examples/demo.py`, `landing_page_v1/v2.html`, `plans/2026-02-24-demo-and-landing-v2.md` — see previous Handoff for details
 
 ### Next Steps (priority order)
-1. **Bump PyPI to 0.2.0** — rollback is a significant feature. Bump `pyproject.toml`, build, upload.
-2. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox. Use Appendix in `plans/2026-02-24-rollback.md` for rollback checklist.
-3. **Demo agent** — end-to-end script: triage issue → create branch → open PR. Good for README video.
-4. **Email connector** — SendGrid. High idempotency value.
+1. **Bump PyPI to 0.2.0** — rollback + security hardening warrant a version bump. Bump `pyproject.toml`, `python -m build`, `python -m twine upload dist/*`.
+2. **Decide on landing_page_v2.html** — review in browser, swap it in as `landing_page.html` when satisfied.
+3. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`. Add row-level evidence to Act 3, record terminal GIF, embed on landing page + README.
+4. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
 
 ### Files to Reference
+- `docs/plans/2026-02-24-demo-evidence-and-gif.md` — NEXT TASK: demo evidence + GIF plan
 - `SPEC.md` — full build plan with ✅/⏭️ status markers + strategic thesis
 - `README.md` — install, quickstart, connector/policy reference
 - `CLAUDE.md` — conventions, design philosophy, git workflow
 - `PLAN-TEMPLATE.md` — how to write implementation plans
-- `examples/quickstart.py` — runnable PASS + BLOCK demo
-- `landing_page.html` — marketing page (open in browser to preview)
+- `examples/demo.py` — 3-act demo: BLOCK + PASS + ROLLBACK (no credentials)
+- `examples/quickstart.py` — minimal PASS + BLOCK demo
+- `landing_page_v2.html` — updated marketing page (open in browser to preview)
 </content>
 </invoke>

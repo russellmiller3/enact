@@ -38,20 +38,54 @@ def multi_action_workflow(ctx):
 
 class TestEnactClientInit:
     def test_registers_workflows_by_name(self):
-        client = EnactClient(workflows=[dummy_workflow])
+        client = EnactClient(
+            workflows=[dummy_workflow], secret="s", allow_insecure_secret=True,
+        )
         assert "dummy_workflow" in client._workflows
 
-    def test_default_secret(self):
-        client = EnactClient()
-        assert client._secret == "enact-default-secret"
-
     def test_custom_secret(self):
-        client = EnactClient(secret="my-secret")
+        client = EnactClient(secret="my-secret", allow_insecure_secret=True)
         assert client._secret == "my-secret"
 
     def test_rollback_disabled_by_default(self):
-        client = EnactClient()
+        client = EnactClient(secret="s", allow_insecure_secret=True)
         assert client._rollback_enabled is False
+
+
+# ── Security: Secret validation (Risk #2) ────────────────────────────────────
+
+class TestSecretValidation:
+    def test_no_secret_no_env_raises(self, monkeypatch):
+        """EnactClient without any secret source raises ValueError."""
+        monkeypatch.delenv("ENACT_SECRET", raising=False)
+        with pytest.raises(ValueError, match="No signing secret provided"):
+            EnactClient()
+
+    def test_short_secret_raises(self):
+        """Secrets under 32 characters are rejected by default."""
+        with pytest.raises(ValueError, match="at least 32 characters"):
+            EnactClient(secret="too-short")
+
+    def test_allow_insecure_secret_skips_length_check(self):
+        """allow_insecure_secret=True permits short secrets for dev/testing."""
+        client = EnactClient(secret="short", allow_insecure_secret=True)
+        assert client._secret == "short"
+
+    def test_env_var_secret_is_accepted(self, monkeypatch):
+        """ENACT_SECRET env var works as the secret source."""
+        monkeypatch.setenv("ENACT_SECRET", "a" * 32)
+        client = EnactClient()
+        assert client._secret == "a" * 32
+
+    def test_explicit_secret_overrides_env_var(self, monkeypatch):
+        monkeypatch.setenv("ENACT_SECRET", "env-secret-that-is-long-enough-32chars!")
+        client = EnactClient(secret="explicit-secret-long-enough-32characters!")
+        assert client._secret == "explicit-secret-long-enough-32characters!"
+
+    def test_strong_secret_passes_validation(self):
+        """A 32+ character secret passes without allow_insecure_secret."""
+        client = EnactClient(secret="a-very-strong-production-secret-key-here!")
+        assert len(client._secret) >= 32
 
 
 class TestEnactClientRun:
@@ -60,6 +94,7 @@ class TestEnactClientRun:
             policies=[policy_pass],
             workflows=[dummy_workflow],
             receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
@@ -77,6 +112,7 @@ class TestEnactClientRun:
             policies=[policy_pass, policy_fail],
             workflows=[dummy_workflow],
             receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
@@ -94,6 +130,7 @@ class TestEnactClientRun:
             policies=[policy_fail, policy_pass, policy_fail],
             workflows=[dummy_workflow],
             receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
@@ -103,7 +140,10 @@ class TestEnactClientRun:
         assert len(receipt.policy_results) == 3  # All 3 ran
 
     def test_unknown_workflow_raises(self, tmp_path):
-        client = EnactClient(receipt_dir=str(tmp_path))
+        client = EnactClient(
+            receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
+        )
         with pytest.raises(ValueError, match="Unknown workflow"):
             client.run(workflow="nonexistent", actor_email="a@b.com", payload={})
 
@@ -112,6 +152,7 @@ class TestEnactClientRun:
             policies=[policy_pass],
             workflows=[dummy_workflow],
             receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
         )
         _, receipt = client.run(
             workflow="dummy_workflow",
@@ -126,6 +167,7 @@ class TestEnactClientRun:
             policies=[policy_pass],
             workflows=[multi_action_workflow],
             receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
         )
         result, receipt = client.run(
             workflow="multi_action_workflow",
@@ -151,6 +193,7 @@ class TestEnactClientRun:
             policies=[capture_policy],
             workflows=[dummy_workflow],
             receipt_dir=str(tmp_path),
+            secret="s", allow_insecure_secret=True,
         )
         client.run(workflow="dummy_workflow", actor_email="x@y.com", payload={"k": "v"})
         assert captured["workflow"] == "dummy_workflow"
@@ -166,6 +209,7 @@ class TestEnactClientEndToEnd:
             workflows=[dummy_workflow],
             secret="e2e-secret",
             receipt_dir=str(tmp_path),
+            allow_insecure_secret=True,
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
@@ -186,6 +230,7 @@ class TestEnactClientEndToEnd:
             workflows=[dummy_workflow],
             secret="e2e-secret",
             receipt_dir=str(tmp_path),
+            allow_insecure_secret=True,
         )
         result, receipt = client.run(
             workflow="dummy_workflow",

@@ -20,15 +20,16 @@ __name__ attribute, so the name used in run() must match the function name exact
 
 ENACT_SECRET
 ------------
-The HMAC signing key. Defaults to "enact-default-secret" for local development.
-Set the ENACT_SECRET environment variable in production to prevent receipt forgery.
+The HMAC signing key. Required — pass secret= or set the ENACT_SECRET env var.
+There is no default; receipts are only trustworthy if the secret is private.
 All receipts written to disk by a given deployment should use the same secret so
-verify_signature() can validate them consistently.
+verify_signature() can validate them consistently. For development/testing, pass
+allow_insecure_secret=True to skip the 32-character minimum length check.
 """
 import os
 from enact.models import WorkflowContext, RunResult, Receipt
 from enact.policy import evaluate_all, all_passed
-from enact.receipt import build_receipt, sign_receipt, write_receipt, load_receipt
+from enact.receipt import build_receipt, sign_receipt, verify_signature, write_receipt, load_receipt
 from enact.rollback import execute_rollback_action
 
 
@@ -60,29 +61,46 @@ class EnactClient:
         secret: str | None = None,
         receipt_dir: str = "receipts",
         rollback_enabled: bool = False,
+        allow_insecure_secret: bool = False,
     ):
         """
         Initialise the client.
 
         Args:
-            systems          — connector instances keyed by name, e.g. {"github": GitHubConnector(...)}.
-                               Passed into WorkflowContext so policies and workflows can call them.
-            policies         — list of policy callables, each (WorkflowContext) -> PolicyResult.
-                               May include factory-produced closures (e.g. max_files_per_commit(10)).
-                               All policies run on every call to run() — order matters only for receipt readability.
-            workflows        — list of workflow functions, each (WorkflowContext) -> list[ActionResult].
-                               Stored as {function.__name__: function} so they can be looked up by name string.
-            secret           — HMAC key for receipt signing. Falls back to ENACT_SECRET env var,
-                               then to "enact-default-secret". Override in production.
-            receipt_dir      — directory to write signed receipt JSON files. Created on first run if absent.
-            rollback_enabled — premium feature flag. Set True to enable client.rollback(run_id).
+            systems              — connector instances keyed by name, e.g. {"github": GitHubConnector(...)}.
+                                   Passed into WorkflowContext so policies and workflows can call them.
+            policies             — list of policy callables, each (WorkflowContext) -> PolicyResult.
+                                   May include factory-produced closures (e.g. max_files_per_commit(10)).
+                                   All policies run on every call to run() — order matters only for receipt readability.
+            workflows            — list of workflow functions, each (WorkflowContext) -> list[ActionResult].
+                                   Stored as {function.__name__: function} so they can be looked up by name string.
+            secret               — HMAC key for receipt signing. Falls back to ENACT_SECRET env var.
+                                   Required — receipts are unforgeable only if the secret is kept private.
+            receipt_dir          — directory to write signed receipt JSON files. Created on first run if absent.
+            rollback_enabled     — premium feature flag. Set True to enable client.rollback(run_id).
+            allow_insecure_secret — skip secret strength validation. For development/testing ONLY.
+                                    Never use in production — short secrets enable receipt forgery.
         """
         self._systems = systems or {}
         self._policies = policies or []
         # Index by function name so run(workflow="foo") can find the function without
         # requiring the caller to import it directly.
         self._workflows = {wf.__name__: wf for wf in (workflows or [])}
-        self._secret = secret or os.environ.get("ENACT_SECRET", "enact-default-secret")
+
+        # --- Secret validation (Risk #2: no more insecure default) ---
+        self._secret = secret or os.environ.get("ENACT_SECRET")
+        if not self._secret:
+            raise ValueError(
+                "No signing secret provided. Pass secret= to EnactClient or set the "
+                "ENACT_SECRET environment variable. Receipts cannot be trusted without a secret."
+            )
+        if not allow_insecure_secret and len(self._secret) < 32:
+            raise ValueError(
+                f"Secret must be at least 32 characters (got {len(self._secret)}). "
+                "Use a strong, random secret in production. "
+                "Pass allow_insecure_secret=True for development/testing only."
+            )
+
         self._receipt_dir = receipt_dir
         self._rollback_enabled = rollback_enabled
 
@@ -200,6 +218,15 @@ class EnactClient:
             )
 
         original_receipt = load_receipt(run_id, self._receipt_dir)
+
+        # Verify signature BEFORE executing any rollback operations.
+        # Prevents TOCTOU attacks where an attacker modifies the receipt on disk
+        # between load and execution — tampered receipts are rejected immediately.
+        if not verify_signature(original_receipt, self._secret):
+            raise ValueError(
+                f"Receipt signature verification failed for run_id: {run_id}. "
+                "The receipt may have been tampered with."
+            )
 
         if original_receipt.decision == "BLOCK":
             raise ValueError("Cannot rollback a blocked run — no actions were taken")

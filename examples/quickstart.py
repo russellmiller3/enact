@@ -41,6 +41,7 @@ enact = EnactClient(
     policies=[require_email_in_payload],
     workflows=[hello_workflow],
     receipt_dir="receipts",
+    secret="demo-secret", allow_insecure_secret=True,
 )
 
 # Run with valid payload → PASS

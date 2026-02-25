@@ -229,6 +229,9 @@ from enact.client import EnactClient
 from enact.models import Receipt
 from enact.receipt import build_receipt, sign_receipt, write_receipt
 
+# Shared test secret — must match between receipt signing and client init.
+_TEST_SECRET = "test-secret"
+
 
 def _write_test_receipt(tmp_path, actions_taken, decision="PASS"):
     """Helper: write a receipt to tmp_path and return its run_id."""
@@ -240,29 +243,38 @@ def _write_test_receipt(tmp_path, actions_taken, decision="PASS"):
         decision=decision,
         actions_taken=actions_taken,
     )
-    receipt = sign_receipt(receipt, "enact-default-secret")
+    receipt = sign_receipt(receipt, _TEST_SECRET)
     write_receipt(receipt, str(tmp_path))
     return receipt.run_id
 
 
 class TestEnactClientRollbackGate:
     def test_rollback_disabled_by_default(self):
-        client = EnactClient()
+        client = EnactClient(secret=_TEST_SECRET, allow_insecure_secret=True)
         with pytest.raises(PermissionError, match="premium feature"):
             client.rollback("any-run-id")
 
     def test_rollback_enabled_flag(self):
-        client = EnactClient(rollback_enabled=True)
+        client = EnactClient(
+            rollback_enabled=True, secret=_TEST_SECRET, allow_insecure_secret=True,
+        )
         assert client._rollback_enabled is True
 
     def test_rollback_missing_receipt_raises(self, tmp_path):
-        client = EnactClient(rollback_enabled=True, receipt_dir=str(tmp_path))
+        client = EnactClient(
+            rollback_enabled=True, receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
+        )
         with pytest.raises(FileNotFoundError, match="No receipt found"):
-            client.rollback("nonexistent-uuid")
+            # Must use valid UUID format — non-UUID strings now raise ValueError
+            client.rollback("00000000-0000-0000-0000-000000000000")
 
     def test_rollback_blocked_run_raises(self, tmp_path):
         run_id = _write_test_receipt(tmp_path, actions_taken=[], decision="BLOCK")
-        client = EnactClient(rollback_enabled=True, receipt_dir=str(tmp_path))
+        client = EnactClient(
+            rollback_enabled=True, receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
+        )
         with pytest.raises(ValueError, match="Cannot rollback a blocked run"):
             client.rollback(run_id)
 
@@ -296,6 +308,7 @@ class TestEnactClientRollbackExecution:
             systems={"github": mock_gh},
             rollback_enabled=True,
             receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
         )
         result, receipt = client.rollback(run_id)
 
@@ -319,6 +332,7 @@ class TestEnactClientRollbackExecution:
             systems={"github": mock_gh},
             rollback_enabled=True,
             receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
         )
         result, receipt = client.rollback(run_id)
 
@@ -340,6 +354,7 @@ class TestEnactClientRollbackExecution:
             systems={"github": mock_gh},
             rollback_enabled=True,
             receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
         )
         result, receipt = client.rollback(run_id)
 
@@ -374,6 +389,7 @@ class TestEnactClientRollbackExecution:
             systems={"github": mock_gh},
             rollback_enabled=True,
             receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
         )
         result, receipt = client.rollback(run_id)
 
@@ -400,6 +416,7 @@ class TestEnactClientRollbackExecution:
             systems={"github": mock_gh},
             rollback_enabled=True,
             receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
         )
         result, receipt = client.rollback(run_id)
 
@@ -424,8 +441,95 @@ class TestEnactClientRollbackExecution:
             systems={"github": mock_gh},
             rollback_enabled=True,
             receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
         )
         _, receipt = client.rollback(run_id)
 
         assert receipt.payload["original_run_id"] == run_id
         assert receipt.payload["rollback"] is True
+
+
+# ── Security: TOCTOU protection in rollback (Risk #4) ───────────────────────
+
+class TestRollbackSignatureVerification:
+    def test_rollback_rejects_tampered_receipt(self, tmp_path):
+        """Rollback verifies signature before executing — tampered receipt is rejected."""
+        import json
+
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        # Tamper with the receipt on disk (simulate attacker modifying the file)
+        receipt_path = tmp_path / f"{run_id}.json"
+        with open(receipt_path) as f:
+            data = json.load(f)
+        data["decision"] = "BLOCK"  # Tamper with the decision field
+        with open(receipt_path, "w") as f:
+            json.dump(data, f)
+
+        mock_gh = MagicMock()
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
+        )
+        with pytest.raises(ValueError, match="signature verification failed"):
+            client.rollback(run_id)
+
+        # Verify no rollback actions were executed
+        mock_gh.delete_branch.assert_not_called()
+
+    def test_rollback_accepts_valid_receipt(self, tmp_path):
+        """Rollback proceeds when receipt signature is valid."""
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+        ]
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        mock_gh.delete_branch.return_value = ActionResult(
+            action="delete_branch", system="github", success=True, output={}
+        )
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+            secret=_TEST_SECRET, allow_insecure_secret=True,
+        )
+        result, receipt = client.rollback(run_id)
+        assert result.success is True
+        mock_gh.delete_branch.assert_called_once()
+
+    def test_rollback_rejects_wrong_secret(self, tmp_path):
+        """Client with a different secret cannot rollback receipts signed with another."""
+        actions = [
+            ActionResult(
+                action="create_branch", system="github", success=True,
+                output={"branch": "agent/x", "already_done": False},
+                rollback_data={"repo": "owner/repo", "branch": "agent/x"},
+            ),
+        ]
+        # Receipt signed with _TEST_SECRET
+        run_id = _write_test_receipt(tmp_path, actions)
+
+        mock_gh = MagicMock()
+        # Client uses a DIFFERENT secret
+        client = EnactClient(
+            systems={"github": mock_gh},
+            rollback_enabled=True,
+            receipt_dir=str(tmp_path),
+            secret="different-secret", allow_insecure_secret=True,
+        )
+        with pytest.raises(ValueError, match="signature verification failed"):
+            client.rollback(run_id)

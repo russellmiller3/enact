@@ -14,6 +14,7 @@ enact = EnactClient(
     systems={"github": GitHubConnector(token="...")},
     policies=[no_push_to_main, require_branch_prefix(prefix="agent/")],
     workflows=[agent_pr_workflow],
+    secret="...",  # or set ENACT_SECRET env var
 )
 
 result, receipt = enact.run(
@@ -154,7 +155,10 @@ enact/
 │   ├── test_policies.py
 │   └── test_workflows.py
 ├── examples/
-│   └── quickstart.py       # runnable demo — runs PASS then BLOCK, prints receipt
+│   ├── quickstart.py       # runnable demo — runs PASS then BLOCK, prints receipt
+│   ├── demo.py             # 3-act demo: BLOCK, PASS, and ROLLBACK (no credentials needed)
+│   ├── demo.cast           # terminal recording (asciinema format) for landing page embed
+│   └── record_demo.py      # regenerates demo.cast from demo.py output
 ├── receipts/               # auto-created at runtime, gitignored
 └── pyproject.toml          # PyPI config
 ```
@@ -238,23 +242,50 @@ pip install -e ".[dev]"
 python examples/quickstart.py
 ```
 
+### See the full demo (no credentials needed)
+
+```bash
+python examples/demo.py
+```
+
+Three scenarios in ~10 seconds: an agent blocked from pushing to main (the Kiro pattern), a normal PR workflow, and a database wipe rolled back in one command (the Replit pattern). Uses in-memory connectors — same rollback code path as production.
+
 ---
 
 ## Run Tests
 
 ```bash
 pytest tests/ -v
-# 163 tests, 0 failures
+# 181 tests, 0 failures
+```
+
+---
+
+## Security
+
+Receipts are HMAC-SHA256 signed. The signature covers **every field** — workflow, actor, decision, payload, policy results, and actions taken. Any tampered field invalidates the signature.
+
+**Setting your secret** (required):
+```bash
+export ENACT_SECRET="$(openssl rand -hex 32)"
+```
+Or pass `secret=` directly to `EnactClient`. Minimum 32 characters. There is no default.
+
+For rollback, `rollback()` verifies the receipt signature before executing any reversal actions, preventing tampered receipts from triggering unintended operations.
+
+For development and testing only:
+```python
+EnactClient(..., secret="short", allow_insecure_secret=True)
 ```
 
 ---
 
 ## Environment Variables
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `ENACT_SECRET` | `enact-default-secret` | HMAC signing key for receipts. Override in production. |
-| `GITHUB_TOKEN` | — | GitHub PAT for GitHubConnector |
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `ENACT_SECRET` | Yes — or pass `secret=` directly | HMAC signing key for receipts. Minimum 32 characters. |
+| `GITHUB_TOKEN` | For GitHubConnector | GitHub PAT or App token |
 
 ---
 
