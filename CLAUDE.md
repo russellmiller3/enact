@@ -92,6 +92,16 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - Disagree when there's a better way — do NOT automatically agree
 - First try to find a better approach; only agree if you can't find one
 
+## Asking Questions
+
+**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `landing_page.html`, and the relevant connector/workflow code to form an opinion. Then ask like this:
+
+> "Should rollback apply at the whole-run level or per-action? My read: whole-run — that's what the receipt already models and what enterprise buyers mean by 'undo.' Per-action is more flexible but doubles the API surface for little gain."
+
+- The ICP is a **CISO or senior engineer** at a company with agents in production who got burned — they want "undo the last run", not a granular action picker
+- The strategic thesis is **Zapier + Okta + Splunk for agents** — receipts are already the audit trail; rollback closes the loop by making them actionable
+- When in doubt about scope, default to the simplest thing a burned engineer would want on a Friday afternoon at 5pm
+
 ## Teaching Style
 
 - Plain English first, then explain the programming syntax

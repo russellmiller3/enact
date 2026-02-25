@@ -127,6 +127,7 @@
         .feature-list { list-style: none; margin-bottom: 32px; }
         .feature-list li { display: flex; gap: 10px; font-size: 14px; margin-bottom: 10px; line-height: 1.5; }
         .feature-list li .fi { flex-shrink: 0; margin-top: 2px; }
+        .feat-desc { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; line-height: 1.4; }
         .fi-check { color: var(--green); }
         .fi-dash { color: var(--subtle); }
         .fi-soon { color: var(--amber); }
@@ -237,7 +238,7 @@
     <div class="container">
         <h1>Stop your AI agents from<br>doing dumb sh*t. And prove it.</h1>
         <p class="sub">
-            Enact is an action firewall for AI agents. Define exactly what they're allowed to touch, enforce policies on every request, and generate a human-readable receipt for every run.
+            Enact is an action firewall for AI agents. Define what they're allowed to touch, enforce policies on every request, generate a signed receipt for every run — and undo any reversible action when something slips through.
         </p>
         <div class="cta-row">
             <a href="#" class="btn btn-primary">Start free trial →</a>
@@ -357,6 +358,7 @@
                 <h3>Replit Agent — Deleted Production Database</h3>
                 <p>An AI agent doing "database maintenance" identified what it thought were unused tables and deleted them. They were critical production tables. When questioned, the agent generated plausible explanations for why the deletion was safe. The data was gone.</p>
                 <p class="root">Root cause: Full write access to production schema. No approval workflow. No audit trail.</p>
+                <p style="margin-top:10px; font-size:13px; color:var(--accent);">With Enact: pre-action row capture means <code style="font-family:var(--mono); font-size:11px; background:rgba(74,111,165,.12); padding:1px 5px; border-radius:3px;">enact.rollback(run_id)</code> restores every deleted record in one command. See the rollback receipt below.</p>
             </div>
         </div>
 
@@ -459,12 +461,13 @@ result, receipt = enact.<span class="fn">run</span>(
 <section class="alt" id="receipt">
     <div class="container centered">
         <div class="section-label">See it in action</div>
-        <h2>Blocked vs. approved — live receipts</h2>
-        <p class="section-sub">An agent tries to rotate production database credentials at 3:57am. Watch what happens.</p>
+        <h2>Blocked. Approved. Rolled back.</h2>
+        <p class="section-sub">Three outcomes every production team needs to handle. Enact documents all of them — and gives you the receipt to prove it.</p>
 
         <div class="tab-row" style="justify-content:center;">
             <button class="tab-btn active" onclick="showTab('blocked')">✗ Blocked (disaster prevented)</button>
             <button class="tab-btn" onclick="showTab('approved')">✓ Approved (safe operation)</button>
+            <button class="tab-btn" onclick="showTab('rollback')">↩ Rolled back (damage undone)</button>
         </div>
 
         <!-- BLOCKED -->
@@ -563,6 +566,55 @@ result, receipt = enact.<span class="fn">run</span>(
                     <div class="r-row"><div class="r-label">Execution time</div><div class="r-val">1,247ms</div></div>
                     <div class="r-row"><div class="r-label">Policy checks</div><div class="r-val">4 passed, 0 failed</div></div>
                     <div class="r-row"><div class="r-label">Actions run</div><div class="r-val">3 (all succeeded)</div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROLLBACK -->
+        <div class="tab-pane" id="tab-rollback">
+            <div class="receipt" style="margin:0 auto;">
+                <div class="receipt-hdr">
+                    <div class="r-row"><div class="r-label">Rollback ID</div><div class="r-val">REQ-08476</div></div>
+                    <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 14:35:12 UTC</div></div>
+                    <div class="r-row"><div class="r-label">Type</div><div class="r-val" style="color:var(--amber); font-weight:600;">ROLLBACK of REQ-08473</div></div>
+                    <div class="r-row"><div class="r-label">Decision</div><div class="r-val"><span style="display:inline-block; padding:3px 10px; background:rgba(217,119,6,.15); color:var(--amber); border:1px solid rgba(217,119,6,.3); border-radius:5px; font-weight:700;">PARTIAL ROLLBACK</span></div></div>
+                </div>
+                <div class="r-section">
+                    <h4>ORIGINAL RUN</h4>
+                    <div class="r-row"><div class="r-label">Run ID</div><div class="r-val">REQ-08473</div></div>
+                    <div class="r-row"><div class="r-label">Workflow</div><div class="r-val">db_cleanup_workflow</div></div>
+                    <div class="r-row"><div class="r-label">Actor</div><div class="r-val">cleanup-agent@company.com</div></div>
+                    <div class="r-row"><div class="r-label">Executed</div><div class="r-val">2026-02-22 14:31:44 UTC — 3 minutes ago</div></div>
+                </div>
+                <div class="r-section">
+                    <h4>ROLLBACK ACTIONS (last → first)</h4>
+                    <div class="policy-row">
+                        <div class="pbadge pass">✓</div>
+                        <div class="policy-detail">
+                            <strong>postgres.delete_row → REVERSED</strong>
+                            <span>Re-inserted 47 rows into table "customers" from pre-action capture. All records restored.</span>
+                        </div>
+                    </div>
+                    <div class="policy-row">
+                        <div class="pbadge fail">✗</div>
+                        <div class="policy-detail">
+                            <strong>github.push_commit → COULD NOT REVERSE</strong>
+                            <span class="err">push_commit is irreversible. Commit abc1234 "chore: cleanup inactive records" remains on remote. Manual action required.</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="r-section">
+                    <h4>RESULT</h4>
+                    <div class="r-row"><div class="r-label">Status</div><div class="r-val" style="color:var(--amber);">Partial — 1 of 2 actions reversed</div></div>
+                    <div class="r-row"><div class="r-label">Rows restored</div><div class="r-val" style="color:var(--green);">47 customer records back in prod</div></div>
+                    <div class="r-row"><div class="r-label">Manual action</div><div class="r-val">Revert or delete commit abc1234 from remote</div></div>
+                    <div class="r-row"><div class="r-label">Alert sent</div><div class="r-val">PagerDuty #P847294 updated · Slack #data-team notified</div></div>
+                </div>
+                <div class="r-section">
+                    <h4>TECHNICAL LOG</h4>
+                    <div class="r-row"><div class="r-label">Execution time</div><div class="r-val">612ms</div></div>
+                    <div class="r-row"><div class="r-label">Actions reversed</div><div class="r-val">1 of 2 (1 irreversible)</div></div>
+                    <div class="r-row"><div class="r-label">Signature</div><div class="r-val" style="color:var(--subtle); font-size:12px;">sha256:d4e8f2a193c7...b3c9 (rollback receipt signed)</div></div>
                 </div>
             </div>
         </div>
@@ -722,7 +774,7 @@ result, receipt = enact.<span class="fn">run</span>(
                 <tr>
                     <td>Rollback <span class="badge-soon">coming soon</span></td>
                     <td><span class="cross">✗</span></td>
-                    <td><span style="color:var(--amber);">◐</span> One-command undo for any receipt-logged action</td>
+                    <td><span style="color:var(--amber);">◐</span> One-command undo for reversible receipt-logged actions. Irreversible actions (merged PRs, sent emails) recorded in rollback receipt — you know exactly what still needs manual cleanup.</td>
                 </tr>
                 <tr>
                     <td>Compliance export <span class="badge-soon">coming soon</span></td>
@@ -765,7 +817,7 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="capability-card">
                 <i data-lucide="rotate-ccw" class="cap-icon"></i>
                 <h3>One-Step Rollback <span class="badge-soon">coming soon</span></h3>
-                <p>Every receipt-logged action can be undone in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(receipt_id)</code> reverses what the agent did, generates a rollback receipt, and notifies on-call. Your undo button for agent mistakes.</p>
+                <p>Undo reversible agent actions in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(receipt_id)</code> reverses what it can (branches, DB rows, open PRs), explicitly records what it can't (merged PRs, pushed commits, sent emails), and generates a signed rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">
@@ -839,9 +891,9 @@ result, receipt = enact.<span class="fn">run</span>(
                 <div class="price-sub">For teams shipping agents to prod</div>
                 <ul class="feature-list">
                     <li><span class="fi fi-check">✓</span> Everything in self-hosted</li>
-                    <li><span class="fi fi-check">✓</span> <strong>Receipt search UI</strong> — filter by actor, date, outcome</li>
-                    <li><span class="fi fi-check">✓</span> <strong>SMS + phone call alerts</strong> — know at 3:57am, not standup</li>
-                    <li><span class="fi fi-check">✓</span> <strong>Red-teamed workflow library</strong> — validated, versioned, maintained</li>
+                    <li><span class="fi fi-check">✓</span> <span><strong>Receipt search UI</strong><span class="feat-desc">Filter by actor, date, outcome</span></span></li>
+                    <li><span class="fi fi-check">✓</span> <span><strong>SMS + phone call alerts</strong><span class="feat-desc">Know at 3:57am, not standup</span></span></li>
+                    <li><span class="fi fi-check">✓</span> <span><strong>Red-teamed workflow library</strong><span class="feat-desc">Validated, versioned, maintained</span></span></li>
                     <li><span class="fi fi-check">✓</span> 90-day retention (compliance-ready)</li>
                     <li><span class="fi fi-check">✓</span> Up to 50,000 receipts/month</li>
                     <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Human-in-loop gates <span class="badge-soon">coming soon</span></span></li>
