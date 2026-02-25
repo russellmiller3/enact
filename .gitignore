@@ -25,6 +25,13 @@ Thumbs.db
 # Claude
 .claude/
 
+# Playwright artifacts
+.playwright-mcp/
+
+# Security scan artifacts
+bandit-report.json
+SECURITY-REPORT-COMPLETE.md
+
 # Private planning docs — keep local only
 SPEC.md
 Handoff.md

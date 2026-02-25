@@ -105,9 +105,10 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
 
 ### Next Steps (priority order)
 1. **ABAC + sensitive-read policies** (Template B) — see design notes below. ~2-3 hours.
-2. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
-3. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`.
-4. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
+2. **Landing page — enumerate shipped actions/policies/workflows** — replace generic marketing copy with the actual names. Every connector method (`create_branch`, `write_file`, `select_rows`…), every policy (`no_push_to_main`, `no_delete_without_where`, `dont_read_sensitive_tables`…), both workflows (`agent_pr_workflow`, `db_safe_insert`). Show the real surface area — that's the product.
+3. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
+4. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`.
+5. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
 
 ### NEXT TASK: ABAC + Sensitive-Read Policies (Template B)
 
