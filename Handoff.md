@@ -115,22 +115,23 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
 
 **The fix — two parts:**
 
-**Part 1: Add `actor_attributes` to `WorkflowContext`** (`enact/models.py`)
+**Part 1: Add `user_attributes` to `WorkflowContext`** (`enact/models.py`)
 ```python
 class WorkflowContext(BaseModel):
     workflow: str
-    actor_email: str
+    user_email: str  # rename from actor_email — consistent with "user" everywhere
     payload: dict = {}
-    actor_attributes: dict = {}  # NEW — role, clearance_level, dept, etc.
+    user_attributes: dict = {}  # NEW — role, clearance_level, dept, etc.
     systems: dict = {}
 ```
-Pass it through `EnactClient.run()` as a new kwarg: `actor_attributes={"role": "engineer", "clearance_level": 2}`.
+Pass it through `EnactClient.run()` as a new kwarg: `user_attributes={"role": "engineer", "clearance_level": 2}`.
+Also rename `actor_email` → `user_email` everywhere (models.py, client.py, examples, tests) — no backward compat needed.
 
 **Part 2: New policies in `enact/policies/access.py`**
-- `no_read_sensitive_tables(tables: list[str])` — factory; blocks `select_rows` when `payload["table"]` is in blocked set
-- `no_read_sensitive_paths(paths: list[str])` — factory; blocks `read_file` when `payload["path"]` starts with any sensitive prefix
-- `require_clearance_for_path(paths: list[str], min_clearance: int)` — ABAC; blocks if `actor_attributes["clearance_level"] < min_clearance` for sensitive paths
-- `require_actor_role(*allowed_roles)` — ABAC factory; blocks if `actor_attributes["role"]` not in allowed set
+- `dont_read_sensitive_tables(tables: list[str])` — factory; blocks `select_rows` when `payload["table"]` is in blocked set
+- `dont_read_sensitive_paths(paths: list[str])` — factory; blocks `read_file` when `payload["path"]` starts with any sensitive prefix
+- `require_clearance_for_path(paths: list[str], min_clearance: int)` — ABAC; blocks if `user_attributes["clearance_level"] < min_clearance` for sensitive paths
+- `require_user_role(*allowed_roles)` — ABAC factory; blocks if `user_attributes["role"]` not in allowed set
 
 **Reference:** `C:\Users\user\Desktop\programming\visa\backend\config\policies.py` — Russell's existing ABAC patterns (check_role_authorization, check_clearance_level, check_pii_restriction etc.)
 
