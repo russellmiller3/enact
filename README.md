@@ -93,11 +93,18 @@ It's like a store receipt, but for software decisions. "Your agent tried to do X
 
 ## How It Works
 
+### Prerequisite: The Context
+
+Before we write a workflow, you need to know what data it receives. Every workflow and policy takes a `WorkflowContext` object. It contains two important things:
+
+1. `context.systems` — The connectors (tools) the agent is allowed to use (e.g., `GitHubConnector`).
+2. `context.payload` — The data the agent wants to act on (e.g., `{"repo": "owner/repo", "branch": "feature"}`).
+
+When you call `enact.run()`, you pass in the payload, and Enact builds this context object for you.
+
 ### Step 1: Define what your agent should do
 
-A workflow is a plain Python function. It takes a `WorkflowContext` object, which contains two important things:
-1. `context.systems` — The connectors (tools) the agent is allowed to use.
-2. `context.payload` — The data the agent wants to act on (e.g., the repo name, the branch name).
+A workflow is a plain Python function that uses the context to take actions.
 
 Enact ships with GitHub, Postgres, and Filesystem connectors that handle the actual API calls for you. Every time you call a connector method, it returns an `ActionResult`.
 
