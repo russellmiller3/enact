@@ -347,11 +347,13 @@ First add `import re` at the top of `db.py` (after the existing `from enact.mode
 import re
 
 # DDL keywords that should never appear in agent-executed SQL.
-# Sorted longest-first so multi-word keywords ("ALTER TABLE") are tried before
-# their single-word prefixes ("ALTER") in the compiled pattern.
-_DDL_KEYWORDS = ("DROP", "TRUNCATE", "ALTER TABLE", "CREATE TABLE", "CREATE INDEX", "DROP INDEX")
+# Use bare verbs (DROP, ALTER, CREATE) rather than qualified forms (ALTER TABLE,
+# CREATE TABLE) so that all variants are caught: DROP VIEW, ALTER SEQUENCE,
+# CREATE FUNCTION, CREATE TRIGGER, etc. TRUNCATE and DROP are already bare.
+# \b word boundaries prevent matching column names like "created_at" or "creator".
+_DDL_KEYWORDS = ("DROP", "TRUNCATE", "ALTER", "CREATE")
 _DDL_PATTERN = re.compile(
-    r'\b(?:' + '|'.join(re.escape(k) for k in sorted(_DDL_KEYWORDS, key=len, reverse=True)) + r')\b'
+    r'\b(?:' + '|'.join(re.escape(k) for k in _DDL_KEYWORDS) + r')\b'
 )
 
 
@@ -715,8 +717,26 @@ class TestBlockDDL:
         result = block_ddl(ctx)
         assert result.passed is False
 
+    def test_blocks_alter_sequence(self):
+        # ALTER bare verb catches ALTER SEQUENCE, ALTER VIEW, etc.
+        ctx = make_context(payload={"sql": "ALTER SEQUENCE payments_id_seq RESTART WITH 1"})
+        result = block_ddl(ctx)
+        assert result.passed is False
+
     def test_blocks_create_table(self):
         ctx = make_context(payload={"sql": "CREATE TABLE new_table (id INT)"})
+        result = block_ddl(ctx)
+        assert result.passed is False
+
+    def test_blocks_create_function(self):
+        # CREATE bare verb catches CREATE FUNCTION, CREATE VIEW, CREATE TRIGGER, etc.
+        ctx = make_context(payload={"sql": "CREATE FUNCTION inject() RETURNS void AS $$ $$ LANGUAGE sql"})
+        result = block_ddl(ctx)
+        assert result.passed is False
+
+    def test_blocks_drop_view(self):
+        # DROP bare verb catches DROP VIEW, DROP FUNCTION, DROP SEQUENCE, etc.
+        ctx = make_context(payload={"sql": "DROP VIEW active_users"})
         result = block_ddl(ctx)
         assert result.passed is False
 
@@ -737,6 +757,12 @@ class TestBlockDDL:
 
     def test_passes_for_update(self):
         ctx = make_context(payload={"sql": "UPDATE users SET name = 'foo' WHERE id = 1"})
+        result = block_ddl(ctx)
+        assert result.passed is True
+
+    def test_passes_column_named_created_at(self):
+        # "created_at" must NOT trigger — \b after CREATE fails because next char is '_'
+        ctx = make_context(payload={"sql": "SELECT created_at FROM users WHERE id = 1"})
         result = block_ddl(ctx)
         assert result.passed is True
 
