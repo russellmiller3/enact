@@ -95,18 +95,77 @@ It's like a store receipt, but for software decisions. "Your agent tried to do X
 
 ### Prerequisite: The Context
 
-Before we write a workflow, you need to know what data it receives. Every workflow and policy takes a `WorkflowContext` object. It contains two important things:
+Before we write a workflow, you need to understand the `WorkflowContext` object. This is the "bag of data" that gets passed to every workflow and policy.
 
-1. `context.systems` — The connectors (tools) the agent is allowed to use (e.g., `GitHubConnector`).
-2. `context.payload` — The data the agent wants to act on (e.g., `{"repo": "owner/repo", "branch": "feature"}`).
+Think of it like a delivery package. The context contains:
+1. **Who sent it** (`user_email`)
+2. **What they want done** (`payload`)
+3. **The tools they can use** (`systems`)
 
-When you call `enact.run()`, you pass in the payload, and Enact builds this context object for you.
+Here is what a `WorkflowContext` looks like in memory:
+
+```python
+# This is what Enact builds for you when you call enact.run()
+context = WorkflowContext(
+    workflow="agent_pr_workflow",           # Which workflow to run
+    user_email="agent@company.com",         # Who is making the request
+    payload={                               # The data the agent wants to act on
+        "repo": "owner/repo",
+        "branch": "agent/fix-149",
+    },
+    systems={                               # The connectors (tools) available
+        "github": <GitHubConnector object>, # A real connector instance
+    },
+    user_attributes={                       # Optional: role, clearance, etc.
+        "role": "contractor",
+        "clearance_level": "standard",
+    },
+)
+```
+
+### Prerequisite: The Connector
+
+A **Connector** is a Python class that wraps an external system (GitHub, Postgres, etc.). It has **methods** (also called "actions") that do real work.
+
+Think of a connector like a TV remote. Each button on the remote is an action. You press `create_branch`, and the connector talks to GitHub's API to make it happen.
+
+Here is a simplified view of the `GitHubConnector`:
+
+```python
+class GitHubConnector:
+    # You create it with a token and a list of allowed actions
+    def __init__(self, token: str, allowed_actions: list[str]):
+        self.token = token
+        self.allowed_actions = allowed_actions  # e.g., ["create_branch", "create_pr"]
+    
+    # Each method is an "action" that returns an ActionResult
+    def create_branch(self, repo: str, branch: str) -> ActionResult:
+        # 1. Check if this action is allowed
+        if "create_branch" not in self.allowed_actions:
+            raise PermissionError("Action 'create_branch' not in allowlist")
+        
+        # 2. Call the real GitHub API
+        # ... (code that talks to GitHub)
+        
+        # 3. Return a result object
+        return ActionResult(
+            action="create_branch",
+            system="github",
+            success=True,
+            output={"branch": branch},
+        )
+    
+    def create_pr(self, repo: str, title: str, body: str, head: str) -> ActionResult:
+        # ... similar pattern
+```
+
+**Key insight:** When you call `gh.create_branch(...)`, you get back an `ActionResult` object. This is the "receipt" for that one action. It tells you if it worked, what it produced, and (crucially) how to undo it later.
 
 ### Step 1: Define what your agent should do
 
-A workflow is a plain Python function that uses the context to take actions.
+A workflow is a plain Python function that takes a `context` and returns a list of `ActionResult` objects.
 
-Enact ships with GitHub, Postgres, and Filesystem connectors that handle the actual API calls for you. Every time you call a connector method, it returns an `ActionResult`.
+The workflow pulls the connector from `context.systems`, pulls the data from `context.payload`, and calls the connector's methods to take actions.
 
 Here is how you execute multiple actions sequentially. Notice how we collect the results and stop early if something fails:
 
