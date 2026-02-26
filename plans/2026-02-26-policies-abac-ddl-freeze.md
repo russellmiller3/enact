@@ -134,7 +134,18 @@ user_attributes: dict = Field(default_factory=dict)
 
 Add `from pathlib import PurePosixPath` at the top.
 
-Append four functions after `require_actor_role`:
+Update the module-level docstring. Replace the sentence "All role information is read from context.payload rather than from a database." with:
+
+> Role and clearance information is read from either `context.payload` (legacy `require_actor_role`, `contractor_cannot_write_pii`) or `context.user_attributes` (new `require_user_role`, `require_clearance_for_path`). Prefer `user_attributes` for new policies.
+
+Also update the "Payload keys used by this module" block to add:
+```
+  "user_attributes" — structured identity dict on WorkflowContext:
+      "role"            — actor role string (require_user_role)
+      "clearance_level" — int clearance level, defaults to 0 if absent (require_clearance_for_path)
+```
+
+Append four functions after `require_actor_role` (add the `_is_under` helper first, then the four policy functions):
 
 ```python
 def dont_read_sensitive_tables(tables: list[str]):
@@ -201,16 +212,12 @@ def dont_read_sensitive_paths(paths: list[str]):
             )
         target = PurePosixPath(path)
         for sensitive in paths:
-            try:
-                target.relative_to(PurePosixPath(sensitive))
-                # relative_to succeeded — target is under this sensitive prefix
+            if _is_under(target, PurePosixPath(sensitive)):
                 return PolicyResult(
                     policy="dont_read_sensitive_paths",
                     passed=False,
                     reason=f"Path '{path}' is under sensitive prefix '{sensitive}' — read access not permitted",
                 )
-            except ValueError:
-                continue
         return PolicyResult(
             policy="dont_read_sensitive_paths",
             passed=True,
@@ -332,11 +339,20 @@ def _is_under(target: PurePosixPath, prefix: PurePosixPath) -> bool:
 
 **RED:** Write tests first in `tests/test_db_policies.py`.
 
-**GREEN** — append to `enact/policies/db.py` after `protect_tables`:
+**GREEN** — append to `enact/policies/db.py` after `protect_tables`.
+
+First add `import re` at the top of `db.py` (after the existing `from enact.models import ...` line).
 
 ```python
-# DDL keywords that should never appear in agent-executed SQL
+import re
+
+# DDL keywords that should never appear in agent-executed SQL.
+# Sorted longest-first so multi-word keywords ("ALTER TABLE") are tried before
+# their single-word prefixes ("ALTER") in the compiled pattern.
 _DDL_KEYWORDS = ("DROP", "TRUNCATE", "ALTER TABLE", "CREATE TABLE", "CREATE INDEX", "DROP INDEX")
+_DDL_PATTERN = re.compile(
+    r'\b(?:' + '|'.join(re.escape(k) for k in sorted(_DDL_KEYWORDS, key=len, reverse=True)) + r')\b'
+)
 
 
 def block_ddl(context: WorkflowContext) -> PolicyResult:
@@ -348,12 +364,13 @@ def block_ddl(context: WorkflowContext) -> PolicyResult:
     (`npm run db:push`). This policy is the Enact equivalent: if an agent tries to
     run DROP, TRUNCATE, ALTER TABLE, or CREATE TABLE, it gets blocked before firing.
 
-    Checks are case-insensitive. The policy passes through if neither "sql" nor
-    "action" is present in the payload — nothing to inspect.
+    Detection uses word-boundary regex (\b) so "SELECT 1;DROP TABLE" is caught even
+    without a leading space before DROP. Case-insensitive (input is uppercased first).
+    The policy passes through if neither "sql" nor "action" is present in the payload.
 
     Payload keys:
-        "sql"    — raw SQL string (checked for DDL prefixes)
-        "action" — action string (checked for DDL prefixes as fallback)
+        "sql"    — raw SQL string (checked for DDL keywords)
+        "action" — action string (checked for DDL keywords as fallback)
 
     Args:
         context — WorkflowContext; reads payload["sql"] and payload["action"]
@@ -369,13 +386,13 @@ def block_ddl(context: WorkflowContext) -> PolicyResult:
         if not text:
             continue
         upper = text.strip().upper()
-        for keyword in _DDL_KEYWORDS:
-            if upper.startswith(keyword) or f" {keyword} " in upper or f"\n{keyword} " in upper:
-                return PolicyResult(
-                    policy="block_ddl",
-                    passed=False,
-                    reason=f"DDL statement blocked: '{keyword}' is not permitted",
-                )
+        match = _DDL_PATTERN.search(upper)
+        if match:
+            return PolicyResult(
+                policy="block_ddl",
+                passed=False,
+                reason=f"DDL statement blocked: '{match.group(0)}' is not permitted",
+            )
     return PolicyResult(
         policy="block_ddl",
         passed=True,
@@ -732,6 +749,18 @@ class TestBlockDDL:
         ctx = make_context(payload={"action": "insert_row"})
         result = block_ddl(ctx)
         assert result.passed is True
+
+    def test_passes_when_sql_is_empty_string(self):
+        # Empty string sql key — nothing to inspect, should pass
+        ctx = make_context(payload={"sql": ""})
+        result = block_ddl(ctx)
+        assert result.passed is True
+
+    def test_blocks_semicolon_joined_ddl(self):
+        # No space before DROP — word boundary regex still catches it
+        ctx = make_context(payload={"sql": "SELECT 1;DROP TABLE users"})
+        result = block_ddl(ctx)
+        assert result.passed is False
 ```
 
 ---
