@@ -269,11 +269,11 @@ Think of a **workflow** as a contractor you hired to renovate your kitchen. The 
 
 The `allowed_actions` list is the **physical toolbox** you handed that contractor before you left for work.
 
-If you only put a screwdriver and a wrench in that toolbox (`allowed_actions=["create_branch", "create_pr"]`), and the contractor suddenly hallucinates and decides they need to demolish a load-bearing wall (`delete_repository`), they literally don't have the sledgehammer to do it. The system just throws a `PermissionError` and tells them to fuck off.
+If you only put a screwdriver and a wrench in that toolbox (`allowed_actions=["create_branch", "create_pr"]`), and the contractor suddenly hallucinates and decides they need to demolish a load-bearing wall (`delete_repository`), they literally don't have the sledgehammer to do it. The system just throws a `PermissionError` and stops them immediately.
 
 ### Defense-in-Depth
 
-You might be thinking: *"Wait, don't we have Policies (the bouncer) to stop bad shit from happening?"*
+You might be thinking: *"Wait, don't we have Policies (the bouncer) to stop bad things from happening?"*
 
 Yes, but this is **defense-in-depth**.
 * **Policies** are smart, dynamic rules ("You can push code, but *not* to the `master` branch").
