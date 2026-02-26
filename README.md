@@ -128,33 +128,20 @@ def agent_pr_workflow(context: WorkflowContext) -> list[ActionResult]:
     return results
 ```
 
-### Step 2: Wire up the workflows
-
-Enact ships two starter workflows you can use right away:
-
-| Workflow | What it does |
-|----------|-------------|
-| `agent_pr_workflow` | Creates a feature branch → opens a PR (never to main) |
-| `db_safe_insert` | Checks for duplicate rows → inserts if safe |
-
-```python
-from enact.workflows.agent_pr_workflow import agent_pr_workflow
-from enact.workflows.db_safe_insert import db_safe_insert
-```
-
-### Step 3: Define the policies it should follow
+### Step 2: Define the policies it should follow
 
 A policy is a Python function that returns pass/fail with a reason. No LLMs. No magic.
 
 ```python
 from enact.models import WorkflowContext, PolicyResult
 
-def require_email_in_payload(context: WorkflowContext) -> PolicyResult:
-    has_email = "email" in context.payload
+def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
+    branch = context.payload.get("branch", "")
+    is_main = branch in ("main", "master")
     return PolicyResult(
-        policy="require_email",
-        passed=has_email,
-        reason="Email present" if has_email else "Missing email in payload",
+        policy="dont_push_to_main",
+        passed=not is_main,
+        reason="Branch is main/master" if is_main else "Branch is not main/master",
     )
 ```
 
@@ -175,7 +162,7 @@ from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
 ```
 
-### Step 4: Wire up the policies and run
+### Step 3: Wire it all up and run
 
 ```python
 from enact import EnactClient
@@ -197,7 +184,7 @@ result, receipt = enact.run(
 )
 ```
 
-### Step 5: Read the receipts
+### Step 4: Read the receipts
 
 Every run — PASS or BLOCK — writes a signed JSON receipt to `receipts/`:
 
