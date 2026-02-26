@@ -81,16 +81,24 @@ class TestRollbackGitHub:
         )
         assert result.success is True
 
-    def test_rollback_merge_pr_is_irreversible(self):
-        systems = {"github": MagicMock()}
+    def test_rollback_merge_pr_calls_revert_commit(self):
+        """merge_pr is now reversible via revert_commit — removed from IRREVERSIBLE set."""
+        mock_connector = MagicMock()
+        mock_connector.revert_commit.return_value = ActionResult(
+            action="revert_commit", system="github", success=True,
+            output={"revert_sha": "abc123", "reverted_merge": "xyz789", "base_branch": "main"},
+        )
+        systems = {"github": mock_connector}
         action = ActionResult(
             action="merge_pr", system="github", success=True,
-            output={"merged": True, "already_done": False},
-            rollback_data={},
+            output={"merged": True, "sha": "xyz789", "already_done": False},
+            rollback_data={"repo": "owner/repo", "merge_sha": "xyz789", "base_branch": "main"},
         )
         result = execute_rollback_action(action, systems)
-        assert result.success is False
-        assert "cannot be reversed" in result.output["error"]
+        assert result.success is True
+        mock_connector.revert_commit.assert_called_once_with(
+            repo="owner/repo", merge_sha="xyz789", base_branch="main"
+        )
 
     def test_rollback_push_commit_is_irreversible(self):
         """push_commit cannot be undone — un-pushing requires destructive force-push."""

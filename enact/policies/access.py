@@ -129,7 +129,7 @@ def dont_read_sensitive_tables(tables: list[str]):
     Returns:
         callable — (WorkflowContext) -> PolicyResult
     """
-    blocked = set(tables)
+    sensitive_tables = set(tables)
 
     def _policy(context: WorkflowContext) -> PolicyResult:
         table = context.payload.get("table", "")
@@ -139,7 +139,7 @@ def dont_read_sensitive_tables(tables: list[str]):
                 passed=True,
                 reason="No table specified in payload",
             )
-        if table in blocked:
+        if table in sensitive_tables:
             return PolicyResult(
                 policy="dont_read_sensitive_tables",
                 passed=False,

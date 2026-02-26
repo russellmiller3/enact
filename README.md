@@ -1,13 +1,15 @@
 # Enact
 
-**An action firewall for AI agents.**
+**You just gave an LLM access to real APIs. What happens when it does something stupid?**
 
-Your agent decides what to do. Enact makes sure it's allowed, executes it deterministically, and writes a signed receipt proving exactly what happened.
+It already has. [Replit's agent deleted a production database](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/). [Amazon Kiro caused a 13-hour AWS outage](https://awesomeagents.ai/news/amazon-kiro-ai-aws-outages/). [Claude Code ran `rm -rf` on a home directory](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/). These weren't bugs — the agents did exactly what they were told. The problem: nothing was checking _whether they should_.
 
-Three things:
-1. **Actions run deterministically** — no LLMs in the execution path. Define workflows as plain Python functions.
-2. **Policies gate every action** — pure Python checks that run before anything fires. Git-versioned, fully testable.
-3. **Receipts prove everything** — HMAC-SHA256 signed JSON. Who ran what, which policies passed, what changed.
+Enact is the missing layer between your agent and the real world:
+
+1. **Block dangerous actions before they fire** — Python policies run before anything executes. Agent tries to push to main? Blocked. Tries to delete without a WHERE clause? Blocked.
+2. **Execute deterministically** — LLMs hallucinate. They call functions that don't exist, use wrong argument names, get column names wrong. Plain Python workflows do exactly what you wrote — they can be unit tested, reviewed in a PR, and `git diff`'d. LLM-generated actions cannot.
+3. **Prove what happened** — Every run (PASS or BLOCK) writes a cryptographically-signed JSON receipt: who ran what, which policies passed, what changed.
+4. **Roll back in one call** — When your agent wipes a database table, deletes the wrong branch, or trashes two hours of work, `enact.rollback(run_id)` brings it all back. Deleted rows restored. Branches recreated. PRs closed.
 
 ```
 pip install enact-sdk
@@ -20,7 +22,7 @@ pip install enact-sdk
 ```bash
 git clone https://github.com/russellmiller3/enact
 cd enact
-pip install -e ".[dev]"
+pip install enact-sdk
 python examples/quickstart.py
 ```
 
@@ -32,15 +34,21 @@ Want the full show? `python examples/demo.py` runs a 3-act scenario: an agent bl
 
 ## Core Concepts
 
-Think of Enact like a **bouncer at a club** 🎪 — before anyone gets in, they need to pass the rules. If they pass, they get a stamped receipt proving they got in. If they fail, they're blocked at the door.
+Think of Enact like a **foreman supervising an AI carpenter**. The carpenter is capable and fast, but needs oversight. When the carpenter says "I want to tear down this wall":
 
-### The Three Pieces
+1. **Permit check** — Before any tool is picked up, the foreman checks the plans. Load-bearing? Utilities inside? Approved? If not: work stops, written reason recorded.
+2. **Blueprint** — If approved, the carpenter follows exact step-by-step instructions — not just "tear down the wall" but each specific action in order. No improvising.
+3. **Work log** — A signed record of every nail pulled, every stud removed, exact before-and-after state. Cryptographically sealed so it can't be altered later.
+4. **Change order** — If the carpenter tore down the WRONG wall, the foreman issues a change order. Enact uses the work log to reverse every step and put it back.
 
-| Piece | What it is | Analogy |
-|-------|------------|---------|
-| **Policy** | A Python function that returns pass/fail | The bouncer's checklist |
-| **Workflow** | A Python function that does the actual work | What happens inside the club |
-| **Receipt** | A signed JSON record of what happened | Your stamped ticket out |
+### The Four Pieces
+
+| Piece        | What it is                                  | Analogy                             |
+| ------------ | ------------------------------------------- | ----------------------------------- |
+| **Policy**   | A Python function that returns pass/fail    | The permit check                    |
+| **Workflow** | A Python function that does the actual work | The blueprint the carpenter follows |
+| **Receipt**  | A signed JSON record of what happened       | The signed work log                 |
+| **Rollback** | One call that reverses an entire run        | The change order + teardown         |
 
 ### How They Fit Together
 
@@ -49,55 +57,84 @@ Agent wants to do something
          |
          v
     +----------+
-    | POLICIES |  <-- "Is this allowed?"
+    | POLICIES |  <-- "Is this approved?" (permit check)
     +----------+
          |
-    PASS |  BLOCK --> Receipt (denied, here's why)
+    PASS |  BLOCK --> Receipt (denied + reason)
          v
     +-----------+
-    | WORKFLOW  |  <-- "Do the thing"
+    | WORKFLOW  |  <-- "Follow the blueprint, step by step"
     +-----------+
          |
          v
     +----------+
-    | RECEIPT  |  <-- "Here's proof of what happened"
+    | RECEIPT  |  <-- "Signed work log — what happened, what changed"
+    +----------+
+         |
+    if needed:
+         v
+    +----------+
+    | ROLLBACK |  <-- "Change order — reverse every step using the work log"
     +----------+
 ```
 
-### Why This Matters for AI Agents
+### Why This Matters
 
-AI agents are powerful but unpredictable. Real disasters have happened:
+These weren't bugs — the agents did exactly what they were told. The problem was no permit check, no work log, no way to undo it:
 
-| Incident | What Happened | When |
-|----------|---------------|------|
-| **Replit** | Agent deleted a production database | July 2025 |
-| **Amazon Kiro** | Agent deleted EC2 systems → 13-hour AWS outage | Dec 2025 |
-| **Claude Code** | Agent ran `rm -rf` on home directory | Dec 2025 |
-
-Enact prevents these by:
-1. **Blocking dangerous actions before they happen** — `dont_push_to_main`, `block_ddl`, `dont_delete_without_where`
-2. **Recording everything** — Every run gets a signed receipt with who/what/why/pass-or-fail
-3. **Enabling rollback** — If something does go wrong, undo it with one call
-
-### The Receipt is the Magic
-
-Every run — whether allowed or blocked — generates a cryptographically-signed receipt. This gives you:
-
-- **Audit trail** — Prove what happened, when, and why
-- **Non-repudiation** — The HMAC signature proves the receipt wasn't tampered with
-- **Compliance** — Regulators love this
-
-It's like a store receipt, but for software decisions. "Your agent tried to do X, here's proof of what we decided and why."
+| Incident        | What Happened                                                             | Source                                                                                                                     |
+| --------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Replit**      | Agent deleted a production database containing data for 2,400+ executives | [Fortune, Jul 2025](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/) |
+| **Amazon Kiro** | Agent deleted an EC2 environment → 13-hour AWS outage                     | [Awesome Agents, Feb 2026](https://awesomeagents.ai/news/amazon-kiro-ai-aws-outages/)                                      |
+| **Claude Code** | Agent ran `rm -rf ~/` — wiped developer's entire home directory           | [ByteIota, Dec 2025](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/)                               |
 
 ---
 
 ## How It Works
 
+### Prerequisite: The Connector
+
+**WHY:** Your agent shouldn't call GitHub directly. You want a middleman that (a) limits what the agent can do and (b) records what actually happened. That's the Connector.
+
+A **Connector** is a pre-built class that wraps an external system. You create one, hand it to Enact, and Enact passes it to your workflow. You never call GitHub (or Postgres, or the filesystem) directly anymore — you call the connector.
+
+Think of it like handing a contractor a limited toolbox before you leave for work. The toolbox only contains the tools you specifically put in it. If the contractor hallucinates and decides to demolish a load-bearing wall — too bad, there's no sledgehammer in the box.
+
+Here is how you create and use a connector:
+
+```python
+from enact.connectors.github import GitHubConnector
+
+# Create the connector — you only allow the two actions you actually need
+gh = GitHubConnector(
+    token="ghp_...",                              # Your GitHub Personal Access Token
+    allowed_actions=["create_branch", "create_pr"] # ONLY these methods can be called
+)
+
+# Now call an action on it
+result = gh.create_branch(repo="owner/repo", branch="agent/fix-149")
+
+# Every action returns an ActionResult — a mini-receipt for that one action
+print(result.success)  # True or False
+print(result.output)   # {"branch": "agent/fix-149"}
+```
+
+**Why `allowed_actions` matters:** Policies are your smart rules — they enforce your business logic and the scenarios you anticipated. `allowed_actions` is your hardcoded floor: even if your agent tries something you never thought to write a policy for, it simply can't execute an action that isn't on the list. Policies handle what you thought of. `allowed_actions` handles everything you didn't.
+
+```python
+# This is what happens if the agent goes rogue:
+gh.delete_branch(repo="owner/repo", branch="main")
+# -> PermissionError: Action 'delete_branch' not in allowlist
+```
+
+Enact ships connectors for GitHub, Postgres, and the filesystem. You don't write these — you import and configure them.
+
 ### Prerequisite: The Context
 
-Before we write a workflow, you need to understand the `WorkflowContext` object. This is the "bag of data" that gets passed to every workflow and policy.
+The `WorkflowContext` is the "bag of data" that travels through the entire system — passed to every policy check and every action.
 
 Think of it like a delivery package. The context contains:
+
 1. **Who sent it** (`user_email`)
 2. **What they want done** (`payload`)
 3. **The tools they can use** (`systems`)
@@ -105,115 +142,110 @@ Think of it like a delivery package. The context contains:
 Here is what a `WorkflowContext` looks like in memory:
 
 ```python
-# This is what Enact builds for you when you call enact.run()
+# Enact builds this automatically — you never create it manually.
+# It's shown here so you understand what your workflow receives.
 context = WorkflowContext(
-    workflow="agent_pr_workflow",           # Which workflow to run
-    user_email="agent@company.com",         # Who is making the request
-    payload={                               # The data the agent wants to act on
+    user_email="agent@company.com",             # Who is making the request
+    payload={                                   # The data the agent wants to act on
         "repo": "owner/repo",
         "branch": "agent/fix-149",
     },
-    systems={                               # The connectors (tools) available
-        "github": <GitHubConnector object>, # A real connector instance
-    },
-    user_attributes={                       # Optional: role, clearance, etc.
-        "role": "contractor",
-        "clearance_level": "standard",
+    systems={                                   # The connectors, keyed by name
+        "github": GitHubConnector(              # The actual connector you configured
+            token="ghp_...",
+            allowed_actions=["create_branch", "create_pr"],
+        ),
     },
 )
 ```
 
-### Prerequisite: The Connector
-
-A **Connector** is a Python class that wraps an external system (GitHub, Postgres, etc.). It has **methods** (also called "actions") that do real work.
-
-Think of a connector like a TV remote. Each button on the remote is an action. You press `create_branch`, and the connector talks to GitHub's API to make it happen.
-
-Here is a simplified view of the `GitHubConnector`:
-
-```python
-class GitHubConnector:
-    # You create it with a token and a list of allowed actions
-    def __init__(self, token: str, allowed_actions: list[str]):
-        self.token = token
-        self.allowed_actions = allowed_actions  # e.g., ["create_branch", "create_pr"]
-    
-    # Each method is an "action" that returns an ActionResult
-    def create_branch(self, repo: str, branch: str) -> ActionResult:
-        # 1. Check if this action is allowed
-        if "create_branch" not in self.allowed_actions:
-            raise PermissionError("Action 'create_branch' not in allowlist")
-        
-        # 2. Call the real GitHub API
-        # ... (code that talks to GitHub)
-        
-        # 3. Return a result object
-        return ActionResult(
-            action="create_branch",
-            system="github",
-            success=True,
-            output={"branch": branch},
-        )
-    
-    def create_pr(self, repo: str, title: str, body: str, head: str) -> ActionResult:
-        # ... similar pattern
-```
-
-**Key insight:** When you call `gh.create_branch(...)`, you get back an `ActionResult` object. This is the "receipt" for that one action. It tells you if it worked, what it produced, and (crucially) how to undo it later.
-
 ### Step 1: Define what your agent should do
 
-A workflow is a plain Python function that takes a `context` and returns a list of `ActionResult` objects.
+**WHY:** Instead of your agent running arbitrary code against GitHub, you give it a script to follow — a plain Python function. Enact runs that function. This way, every action is recorded, every failure is caught, and you can roll back the whole thing.
 
-The workflow pulls the connector from `context.systems`, pulls the data from `context.payload`, and calls the connector's methods to take actions.
-
-Here is how you execute multiple actions sequentially. Notice how we collect the results and stop early if something fails:
+A workflow is a Python function that takes a `context` (the bag from above) and returns a list of `ActionResult` objects — one per action taken.
 
 ```python
 from enact.models import WorkflowContext, ActionResult
 
 def agent_pr_workflow(context: WorkflowContext) -> list[ActionResult]:
-    # 1. Get the connector and data from the context
-    gh = context.systems["github"]
-    repo = context.payload["repo"]
-    branch = context.payload["branch"]
+    # Pull the connector and payload data out of the context bag
+    gh = context.systems["github"]      # The GitHubConnector you configured
+    repo = context.payload["repo"]      # "owner/repo"
+    branch = context.payload["branch"]  # "agent/fix-149"
 
     results = []
 
-    # 2. Take the first action
+    # Take the first action — create the branch
     result1 = gh.create_branch(repo=repo, branch=branch)
-    results.append(result1)
-    
-    # 3. Stop early if it failed
+    results.append(result1)  # Keep a running log of everything that happened
+
+    # Stop early if it failed — no point creating a PR for a branch that doesn't exist
     if not result1.success:
         return results
 
-    # 4. Take the next action
+    # Take the second action — open the pull request
+    # f"Agent: {branch}" is Python string interpolation: becomes "Agent: agent/fix-149"
     result2 = gh.create_pr(repo=repo, title=f"Agent: {branch}", body="Automated PR", head=branch)
     results.append(result2)
 
-    # 5. Return the full history of what happened
-    return results
+    return results  # Enact signs this list into a receipt
 ```
 
 ### Step 2: Define the policies it should follow
 
-A policy is a Python function that returns pass/fail with a reason. No LLMs. No magic.
+**WHY:** The workflow does whatever you tell it to. Policies decide _whether it should run at all_. They run first, before any action fires. If any policy fails, the whole run is blocked and you get a receipt explaining why.
+
+A policy is a plain Python function — no LLMs, no magic. It reads the context and returns pass or fail with a reason.
+
+Here's a concrete example. The standard engineering rule is: no one pushes directly to `main`. Instead, changes go into a separate branch, get reviewed by a human in a Pull Request (PR), and only then get merged. This gives you a checkpoint before anything goes live.
+
+Agents break this rule constantly. They push directly to `main` because no one told them not to — and because they can. The Amazon Kiro incident was exactly this pattern: an agent made a direct infrastructure change with no review step, and caused a 13-hour AWS outage. This policy is the guardrail: if the agent tries to target `main`, the run is blocked before any code is touched.
 
 ```python
 from enact.models import WorkflowContext, PolicyResult
 
 def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
     branch = context.payload.get("branch", "")
-    is_main = branch in ("main", "master")
+    branch_is_not_main = branch.lower() not in ("main", "master")
     return PolicyResult(
         policy="dont_push_to_main",
-        passed=not is_main,
-        reason="Branch is main/master" if is_main else "Branch is not main/master",
+        passed=branch_is_not_main,
+        reason="Branch is not main/master" if branch_is_not_main else f"Direct push to '{branch}' is blocked",
     )
 ```
 
+**How the check works — three logical steps:**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  STEP 1: Read the branch name from the agent's request  │
+│    context.payload.get("branch", "")  -->  "main"       │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  STEP 2: Is this branch safe to push to?                │
+│    branch_is_not_main = branch not in ("main","master") │
+│                                                         │
+│    "agent/fix-149" -->  branch_is_not_main = True   ✅  │
+│    "main"          -->  branch_is_not_main = False  🚫  │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  STEP 3: passed = branch_is_not_main                    │
+│                                                         │
+│    True   -->  PASS ✅                                  │
+│    False  -->  BLOCK 🚫                                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+You don't need to write most policies yourself — Enact ships 24 built-in ones. See [Built-in Policies](#built-in-policies) below.
+
 ### Step 3: Wire it all up and run
+
+**WHY:** Now you hand everything to `EnactClient` — your connectors, policies, and workflows. Then you call `enact.run()` the same way your agent would. Enact handles the policy check, the execution, and the receipt.
 
 ```python
 from enact import EnactClient
@@ -222,17 +254,30 @@ from enact.workflows.agent_pr_workflow import agent_pr_workflow
 from enact.policies.git import dont_push_to_main, require_branch_prefix
 
 enact = EnactClient(
-    systems={"github": GitHubConnector(token="ghp_...", allowed_actions=["create_branch", "create_pr"])},
-    policies=[dont_push_to_main, require_branch_prefix("agent/")],
-    workflows=[agent_pr_workflow],
-    secret="your-64-char-secret-here...",  # or set ENACT_SECRET env var
+    systems={
+        "github": GitHubConnector(
+            token="ghp_...",                                 # Your GitHub PAT
+            allowed_actions=["create_branch", "create_pr"], # Only these are allowed
+        )
+    },
+    policies=[
+        dont_push_to_main,           # A plain policy function (defined above)
+        require_branch_prefix("agent/"),  # A policy *factory* — calling it with "agent/"
+                                          # returns a configured policy function
+    ],
+    workflows=[agent_pr_workflow],   # Register the workflow by passing the function
+    secret="your-secret-here",       # Min 32 chars. Or: export ENACT_SECRET="..." in shell
 )
 
+# This is what your agent calls. It returns two things:
 result, receipt = enact.run(
-    workflow="agent_pr_workflow",
-    user_email="agent@company.com",
-    payload={"repo": "owner/repo", "branch": "agent/fix-149"},
+    workflow="agent_pr_workflow",        # Which workflow to run (must be registered above)
+    user_email="agent@company.com",      # Who is making the request (for audit trail)
+    payload={"repo": "owner/repo", "branch": "agent/fix-149"},  # Data for the workflow
 )
+
+print(result.decision)   # "PASS" or "BLOCK"
+print(receipt.run_id)    # UUID — use this to look up or roll back the run
 ```
 
 ### Step 4: Read the receipts
@@ -246,12 +291,20 @@ Every run — PASS or BLOCK — writes a signed JSON receipt to `receipts/`:
   "user_email": "agent@company.com",
   "decision": "PASS",
   "policy_results": [
-    {"policy": "dont_push_to_main", "passed": true, "reason": "Branch is not main/master"},
-    {"policy": "require_branch_prefix", "passed": true, "reason": "Branch 'agent/fix-149' has required prefix"}
+    {
+      "policy": "dont_push_to_main",
+      "passed": true,
+      "reason": "Branch is not main/master"
+    },
+    {
+      "policy": "require_branch_prefix",
+      "passed": true,
+      "reason": "Branch 'agent/fix-149' has required prefix"
+    }
   ],
   "actions_taken": [
-    {"action": "create_branch", "system": "github", "success": true},
-    {"action": "create_pr", "system": "github", "success": true}
+    { "action": "create_branch", "system": "github", "success": true },
+    { "action": "create_pr", "system": "github", "success": true }
   ],
   "timestamp": "2026-02-26T03:30:00Z",
   "signature": "hmac-sha256-hex..."
@@ -267,12 +320,63 @@ is_valid = verify_signature(receipt, secret="your-secret")
 
 ### Step 5: Rollback (if something goes wrong)
 
-If an agent makes a mistake (like deleting the wrong database row), you can undo the entire run with one call. `rollback()` walks the original receipt in reverse and undoes each action.
+**WHY:** Say the `agent_pr_workflow` from Step 1 ran — it created `agent/fix-149`, opened a PR, and merged it straight to `main` by mistake. You need to undo all three steps. One call.
+
+`rollback()` does four things in order:
+
+1. **Loads the receipt** by `run_id` — looks up `receipts/a1b2c3d4-....json`
+2. **Verifies the signature** — if the receipt was tampered with, rollback refuses to run
+3. **Walks `actions_taken` in reverse** — last action first, so nothing is orphaned
+4. **Calls the undo action** for each step and writes a new rollback receipt
+
+Here's what "in reverse" looks like for a workflow that created a branch, opened a PR, then merged it:
+
+```
+Original run (forward):          Rollback (reverse):
+
+  Step 1: create_branch           Step 3 undone: revert_commit  (new commit on main)
+  Step 2: create_pr            →  Step 2 undone: close_pr
+  Step 3: merge_pr                Step 1 undone: delete_branch
+```
+
+Why reverse? `merge_pr` happened last — you have to undo it first before closing the PR makes sense. Reverse order preserves the dependency chain.
+
+`revert_commit` is `git revert -m 1 <sha>` under the hood — it adds a new commit to `main` that restores its pre-merge state. Safe on protected branches; no force-push needed. The merge SHA is captured automatically in the receipt when `merge_pr` runs.
 
 ```python
-# Pass the run_id from the receipt you want to undo
+# receipt.run_id came from the enact.run() call in Step 3
 rollback_result, rollback_receipt = enact.rollback(receipt.run_id)
+
+print(rollback_result.decision)          # "ROLLED_BACK"
+print(rollback_result.actions_reversed)  # ["revert_commit", "close_pr", "delete_branch"]
 ```
+
+The rollback receipt looks like this — note the `revert_sha` showing exactly what was created on `main`:
+
+```json
+{
+  "run_id": "rb-9f8e7d6c-...",
+  "original_run_id": "a1b2c3d4-...",
+  "workflow": "agent_pr_workflow",
+  "decision": "ROLLED_BACK",
+  "actions_reversed": [
+    {
+      "action": "revert_commit",
+      "system": "github",
+      "success": true,
+      "output": { "revert_sha": "f7c3a1b...", "reverted_merge": "e9d2c4a...", "base_branch": "main" }
+    },
+    { "action": "close_pr",      "system": "github", "success": true },
+    { "action": "delete_branch", "system": "github", "success": true }
+  ],
+  "timestamp": "2026-02-26T03:35:00Z",
+  "signature": "hmac-sha256-hex..."
+}
+```
+
+**One caveat on re-merging:** A revert doesn't erase history. If you fix the issue and try to re-merge the same branch later, Git will skip those commits (it thinks they're already in `main`). You'd need to `git revert <revert_sha>` first — "undo the undo" — then merge. This is standard Git behavior, not an Enact quirk.
+
+**What if an action truly can't be undone?** `push_commit` has no safe inverse without a force-push, which GitHub blocks on protected branches. If rollback hits one of these, it stops, records which action couldn't be reversed, and tells you exactly what to fix manually. It won't silently skip it.
 
 ---
 
@@ -280,14 +384,14 @@ rollback_result, rollback_receipt = enact.rollback(receipt.run_id)
 
 Enact ships 24 built-in policies across 6 categories so you don't have to write them from scratch:
 
-| Category | Policies | What they block |
-|----------|----------|-----------------|
-| **Git** | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main` | Direct pushes to main, wrong branch names, blast radius |
-| **Database** | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl` | Dangerous deletes, unscoped updates, DDL like `DROP TABLE` |
-| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions` | File deletions, path traversal, sensitive files (.env, .key) |
-| **Access** | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure |
-| **CRM** | `dont_duplicate_contacts`, `limit_tasks_per_contact` | Duplicate records, rate limiting |
-| **Time** | `within_maintenance_window`, `code_freeze_active` | Actions outside allowed hours, during code freezes |
+| Category       | Policies                                                                                                                                                          | What they block                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Git**        | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main`                                                  | Direct pushes to main, wrong branch names, blast radius      |
+| **Database**   | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl`                                                        | Dangerous deletes, unscoped updates, DDL like `DROP TABLE`   |
+| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions`                                                                                                          | File deletions, path traversal, sensitive files (.env, .key) |
+| **Access**     | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure                            |
+| **CRM**        | `dont_duplicate_contacts`, `limit_tasks_per_contact`                                                                                                              | Duplicate records, rate limiting                             |
+| **Time**       | `within_maintenance_window`, `code_freeze_active`                                                                                                                 | Actions outside allowed hours, during code freezes           |
 
 ```python
 from enact.policies.git import dont_push_to_main, require_branch_prefix
@@ -331,42 +435,39 @@ agent calls enact.run()
 
 ## Connectors & Allowed Actions
 
-Think of a **workflow** as a contractor you hired to renovate your kitchen. The workflow is the actual script the AI runs—it's the step-by-step plan saying, "I'm going to tear out these cabinets, then install the new sink."
+You might be thinking: _"Don't we already have Policies?"_ Yes — but `allowed_actions` adds a complementary layer that works differently.
 
-The `allowed_actions` list is the **physical toolbox** you handed that contractor before you left for work.
+- **Policies** are your business rules: "You can push code, but not to the `master` branch."
+- **`allowed_actions`** is your hardcoded floor: "This connector can only ever call these two methods. Full stop."
 
-If you only put a screwdriver and a wrench in that toolbox (`allowed_actions=["create_branch", "create_pr"]`), and the contractor suddenly hallucinates and decides they need to demolish a load-bearing wall (`delete_repository`), they literally don't have the sledgehammer to do it. The system just throws a `PermissionError` and stops them immediately.
+Policies handle the scenarios you anticipated. `allowed_actions` caps the blast radius for everything else — even actions you never thought to write a policy for. The list is checked before any API call, every time, with no exceptions.
 
-### Defense-in-Depth
+### Available Actions by Connector
 
-You might be thinking: *"Wait, don't we have Policies (the bouncer) to stop bad things from happening?"*
+| System         | Actions                                                                   | Rollback                               | Idempotent                      |
+| -------------- | ------------------------------------------------------------------------- | -------------------------------------- | ------------------------------- |
+| **GitHub**     | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr` | Yes — `merge_pr` via `revert_commit`; except `push_commit` | Yes — `already_done` convention |
+| **Postgres**   | `select_rows`, `insert_row`, `update_row`, `delete_row`                   | Yes — pre-SELECT captures state        | Yes                             |
+| **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir`                      | Yes — content captured before mutation | Yes                             |
 
-Yes, but this is **defense-in-depth**.
-* **Policies** are smart, dynamic rules ("You can push code, but *not* to the `master` branch").
-* **`allowed_actions`** is a dumb, brute-force lock ("You can only read data, you can never write data").
+### What Rollback Can and Can't Undo
 
-You want both. AI agents are unpredictable. If an agent goes completely rogue and tries to call a destructive method that you didn't even think to write a policy for, the `allowed_actions` whitelist acts as your absolute bottom-line safety net.
+| Action | Rollback? | How |
+| -------------------- | --------- | --- |
+| `github.create_branch` | ✅ | Deletes the branch |
+| `github.create_pr` | ✅ | Closes the PR |
+| `github.merge_pr` | ✅ | `git revert -m 1 <sha>` — adds a new commit to the base branch restoring pre-merge state. Safe on protected branches; no force-push. |
+| `github.delete_branch` | ✅ | Recreates branch at the captured SHA |
+| `github.push_commit` | ❌ | Un-pushing requires a destructive force-push, which GitHub blocks on protected branches |
+| `postgres.insert_row` | ✅ | Deletes the inserted row |
+| `postgres.update_row` | ✅ | Restores pre-update values (pre-SELECT captures state) |
+| `postgres.delete_row` | ✅ | Re-inserts every deleted row (pre-SELECT captures state) |
+| `postgres.DROP TABLE` | ❌ | Not a connector action — blocked by `block_ddl` policy. Even with captured rows, you'd lose indexes, constraints, sequences, and foreign keys. Prevention beats fake recovery. |
+| `postgres.TRUNCATE` | ❌ | Same as above — blocked by `block_ddl` |
+| `filesystem.write_file` | ✅ | Restores previous content (or deletes if file was new) |
+| `filesystem.delete_file` | ✅ | Recreates file with captured content |
 
-### How it works in code
-
-Actions are just literal Python methods defined on the Connector classes (e.g., `GitHubConnector.create_branch()`).
-
-Every connector uses an **allowlist** — you declare which actions it can perform at construction time. The very first thing every action method does is check this list. Anything not on the list raises `PermissionError` immediately, before any API call is ever made.
-
-```python
-# This connector can ONLY create branches and PRs — nothing else
-gh = GitHubConnector(token="...", allowed_actions=["create_branch", "create_pr"])
-
-# If the agent's workflow tries to do this:
-gh.delete_branch(repo="owner/repo", branch="main")
-# -> Raises PermissionError: Action 'delete_branch' not in allowlist
-```
-
-| System | Actions | Rollback | Idempotent |
-|--------|---------|----------|------------|
-| **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr` | Yes (except `merge_pr`, `push_commit`) | Yes — `already_done` convention |
-| **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | Yes — pre-SELECT captures state | Yes |
-| **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | Yes — content captured before mutation | Yes |
+**One caveat on `merge_pr` rollback:** After reverting a merge, if you fix the issue and try to re-merge the same branch, Git will skip those commits (they look already-merged). Revert the revert commit first (`git revert <revert_sha>`), then re-merge. This is standard Git behavior.
 
 ---
 
@@ -397,8 +498,8 @@ pytest tests/ -v
 
 ## Environment Variables
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `ENACT_SECRET` | Yes (or pass `secret=`) | HMAC signing key. 32+ characters. |
-| `GITHUB_TOKEN` | For GitHubConnector | GitHub PAT or App token |
-| `ENACT_FREEZE` | Optional | Set to `1` to activate `code_freeze_active` policy |
+| Variable       | Required                | Purpose                                            |
+| -------------- | ----------------------- | -------------------------------------------------- |
+| `ENACT_SECRET` | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
+| `GITHUB_TOKEN` | For GitHubConnector     | GitHub PAT or App token                            |
+| `ENACT_FREEZE` | Optional                | Set to `1` to activate `code_freeze_active` policy |

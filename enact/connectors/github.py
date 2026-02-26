@@ -326,11 +326,99 @@ class GitHubConnector:
                 system="github",
                 success=True,
                 output={"merged": result.merged, "sha": result.sha, "already_done": False},
-                rollback_data={},  # merge_pr is irreversible — no undo possible
+                rollback_data={
+                    "repo": repo,
+                    "merge_sha": result.sha,       # SHA of the merge commit — needed by revert_commit
+                    "base_branch": pr.base.ref,    # e.g. "main" — the branch the PR was merged into
+                },
             )
         except Exception as e:
             return ActionResult(
                 action="merge_pr",
+                system="github",
+                success=False,
+                output={"error": str(e)},
+            )
+
+    def revert_commit(self, repo: str, merge_sha: str, base_branch: str = "main") -> ActionResult:
+        """
+        Revert a merge commit by creating a new commit whose tree matches the
+        first parent of the merge (i.e. what base_branch looked like before the merge).
+
+        This is the programmatic equivalent of `git revert -m 1 <merge_sha>`.
+        It does NOT rewrite history — it adds a new commit on top of base_branch,
+        which is safe on protected branches.
+
+        CAVEAT: If you later try to re-merge the same branch, Git will skip the
+        commits it already saw. You would need to `git revert <revert_sha>` first
+        to "undo the undo" before re-merging.
+
+        Args:
+            repo         — "owner/repo" string
+            merge_sha    — SHA of the merge commit to revert (from merge_pr output)
+            base_branch  — branch that was merged into (default: "main")
+
+        Returns:
+            ActionResult — success=True with {"revert_sha": str, "reverted_merge": str}, or
+                           success=False with {"error": str(e)}
+        """
+        self._check_allowed("revert_commit")
+        try:
+            repo_obj = self._get_repo(repo)
+
+            # Low-level GitCommit (has .tree and .parents as GitCommit objects)
+            merge_git_commit = repo_obj.get_git_commit(merge_sha)
+
+            # Validate: a merge commit has 2+ parents
+            if len(merge_git_commit.parents) < 2:
+                return ActionResult(
+                    action="revert_commit",
+                    system="github",
+                    success=False,
+                    output={"error": f"SHA {merge_sha} is not a merge commit ({len(merge_git_commit.parents)} parent(s))"},
+                )
+
+            # parent[0] = tip of base_branch just before the merge happened
+            # Its tree = the state we want to restore
+            parent_sha = merge_git_commit.parents[0].sha
+            parent_git_commit = repo_obj.get_git_commit(parent_sha)
+            parent_tree = parent_git_commit.tree  # GitTree object
+
+            # Current HEAD of base_branch becomes the new commit's parent
+            current_head_sha = repo_obj.get_branch(base_branch).commit.sha
+            current_head_git_commit = repo_obj.get_git_commit(current_head_sha)
+
+            revert_message = (
+                f"Revert merge {merge_sha[:7]}\n\n"
+                f"This reverts merge commit {merge_sha}.\n"
+                f"Created automatically by Enact rollback."
+            )
+
+            # Create the revert commit: same tree as parent[0], current HEAD as its parent
+            new_commit = repo_obj.create_git_commit(
+                message=revert_message,
+                tree=parent_tree,
+                parents=[current_head_git_commit],
+            )
+
+            # Fast-forward base_branch to the new revert commit
+            ref = repo_obj.get_git_ref(f"heads/{base_branch}")
+            ref.edit(new_commit.sha)
+
+            return ActionResult(
+                action="revert_commit",
+                system="github",
+                success=True,
+                output={
+                    "revert_sha": new_commit.sha,
+                    "reverted_merge": merge_sha,
+                    "base_branch": base_branch,
+                    "already_done": False,
+                },
+            )
+        except Exception as e:
+            return ActionResult(
+                action="revert_commit",
                 system="github",
                 success=False,
                 output={"error": str(e)},

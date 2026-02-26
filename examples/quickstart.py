@@ -9,7 +9,9 @@ This shows the three core scenarios that matter for AI agents:
 No credentials needed. Uses in-memory demo connectors.
 
 Usage:
-    pip install -e ".[dev]"
+    git clone https://github.com/russellmiller3/enact
+    cd enact
+    pip install enact-sdk
     python examples/quickstart.py
 """
 import sys

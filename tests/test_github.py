@@ -263,7 +263,10 @@ class TestMergePR:
         assert result.output["merged"] is True
         assert result.output["sha"] == "deadbeef"
         assert result.output["already_done"] is False
-        assert result.rollback_data == {}  # merge_pr is irreversible
+        # merge_pr now captures rollback_data for revert_commit
+        assert result.rollback_data["repo"] == "owner/repo"
+        assert result.rollback_data["merge_sha"] == "deadbeef"
+        assert "base_branch" in result.rollback_data
 
     def test_merge_pr_failure(self, connector):
         connector._get_repo = MagicMock(side_effect=Exception("PR not mergeable"))
@@ -422,3 +425,84 @@ class TestCreateBranchFromSha:
         )
         assert result.success is False
         assert "API error" in result.output["error"]
+
+
+class TestRevertCommit:
+    def test_revert_commit_success(self, connector):
+        connector._allowed_actions.add("revert_commit")
+        mock_repo = MagicMock()
+
+        # Merge commit has 2 parents — parent[0] is what main looked like before merge
+        merge_parent_0 = MagicMock()
+        merge_parent_0.sha = "parent_sha_111"
+        merge_parent_1 = MagicMock()
+        merge_parent_1.sha = "feature_sha_222"
+        merge_git_commit = MagicMock()
+        merge_git_commit.parents = [merge_parent_0, merge_parent_1]
+
+        parent_git_commit = MagicMock()
+        parent_git_commit.tree = MagicMock()  # GitTree to restore
+
+        current_head_git_commit = MagicMock()
+
+        new_commit = MagicMock()
+        new_commit.sha = "revert_sha_xyz"
+
+        mock_repo.get_branch.return_value.commit.sha = "current_head_sha_333"
+
+        def get_git_commit_side_effect(sha):
+            if sha == "merge_sha_abc":
+                return merge_git_commit
+            elif sha == "parent_sha_111":
+                return parent_git_commit
+            elif sha == "current_head_sha_333":
+                return current_head_git_commit
+            raise ValueError(f"Unexpected sha in test: {sha}")
+
+        mock_repo.get_git_commit.side_effect = get_git_commit_side_effect
+        mock_repo.create_git_commit.return_value = new_commit
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.revert_commit(
+            repo="owner/repo", merge_sha="merge_sha_abc", base_branch="main"
+        )
+
+        assert result.success is True
+        assert result.action == "revert_commit"
+        assert result.output["revert_sha"] == "revert_sha_xyz"
+        assert result.output["reverted_merge"] == "merge_sha_abc"
+        assert result.output["base_branch"] == "main"
+        assert result.output["already_done"] is False
+        # Verify the revert commit was created with the right tree
+        mock_repo.create_git_commit.assert_called_once()
+        # Verify main's ref was updated to the new commit
+        mock_repo.get_git_ref.assert_called_once_with("heads/main")
+        mock_repo.get_git_ref.return_value.edit.assert_called_once_with("revert_sha_xyz")
+
+    def test_revert_commit_not_a_merge_commit(self, connector):
+        """Single-parent commit should fail — nothing to -m 1 against."""
+        connector._allowed_actions.add("revert_commit")
+        mock_repo = MagicMock()
+        non_merge_commit = MagicMock()
+        non_merge_commit.parents = [MagicMock()]  # only 1 parent
+        mock_repo.get_git_commit.return_value = non_merge_commit
+        connector._get_repo = MagicMock(return_value=mock_repo)
+
+        result = connector.revert_commit(repo="owner/repo", merge_sha="abc123")
+
+        assert result.success is False
+        assert "not a merge commit" in result.output["error"]
+
+    def test_revert_commit_not_in_default_allowlist(self, connector):
+        """revert_commit is a rollback op — not in the default allowlist."""
+        with pytest.raises(PermissionError, match="not in allowlist"):
+            connector.revert_commit(repo="owner/repo", merge_sha="abc123")
+
+    def test_revert_commit_api_failure(self, connector):
+        connector._allowed_actions.add("revert_commit")
+        connector._get_repo = MagicMock(side_effect=Exception("API timeout"))
+
+        result = connector.revert_commit(repo="owner/repo", merge_sha="abc123")
+
+        assert result.success is False
+        assert "API timeout" in result.output["error"]

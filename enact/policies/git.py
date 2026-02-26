@@ -52,14 +52,14 @@ def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
         PolicyResult — passed=False if branch is "main" or "master" (any case)
     """
     branch = context.payload.get("branch", "")
-    blocked = branch.lower() in ("main", "master")
+    branch_is_not_main = branch.lower() not in ("main", "master")
     return PolicyResult(
         policy="dont_push_to_main",
-        passed=not blocked,
+        passed=branch_is_not_main,
         reason=(
-            f"Direct push to '{branch}' is blocked"
-            if blocked
-            else "Branch is not main/master"
+            "Branch is not main/master"
+            if branch_is_not_main
+            else f"Direct push to '{branch}' is blocked"
         ),
     )
 
@@ -189,13 +189,13 @@ def dont_merge_to_main(context: WorkflowContext) -> PolicyResult:
         PolicyResult — passed=False if base is "main" or "master" (any case)
     """
     base = context.payload.get("base", "")
-    blocked = base.lower() in ("main", "master")
+    merge_target_is_not_main = base.lower() not in ("main", "master")
     return PolicyResult(
         policy="dont_merge_to_main",
-        passed=not blocked,
+        passed=merge_target_is_not_main,
         reason=(
-            f"Merge into '{base}' is blocked — PRs must target a non-protected branch"
-            if blocked
-            else "Merge target is not main/master"
+            "Merge target is not main/master"
+            if merge_target_is_not_main
+            else f"Merge into '{base}' is blocked — PRs must target a non-protected branch"
         ),
     )

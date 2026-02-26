@@ -77,6 +77,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - **Prefer long-term quality over speed.** If the "right way" is only slightly more work than the quick hack, do it right the first time. If the right way is significantly more work, ask Russell before committing to it.
 - **Standardize conventions early.** When adding a pattern that will repeat across connectors/modules, define the convention now — don't plan to "refactor later."
 - **Plain English naming.** Avoid jargon in APIs and data contracts. If a non-programmer wouldn't understand the field name, pick a clearer one.
+- **Verbose boolean variable names.** Name booleans after what you *want* to be true, not what you're guarding against. Prefer `branch_is_not_main` over `blocked`. This eliminates the `passed = not blocked` double-negative pattern. Example: `branch_is_not_main = branch not in ("main", "master")` → `passed=branch_is_not_main`. No flip, no mental gymnastics.
 
 ## Connector Conventions
 

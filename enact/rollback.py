@@ -9,7 +9,7 @@ Inverse map:
     github.delete_branch        -> github.create_branch_from_sha
     github.create_pr            -> github.close_pr
     github.create_issue         -> github.close_issue
-    github.merge_pr             -> (irreversible — cannot unmerge)
+    github.merge_pr             -> github.revert_commit  (git revert -m 1 <sha>; adds new commit, safe on protected branches)
     github.push_commit          -> (irreversible — cannot un-push without destructive force)
     postgres.insert_row         -> postgres.delete_row  (using id or first col as PK)
     postgres.update_row         -> postgres.update_row  (with old_rows from rollback_data)
@@ -27,10 +27,10 @@ from enact.models import ActionResult
 # These are NOT errors — they are documented contracts. The rollback receipt
 # records success=False for each so the caller knows what needs manual cleanup.
 _IRREVERSIBLE = {
-    ("github", "merge_pr"),     # Can't unmerge a merged PR
     ("github", "push_commit"),  # Can't un-push without destructive force-push
     # NOTE: Add future irreversible actions here (email sends, Slack messages, etc.)
     # Pattern: ("system_name", "action_name")
+    # merge_pr is handled via revert_commit — removed from irreversible
 }
 
 # Read-only actions — nothing to undo, rollback skips them gracefully
@@ -111,6 +111,12 @@ def _rollback_github(action: str, rd: dict, connector) -> ActionResult:
             return connector.close_pr(repo=rd["repo"], pr_number=rd["pr_number"])
         elif action == "create_issue":
             return connector.close_issue(repo=rd["repo"], issue_number=rd["issue_number"])
+        elif action == "merge_pr":
+            return connector.revert_commit(
+                repo=rd["repo"],
+                merge_sha=rd["merge_sha"],
+                base_branch=rd.get("base_branch", "main"),
+            )
         else:
             return ActionResult(
                 action=f"rollback_{action}",

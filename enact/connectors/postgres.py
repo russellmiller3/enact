@@ -291,6 +291,13 @@ class PostgresConnector:
                            or success=False with {"error": str(e)}
         """
         self._check_allowed("delete_row")
+        if not where:
+            return ActionResult(
+                action="delete_row",
+                system="postgres",
+                success=False,
+                output={"error": "delete_row requires at least one WHERE condition — use dont_delete_without_where policy to enforce this"},
+            )
         conn = None
         try:
             conn = self._get_connection()
