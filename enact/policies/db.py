@@ -39,6 +39,7 @@ Workflows should populate these keys in the payload before calling enact.run()
 so policies can inspect them. This is the same convention as file_count in
 max_files_per_commit — the workflow sets the context, the policy reads it.
 """
+import re
 from enact.models import WorkflowContext, PolicyResult
 
 
@@ -180,3 +181,59 @@ def protect_tables(protected: list[str]):
         )
 
     return _policy
+
+
+# DDL keywords that should never appear in agent-executed SQL.
+# Use bare verbs (DROP, ALTER, CREATE) rather than qualified forms (ALTER TABLE,
+# CREATE TABLE) so that all variants are caught: DROP VIEW, ALTER SEQUENCE,
+# CREATE FUNCTION, CREATE TRIGGER, etc.
+# \b word boundaries prevent matching column names like "created_at" or "creator".
+_DDL_KEYWORDS = ("DROP", "TRUNCATE", "ALTER", "CREATE")
+_DDL_PATTERN = re.compile(
+    r'\b(?:' + '|'.join(re.escape(k) for k in _DDL_KEYWORDS) + r')\b'
+)
+
+
+def block_ddl(context: WorkflowContext) -> PolicyResult:
+    """
+    Block any operation that contains DDL keywords in payload["sql"] or payload["action"].
+
+    Sentinel policy — register on any client where schema changes must never happen.
+    The Replit database deletion incident (July 2025) was triggered by a schema push
+    (`npm run db:push`). This policy is the Enact equivalent: if an agent tries to
+    run DROP, TRUNCATE, ALTER TABLE, or CREATE TABLE, it gets blocked before firing.
+
+    Detection uses word-boundary regex (\\b) so "SELECT 1;DROP TABLE" is caught even
+    without a leading space before DROP. Case-insensitive (input is uppercased first).
+    The policy passes through if neither "sql" nor "action" is present in the payload.
+
+    Payload keys:
+        "sql"    — raw SQL string (checked for DDL keywords)
+        "action" — action string (checked for DDL keywords as fallback)
+
+    Args:
+        context — WorkflowContext; reads payload["sql"] and payload["action"]
+
+    Returns:
+        PolicyResult — passed=False if any DDL keyword is found
+    """
+    candidates = [
+        context.payload.get("sql", ""),
+        context.payload.get("action", ""),
+    ]
+    for text in candidates:
+        if not text:
+            continue
+        upper = text.strip().upper()
+        match = _DDL_PATTERN.search(upper)
+        if match:
+            return PolicyResult(
+                policy="block_ddl",
+                passed=False,
+                reason=f"DDL statement blocked: '{match.group(0)}' is not permitted",
+            )
+    return PolicyResult(
+        policy="block_ddl",
+        passed=True,
+        reason="No DDL keywords detected",
+    )

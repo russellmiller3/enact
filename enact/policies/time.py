@@ -20,6 +20,7 @@ start and end hours:
 
 This covers the full 24-hour clock without needing date arithmetic.
 """
+import os
 from datetime import datetime, timezone
 from enact.models import WorkflowContext, PolicyResult
 
@@ -71,3 +72,42 @@ def within_maintenance_window(start_hour_utc: int, end_hour_utc: int):
         )
 
     return _policy
+
+
+# Values of ENACT_FREEZE that mean "yes, freeze is on"
+_FREEZE_ON_VALUES = frozenset(("1", "true", "yes"))
+
+
+def code_freeze_active(context: WorkflowContext) -> PolicyResult:
+    """
+    Block all operations when a code freeze is declared via environment variable.
+
+    Set ENACT_FREEZE=1 (or "true" / "yes") in your environment to freeze all
+    agent actions through this client. Unset or set to "0" / "" to lift the freeze.
+
+    This directly addresses the Replit incident pattern: an agent that ignores an
+    explicit "do not make changes" instruction. With this policy registered, the
+    freeze is enforced at the action layer — the agent cannot override it.
+
+    The check is case-insensitive. Only "1", "true", and "yes" trigger a block;
+    "0" and empty string pass through. This avoids the Python string truthy trap
+    where "0" would block if evaluated as bool("0").
+
+    Args:
+        context — WorkflowContext (not inspected)
+
+    Returns:
+        PolicyResult — passed=False if ENACT_FREEZE is set to a truthy value
+    """
+    freeze_value = os.environ.get("ENACT_FREEZE", "").strip().lower()
+    if freeze_value in _FREEZE_ON_VALUES:
+        return PolicyResult(
+            policy="code_freeze_active",
+            passed=False,
+            reason=f"Code freeze is active (ENACT_FREEZE={os.environ.get('ENACT_FREEZE')}). No agent actions permitted.",
+        )
+    return PolicyResult(
+        policy="code_freeze_active",
+        passed=True,
+        reason="No code freeze active",
+    )

@@ -6,17 +6,25 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
 
 from enact.policies.crm import dont_duplicate_contacts, limit_tasks_per_contact
-from enact.policies.access import contractor_cannot_write_pii, require_actor_role
-from enact.policies.time import within_maintenance_window
+from enact.policies.access import (
+    contractor_cannot_write_pii,
+    require_actor_role,
+    dont_read_sensitive_tables,
+    dont_read_sensitive_paths,
+    require_clearance_for_path,
+    require_user_role,
+)
+from enact.policies.time import within_maintenance_window, code_freeze_active
 from enact.models import WorkflowContext, ActionResult
 
 
-def make_context(payload=None, systems=None):
+def make_context(payload=None, systems=None, user_attributes=None):
     return WorkflowContext(
         workflow="test",
         user_email="agent@test.com",
         payload=payload or {},
         systems=systems or {},
+        user_attributes=user_attributes or {},
     )
 
 
@@ -250,3 +258,194 @@ class TestWithinMaintenanceWindow:
             ctx = make_context()
             result = policy(ctx)
         assert result.policy == "within_maintenance_window"
+
+
+# ─── ABAC: Sensitive Read Policies ───────────────────────────────────────────
+
+class TestDontReadSensitiveTables:
+    def test_passes_for_non_sensitive_table(self):
+        ctx = make_context(payload={"table": "orders"})
+        result = dont_read_sensitive_tables(["users", "credit_cards"])(ctx)
+        assert result.passed is True
+        assert result.policy == "dont_read_sensitive_tables"
+
+    def test_blocks_for_sensitive_table(self):
+        ctx = make_context(payload={"table": "credit_cards"})
+        result = dont_read_sensitive_tables(["users", "credit_cards"])(ctx)
+        assert result.passed is False
+        assert "credit_cards" in result.reason
+
+    def test_passes_when_no_table_in_payload(self):
+        ctx = make_context(payload={})
+        result = dont_read_sensitive_tables(["users"])(ctx)
+        assert result.passed is True
+
+    def test_blocks_only_exact_match(self):
+        # "user_data" should not match "users"
+        ctx = make_context(payload={"table": "user_data"})
+        result = dont_read_sensitive_tables(["users"])(ctx)
+        assert result.passed is True
+
+
+class TestDontReadSensitivePaths:
+    def test_passes_for_non_sensitive_path(self):
+        ctx = make_context(payload={"path": "/home/user/docs/report.txt"})
+        result = dont_read_sensitive_paths(["/etc", "/root"])(ctx)
+        assert result.passed is True
+
+    def test_blocks_for_path_under_sensitive_prefix(self):
+        ctx = make_context(payload={"path": "/etc/passwd"})
+        result = dont_read_sensitive_paths(["/etc", "/root"])(ctx)
+        assert result.passed is False
+        assert "/etc/passwd" in result.reason
+
+    def test_blocks_for_nested_path_under_prefix(self):
+        ctx = make_context(payload={"path": "/etc/ssh/sshd_config"})
+        result = dont_read_sensitive_paths(["/etc"])(ctx)
+        assert result.passed is False
+
+    def test_does_not_match_path_with_similar_prefix(self):
+        # /etchosts must NOT match /etc prefix
+        ctx = make_context(payload={"path": "/etchosts"})
+        result = dont_read_sensitive_paths(["/etc"])(ctx)
+        assert result.passed is True
+
+    def test_passes_when_no_path_in_payload(self):
+        ctx = make_context(payload={})
+        result = dont_read_sensitive_paths(["/etc"])(ctx)
+        assert result.passed is True
+
+    def test_blocks_exact_prefix_match(self):
+        # /etc itself (not just things under it) should also be blocked
+        ctx = make_context(payload={"path": "/etc"})
+        result = dont_read_sensitive_paths(["/etc"])(ctx)
+        assert result.passed is False
+
+
+class TestRequireClearanceForPath:
+    def test_passes_when_sufficient_clearance(self):
+        ctx = make_context(
+            payload={"path": "/sensitive/data.csv"},
+            user_attributes={"clearance_level": 3},
+        )
+        result = require_clearance_for_path(["/sensitive"], 2)(ctx)
+        assert result.passed is True
+
+    def test_blocks_when_insufficient_clearance(self):
+        ctx = make_context(
+            payload={"path": "/sensitive/data.csv"},
+            user_attributes={"clearance_level": 1},
+        )
+        result = require_clearance_for_path(["/sensitive"], 2)(ctx)
+        assert result.passed is False
+        assert "clearance" in result.reason.lower()
+        assert "1" in result.reason
+        assert "2" in result.reason
+
+    def test_passes_for_non_sensitive_path_regardless_of_clearance(self):
+        ctx = make_context(
+            payload={"path": "/public/readme.txt"},
+            user_attributes={"clearance_level": 0},
+        )
+        result = require_clearance_for_path(["/sensitive"], 2)(ctx)
+        assert result.passed is True
+
+    def test_blocks_when_clearance_missing_from_attributes(self):
+        ctx = make_context(
+            payload={"path": "/sensitive/data.csv"},
+            user_attributes={},
+        )
+        result = require_clearance_for_path(["/sensitive"], 1)(ctx)
+        assert result.passed is False
+        assert "0" in result.reason  # defaults to 0
+
+    def test_passes_when_no_path_in_payload(self):
+        ctx = make_context(payload={}, user_attributes={})
+        result = require_clearance_for_path(["/sensitive"], 5)(ctx)
+        assert result.passed is True
+
+    def test_passes_at_exact_clearance_level(self):
+        ctx = make_context(
+            payload={"path": "/sensitive/data.csv"},
+            user_attributes={"clearance_level": 2},
+        )
+        result = require_clearance_for_path(["/sensitive"], 2)(ctx)
+        assert result.passed is True
+
+
+class TestRequireUserRole:
+    def test_passes_for_allowed_role(self):
+        ctx = make_context(user_attributes={"role": "admin"})
+        result = require_user_role("admin", "engineer")(ctx)
+        assert result.passed is True
+        assert result.policy == "require_user_role"
+
+    def test_passes_for_second_allowed_role(self):
+        ctx = make_context(user_attributes={"role": "engineer"})
+        result = require_user_role("admin", "engineer")(ctx)
+        assert result.passed is True
+
+    def test_blocks_for_disallowed_role(self):
+        ctx = make_context(user_attributes={"role": "contractor"})
+        result = require_user_role("admin", "engineer")(ctx)
+        assert result.passed is False
+        assert "contractor" in result.reason
+
+    def test_blocks_when_role_missing(self):
+        ctx = make_context(user_attributes={})
+        result = require_user_role("admin")(ctx)
+        assert result.passed is False
+        assert "unknown" in result.reason
+
+    def test_blocks_when_user_attributes_empty(self):
+        ctx = make_context()
+        result = require_user_role("admin")(ctx)
+        assert result.passed is False
+
+
+# ─── Time: Code Freeze ────────────────────────────────────────────────────────
+
+class TestCodeFreezeActive:
+    def test_passes_when_freeze_not_set(self, monkeypatch):
+        monkeypatch.delenv("ENACT_FREEZE", raising=False)
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is True
+        assert result.policy == "code_freeze_active"
+
+    def test_blocks_when_freeze_is_1(self, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "1")
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is False
+        assert "freeze" in result.reason.lower()
+
+    def test_blocks_when_freeze_is_true(self, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "true")
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is False
+
+    def test_blocks_when_freeze_is_yes(self, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "yes")
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is False
+
+    def test_blocks_case_insensitive(self, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "TRUE")
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is False
+
+    def test_passes_when_freeze_is_0(self, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "0")
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is True
+
+    def test_passes_when_freeze_is_empty_string(self, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "")
+        ctx = make_context()
+        result = code_freeze_active(ctx)
+        assert result.passed is True

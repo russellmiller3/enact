@@ -30,10 +30,12 @@ class WorkflowContext(BaseModel):
     calls context.systems["hubspot"].get_contact() before the workflow runs.
 
     Fields:
-        workflow     — name of the registered workflow being called
-        user_email  — identity of the agent/user making the request; appears in every receipt
-        payload      — arbitrary key-value data the workflow needs (repo name, contact email, etc.)
-        systems      — dict of connector instances, keyed by name (e.g. {"github": GitHubConnector(...)})
+        workflow         — name of the registered workflow being called
+        user_email       — identity of the agent/user making the request; appears in every receipt
+        payload          — arbitrary key-value data the workflow needs (repo name, contact email, etc.)
+        systems          — dict of connector instances, keyed by name (e.g. {"github": GitHubConnector(...)})
+        user_attributes  — structured identity context for ABAC policies (role, clearance_level, etc.)
+                           Set by the caller before run(); Enact does not verify these claims.
     """
     workflow: str
     user_email: str
@@ -41,6 +43,9 @@ class WorkflowContext(BaseModel):
     # Connector instances injected at EnactClient init time.
     # Keyed by the name callers use to retrieve them (e.g. context.systems["github"]).
     systems: dict = Field(default_factory=dict)
+    # Attribute-based access control context — role, clearance_level, dept, etc.
+    # Set by the caller before run(); Enact does not verify these claims.
+    user_attributes: dict = Field(default_factory=dict)
 
 
 class PolicyResult(BaseModel):
