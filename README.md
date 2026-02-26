@@ -95,7 +95,9 @@ It's like a store receipt, but for software decisions. "Your agent tried to do X
 
 ### Step 1: Define what your agent should do
 
-A workflow is a plain Python function. It takes a context (who's calling, with what data), uses **Connectors** to take actions, and returns a list of the results.
+A workflow is a plain Python function. It takes a `WorkflowContext` object, which contains two important things:
+1. `context.systems` — The connectors (tools) the agent is allowed to use.
+2. `context.payload` — The data the agent wants to act on (e.g., the repo name, the branch name).
 
 Enact ships with GitHub, Postgres, and Filesystem connectors that handle the actual API calls for you. Every time you call a connector method, it returns an `ActionResult`.
 
@@ -105,7 +107,7 @@ Here is how you execute multiple actions sequentially. Notice how we collect the
 from enact.models import WorkflowContext, ActionResult
 
 def agent_pr_workflow(context: WorkflowContext) -> list[ActionResult]:
-    # 1. Get the connector from the context
+    # 1. Get the connector and data from the context
     gh = context.systems["github"]
     repo = context.payload["repo"]
     branch = context.payload["branch"]
@@ -143,23 +145,6 @@ def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
         passed=not is_main,
         reason="Branch is main/master" if is_main else "Branch is not main/master",
     )
-```
-
-Enact ships 24 built-in policies across 6 categories:
-
-| Category | Policies | What they block |
-|----------|----------|-----------------|
-| **Git** | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main` | Direct pushes to main, wrong branch names, blast radius |
-| **Database** | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl` | Dangerous deletes, unscoped updates, DDL like `DROP TABLE` |
-| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions` | File deletions, path traversal, sensitive files (.env, .key) |
-| **Access** | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure |
-| **CRM** | `dont_duplicate_contacts`, `limit_tasks_per_contact` | Duplicate records, rate limiting |
-| **Time** | `within_maintenance_window`, `code_freeze_active` | Actions outside allowed hours, during code freezes |
-
-```python
-from enact.policies.git import dont_push_to_main, require_branch_prefix
-from enact.policies.db import protect_tables, block_ddl
-from enact.policies.time import code_freeze_active
 ```
 
 ### Step 3: Wire it all up and run
@@ -212,6 +197,36 @@ Verify a receipt hasn't been tampered with:
 ```python
 from enact.receipt import verify_signature
 is_valid = verify_signature(receipt, secret="your-secret")
+```
+
+### Step 5: Rollback (if something goes wrong)
+
+If an agent makes a mistake (like deleting the wrong database row), you can undo the entire run with one call. `rollback()` walks the original receipt in reverse and undoes each action.
+
+```python
+# Pass the run_id from the receipt you want to undo
+rollback_result, rollback_receipt = enact.rollback(receipt.run_id)
+```
+
+---
+
+## Built-in Policies
+
+Enact ships 24 built-in policies across 6 categories so you don't have to write them from scratch:
+
+| Category | Policies | What they block |
+|----------|----------|-----------------|
+| **Git** | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main` | Direct pushes to main, wrong branch names, blast radius |
+| **Database** | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl` | Dangerous deletes, unscoped updates, DDL like `DROP TABLE` |
+| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions` | File deletions, path traversal, sensitive files (.env, .key) |
+| **Access** | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure |
+| **CRM** | `dont_duplicate_contacts`, `limit_tasks_per_contact` | Duplicate records, rate limiting |
+| **Time** | `within_maintenance_window`, `code_freeze_active` | Actions outside allowed hours, during code freezes |
+
+```python
+from enact.policies.git import dont_push_to_main, require_branch_prefix
+from enact.policies.db import protect_tables, block_ddl
+from enact.policies.time import code_freeze_active
 ```
 
 ---
@@ -286,31 +301,6 @@ gh.delete_branch(repo="owner/repo", branch="main")
 | **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr` | Yes (except `merge_pr`, `push_commit`) | Yes — `already_done` convention |
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | Yes — pre-SELECT captures state | Yes |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | Yes — content captured before mutation | Yes |
-
----
-
-## Rollback
-
-Undo an entire run with one call:
-
-```python
-enact = EnactClient(
-    systems={...},
-    policies=[...],
-    workflows=[...],
-    rollback_enabled=True,
-    secret="...",
-)
-
-result, receipt = enact.run(workflow="my_workflow", ...)
-
-# Later — something went wrong, undo everything
-rollback_result, rollback_receipt = enact.rollback(receipt.run_id)
-```
-
-`rollback()` walks the original receipt in reverse, undoes each action (deletes the branch, closes the PR, restores the DB row), skips irreversible actions (merged PRs), and writes a signed rollback receipt with decision `PASS` or `PARTIAL`.
-
-Every connector captures pre-action state in `rollback_data` at execution time — nothing needs to be fetched retroactively.
 
 ---
 
