@@ -221,6 +221,7 @@
             <div class="logo">enact</div>
             <nav>
                 <a href="#quickstart">Quickstart</a>
+                <a href="#policies">Policies</a>
                 <a href="#receipt">See it work</a>
                 <a href="#roadmap">Roadmap</a>
                 <a href="#pricing">Pricing</a>
@@ -245,6 +246,26 @@
             <a href="#quickstart" class="btn btn-secondary">pip install enact-sdk</a>
         </div>
         <p class="hero-note">Open source · <a href="https://enact.cloud" style="color:var(--accent);">enact.cloud</a> · Self-host free · Cloud from $299/mo</p>
+
+        <div style="margin-top:44px; max-width:700px; margin-left:auto; margin-right:auto; text-align:left;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--subtle); margin-bottom:10px; text-align:center;">Minimal setup — add to any agent in minutes</p>
+            <pre style="font-size:12px; line-height:1.75;"><code><span class="cm"># 1. install</span>
+pip install enact-sdk
+
+<span class="cm"># 2. add to your agent</span>
+<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
+<span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
+<span class="kw">from</span> enact.policies.db <span class="kw">import</span> block_ddl, dont_delete_without_where
+
+enact = <span class="fn">EnactClient</span>(
+    secret=<span class="str">"..."</span>,
+    systems={<span class="str">"postgres"</span>: <span class="fn">PostgresConnector</span>(dsn=<span class="str">"postgresql://..."</span>)},
+    policies=[block_ddl, dont_delete_without_where],
+)
+
+<span class="cm"># 3. your agent calls this — policy-gated, receipt-backed</span>
+result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"..."</span>, user_email=<span class="str">"agent@co.com"</span>, payload={...})</code></pre>
+        </div>
     </div>
 </section>
 
@@ -421,8 +442,10 @@ pip install enact-sdk
 <span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
 <span class="kw">from</span> enact.connectors.filesystem <span class="kw">import</span> <span class="fn">FilesystemConnector</span>
 <span class="kw">from</span> enact.policies.git <span class="kw">import</span> dont_push_to_main, dont_merge_to_main
-<span class="kw">from</span> enact.policies.db <span class="kw">import</span> dont_delete_without_where
+<span class="kw">from</span> enact.policies.db <span class="kw">import</span> dont_delete_without_where, block_ddl
 <span class="kw">from</span> enact.policies.filesystem <span class="kw">import</span> dont_delete_file, restrict_paths
+<span class="kw">from</span> enact.policies.time <span class="kw">import</span> code_freeze_active
+<span class="kw">from</span> enact.policies.access <span class="kw">import</span> require_user_role
 <span class="kw">from</span> enact.workflows.agent_pr_workflow <span class="kw">import</span> agent_pr_workflow
 
 enact = <span class="fn">EnactClient</span>(
@@ -436,8 +459,11 @@ enact = <span class="fn">EnactClient</span>(
         dont_push_to_main,          <span class="cm"># blocks direct pushes to main</span>
         dont_merge_to_main,         <span class="cm"># blocks PRs targeting main or master</span>
         dont_delete_without_where,  <span class="cm"># blocks unsafe bulk deletes</span>
+        block_ddl,                  <span class="cm"># blocks DROP/ALTER/CREATE in SQL payloads</span>
         dont_delete_file,           <span class="cm"># blocks all file deletions</span>
         restrict_paths([<span class="str">"/workspace/src"</span>]),  <span class="cm"># path confinement</span>
+        code_freeze_active,         <span class="cm"># respects ENACT_FREEZE env var</span>
+        require_user_role(<span class="str">"admin"</span>, <span class="str">"engineer"</span>),  <span class="cm"># ABAC role check</span>
     ],
     workflows=[agent_pr_workflow],
 )
@@ -463,6 +489,184 @@ result, receipt = enact.<span class="fn">run</span>(
 
 <span class="cm"># Same pattern works with Claude tool_use, OpenAI Responses API, CrewAI, AutoGen, etc.</span></code></pre>
         </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════
+     POLICY REFERENCE
+════════════════════════════════════════════════════ -->
+<section id="policies" class="alt">
+    <div class="container">
+        <div class="section-label">Built-in policies</div>
+        <h2>20+ policies, shipped today</h2>
+        <p class="section-sub">Pure Python functions — no LLMs, versioned in Git, testable with pytest. Register any combination on your <span class="inline-code">EnactClient</span>.</p>
+
+        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px;">
+
+            <!-- DATABASE SAFETY — spans full width, most important -->
+            <div style="background:var(--bg); border:1px solid rgba(220,38,38,.4); border-radius:12px; padding:24px; grid-column: 1 / -1;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <i data-lucide="database" style="width:16px; height:16px; color:var(--red); flex-shrink:0;"></i>
+                    <h3 style="font-size:13px; font-weight:700; color:var(--red); letter-spacing:0.08em; text-transform:uppercase;">Database Safety</h3>
+                    <span style="font-size:12px; color:var(--subtle); margin-left:auto;">Blocks the Replit incident pattern — schema drops, unsafe deletes, unfiltered updates</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">block_ddl</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks DROP, TRUNCATE, ALTER, CREATE — word-boundary regex, catches semicolon-joined statements</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_row</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Sentinel — unconditionally blocks all row deletions regardless of table or WHERE clause</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_without_where</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks DELETE with empty or missing WHERE clause — prevents deleting all rows</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_update_without_where</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks UPDATE with empty or missing WHERE clause — prevents overwriting every record</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px; grid-column:span 2;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">protect_tables(list)</code>
+                        <span style="font-size:12px; color:var(--muted); margin-left:10px;">Factory — blocks any operation on a named table. Exact, case-sensitive match. Pass-through if no table in payload.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CODE FREEZE + TIME -->
+            <div style="background:var(--surface); border:1px solid rgba(217,119,6,.35); border-radius:12px; padding:24px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <i data-lucide="pause-circle" style="width:16px; height:16px; color:var(--amber); flex-shrink:0;"></i>
+                    <h3 style="font-size:13px; font-weight:700; color:var(--amber); letter-spacing:0.08em; text-transform:uppercase;">Code Freeze &amp; Time</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">code_freeze_active</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks all agent actions when ENACT_FREEZE=1 — enforces "do not touch" at the action layer, not the prompt layer</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">within_maintenance_window(start, end)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Restricts actions to a UTC time window — midnight-crossing windows supported (e.g. 22:00–06:00 UTC)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACCESS CONTROL -->
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <i data-lucide="shield-check" style="width:16px; height:16px; color:var(--accent); flex-shrink:0;"></i>
+                    <h3 style="font-size:13px; font-weight:700; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase;">Access Control</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_read_sensitive_tables(list)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks SELECT on named tables — agents can't read credit_cards, audit_log, etc.</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_read_sensitive_paths(list)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks read_file on paths under sensitive prefixes (/etc, /root, secrets/) — traversal-safe</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_user_role(*roles)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">ABAC: blocks if user_attributes["role"] not in allowed set — reads structured identity, not payload</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_clearance_for_path(paths, min)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">ABAC: blocks if user_attributes["clearance_level"] below minimum for sensitive path</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">contractor_cannot_write_pii</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks contractors from writing any field in the caller-defined pii_fields list</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_actor_role(list)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks actors without an allowed role — reads payload["actor_role"]</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GIT SAFETY -->
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <i data-lucide="git-branch" style="width:16px; height:16px; color:var(--green); flex-shrink:0;"></i>
+                    <h3 style="font-size:13px; font-weight:700; color:var(--green); letter-spacing:0.08em; text-transform:uppercase;">Git Safety</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_push_to_main</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks direct pushes to main or master — the Kiro pattern</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_merge_to_main</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks PR merges targeting main or master</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_branch</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Sentinel — unconditionally blocks all branch deletions</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">max_files_per_commit(n)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Caps blast radius — blocks commits touching more than n files</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_branch_prefix(prefix)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Enforces branch naming — blocks branches not starting with required prefix</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILESYSTEM + CRM in 2 columns -->
+            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;">
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <i data-lucide="folder-lock" style="width:16px; height:16px; color:var(--muted); flex-shrink:0;"></i>
+                    <h3 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase;">Filesystem Safety</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden; margin-bottom:24px;">
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_file</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Sentinel — unconditionally blocks all file deletions</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">restrict_paths(list)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Confines operations to allowed directories — traversal-safe prefix matching</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">block_extensions(list)</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Blocks operations on .env, .key, .pem and other sensitive file types</span>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
+                    <i data-lucide="users" style="width:16px; height:16px; color:var(--muted); flex-shrink:0;"></i>
+                    <h3 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase;">CRM</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_duplicate_contacts</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Live lookup before workflow runs — blocks creating a contact that already exists</span>
+                    </div>
+                    <div style="background:var(--surface); padding:10px 14px;">
+                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">limit_tasks_per_contact</code>
+                        <br><span style="font-size:12px; color:var(--muted);">Rate-limits tasks per contact per rolling time window</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="margin-top:24px; padding:20px 24px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; align-items:flex-start; gap:32px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:240px;">
+                <strong style="font-size:14px; display:block; margin-bottom:6px;">Write your own in 5 lines of Python</strong>
+                <p style="font-size:13px; color:var(--muted);">Any callable <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">(WorkflowContext) -&gt; PolicyResult</code> can be registered. No SDK extension needed.</p>
+            </div>
+            <pre style="font-size:12px; line-height:1.65; flex:1; min-width:300px;"><code><span class="kw">def</span> <span class="fn">only_on_weekdays</span>(ctx: WorkflowContext) -> PolicyResult:
+    ok = datetime.now(timezone.utc).weekday() < 5
+    <span class="kw">return</span> PolicyResult(
+        policy=<span class="str">"only_on_weekdays"</span>, passed=ok,
+        reason=<span class="str">"weekday OK"</span> <span class="kw">if</span> ok <span class="kw">else</span> <span class="str">"no weekend ops"</span>
+    )</code></pre>
+        </div>
+
     </div>
 </section>
 
