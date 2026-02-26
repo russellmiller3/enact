@@ -31,12 +31,12 @@ class WorkflowContext(BaseModel):
 
     Fields:
         workflow     — name of the registered workflow being called
-        actor_email  — identity of the agent/user making the request; appears in every receipt
+        user_email  — identity of the agent/user making the request; appears in every receipt
         payload      — arbitrary key-value data the workflow needs (repo name, contact email, etc.)
         systems      — dict of connector instances, keyed by name (e.g. {"github": GitHubConnector(...)})
     """
     workflow: str
-    actor_email: str
+    user_email: str
     payload: dict
     # Connector instances injected at EnactClient init time.
     # Keyed by the name callers use to retrieve them (e.g. context.systems["github"]).
@@ -105,7 +105,7 @@ class Receipt(BaseModel):
     Fields:
         run_id          — UUID, auto-generated; used as the receipt filename
         workflow        — name of the workflow that was called
-        actor_email     — who triggered this run
+        user_email     — who triggered this run
         payload         — copy of the input payload for audit purposes
         policy_results  — full list of every policy result (pass and fail)
         decision        — "PASS" if all policies passed, "BLOCK" if any failed
@@ -116,7 +116,7 @@ class Receipt(BaseModel):
     # Auto-generated UUID so each receipt has a unique, stable filename.
     run_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     workflow: str
-    actor_email: str
+    user_email: str
     payload: dict
     policy_results: list[PolicyResult]
     # "PASS" = all policies passed and workflow ran

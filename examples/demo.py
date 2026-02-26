@@ -301,7 +301,7 @@ def run_demo():
     )
     _, receipt1 = enact1.run(
         workflow="direct_push_workflow",
-        actor_email="infra-agent@company.com",
+        user_email="infra-agent@company.com",
         payload={"repo": "company/api", "branch": "main"},
     )
     print(f"  {B}Policy gate:{RST}")
@@ -329,7 +329,7 @@ def run_demo():
     )
     _, receipt2 = enact2.run(
         workflow="agent_pr_workflow",
-        actor_email="agent@company.com",
+        user_email="agent@company.com",
         payload={
             "repo": "company/api",
             "branch": "agent/fix-149",
@@ -374,7 +374,7 @@ def run_demo():
     )
     _, receipt3 = enact3.run(
         workflow="db_cleanup_workflow",
-        actor_email="cleanup-agent@company.com",
+        user_email="cleanup-agent@company.com",
         payload={"table": "customers", "status_filter": "inactive"},
     )
     print(f"  {B}Policy gate:{RST}")

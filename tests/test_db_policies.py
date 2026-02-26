@@ -16,7 +16,7 @@ from enact.models import WorkflowContext
 def make_context(payload=None):
     return WorkflowContext(
         workflow="test",
-        actor_email="agent@test.com",
+        user_email="agent@test.com",
         payload=payload or {},
         systems={},
     )
@@ -39,7 +39,7 @@ class TestNoDeleteRow:
 
     def test_blocks_any_workflow_name(self):
         ctx = WorkflowContext(
-            workflow="routine_cleanup", actor_email="agent@test.com",
+            workflow="routine_cleanup", user_email="agent@test.com",
             payload={}, systems={},
         )
         result = dont_delete_row(ctx)

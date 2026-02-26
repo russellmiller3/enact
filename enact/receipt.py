@@ -11,7 +11,7 @@ can modify a receipt on disk cannot recompute a valid signature without the key.
 What fields are covered by the signature?
 ------------------------------------------
 The signature covers ALL receipt fields via JSON canonicalization:
-    run_id, workflow, actor_email, decision, timestamp,
+    run_id, workflow, user_email, decision, timestamp,
     payload, policy_results, actions_taken
 
 If ANY field is changed after signing, verify_signature() returns False.
@@ -73,7 +73,7 @@ def _validate_run_id(run_id: str) -> None:
 
 def build_receipt(
     workflow: str,
-    actor_email: str,
+    user_email: str,
     payload: dict,
     policy_results: list[PolicyResult],
     decision: str,
@@ -85,7 +85,7 @@ def build_receipt(
 
     Args:
         workflow        — name of the workflow that was invoked
-        actor_email     — identity of the caller
+        user_email     — identity of the caller
         payload         — the input payload passed to run()
         policy_results  — full list from evaluate_all(), including failures
         decision        — "PASS" or "BLOCK"
@@ -96,7 +96,7 @@ def build_receipt(
     """
     return Receipt(
         workflow=workflow,
-        actor_email=actor_email,
+        user_email=user_email,
         payload=payload,
         policy_results=policy_results,
         decision=decision,
@@ -116,13 +116,13 @@ def _build_signature_message(receipt: Receipt) -> str:
     compact separators) ensures deterministic output regardless of dict
     insertion order.
 
-    Previous versions only signed identity fields (run_id, workflow, actor_email,
+    Previous versions only signed identity fields (run_id, workflow, user_email,
     decision, timestamp). This left payload and policy_results modifiable without
     invalidating the signature — a tamper risk for forensic investigation.
     """
     canon = lambda obj: json.dumps(obj, sort_keys=True, separators=(",", ":"))
     return (
-        f"{receipt.run_id}:{receipt.workflow}:{receipt.actor_email}"
+        f"{receipt.run_id}:{receipt.workflow}:{receipt.user_email}"
         f":{receipt.decision}:{receipt.timestamp}"
         f":{canon(receipt.payload)}"
         f":{canon([pr.model_dump() for pr in receipt.policy_results])}"
@@ -135,7 +135,7 @@ def sign_receipt(receipt: Receipt, secret: str) -> Receipt:
     HMAC-SHA256 sign the receipt and return a new Receipt with signature set.
 
     The signature covers ALL receipt fields via JSON canonicalization:
-    run_id, workflow, actor_email, decision, timestamp, payload,
+    run_id, workflow, user_email, decision, timestamp, payload,
     policy_results, and actions_taken. Any modification invalidates
     the signature.
 

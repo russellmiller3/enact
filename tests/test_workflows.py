@@ -26,7 +26,7 @@ def make_context(pg, table="users", data=None, unique_key=None):
         payload["unique_key"] = unique_key
     return WorkflowContext(
         workflow="db_safe_insert",
-        actor_email="agent@test.com",
+        user_email="agent@test.com",
         payload=payload,
         systems={"postgres": pg},
     )

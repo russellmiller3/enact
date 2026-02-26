@@ -48,7 +48,7 @@ enact = EnactClient(
 print("=== Run 1: Valid payload ===")
 result, receipt = enact.run(
     workflow="hello_workflow",
-    actor_email="agent@company.com",
+    user_email="agent@company.com",
     payload={"email": "jane@acme.com"},
 )
 print(f"Success:   {result.success}")
@@ -61,7 +61,7 @@ print()
 print("=== Run 2: Missing email ===")
 result, receipt = enact.run(
     workflow="hello_workflow",
-    actor_email="agent@company.com",
+    user_email="agent@company.com",
     payload={"name": "Jane"},
 )
 print(f"Success:  {result.success}")

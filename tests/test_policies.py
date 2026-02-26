@@ -14,7 +14,7 @@ from enact.models import WorkflowContext, ActionResult
 def make_context(payload=None, systems=None):
     return WorkflowContext(
         workflow="test",
-        actor_email="agent@test.com",
+        user_email="agent@test.com",
         payload=payload or {},
         systems=systems or {},
     )

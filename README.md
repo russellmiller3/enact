@@ -19,7 +19,7 @@ enact = EnactClient(
 
 result, receipt = enact.run(
     workflow="agent_pr_workflow",
-    actor_email="agent@company.com",
+    user_email="agent@company.com",
     payload={"repo": "owner/repo", "branch": "agent/my-feature"},
 )
 ```
@@ -184,9 +184,9 @@ enact/
 ## Data Flow (in code)
 
 ```
-enact.run(workflow="agent_pr_workflow", actor_email="agent@co.com", payload={"repo": "owner/repo", "branch": "agent/fix"})
+enact.run(workflow="agent_pr_workflow", user_email="agent@co.com", payload={"repo": "owner/repo", "branch": "agent/fix"})
   │
-  ├─▶ WorkflowContext(workflow, actor_email, payload, systems)
+  ├─▶ WorkflowContext(workflow, user_email, payload, systems)
   │
   ├─▶ policy_results = [
   │       PolicyResult(policy="dont_push_to_main",      passed=True, reason="Branch is not main/master"),
@@ -200,7 +200,7 @@ enact.run(workflow="agent_pr_workflow", actor_email="agent@co.com", payload={"re
   │       ActionResult(action="create_pr",     system="github", success=True, output={"pr_number": 42, "url": "...", "already_done": False}),
   │   ]
   │
-  ├─▶ Receipt(run_id, workflow, actor_email, payload, policy_results,
+  ├─▶ Receipt(run_id, workflow, user_email, payload, policy_results,
   │           decision="PASS", actions_taken, timestamp, signature)
   │
   └─▶ RunResult(success=True, workflow="agent_pr_workflow", output={...})

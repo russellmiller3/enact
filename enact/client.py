@@ -48,7 +48,7 @@ class EnactClient:
         )
         result, receipt = enact.run(
             workflow="agent_pr_workflow",
-            actor_email="agent@company.com",
+            user_email="agent@company.com",
             payload={"repo": "owner/repo", "branch": "agent/my-feature"},
         )
     """
@@ -107,7 +107,7 @@ class EnactClient:
     def run(
         self,
         workflow: str,
-        actor_email: str,
+        user_email: str,
         payload: dict,
     ) -> tuple[RunResult, Receipt]:
         """
@@ -128,7 +128,7 @@ class EnactClient:
 
         Args:
             workflow     — name of a registered workflow function (must match __name__ exactly)
-            actor_email  — identity of the agent making the request; stored in every receipt
+            user_email  — identity of the agent making the request; stored in every receipt
             payload      — arbitrary dict of inputs the workflow needs (repo, email, table, etc.)
 
         Returns:
@@ -147,7 +147,7 @@ class EnactClient:
         # 2. Build context — single shared object passed to policies AND the workflow
         context = WorkflowContext(
             workflow=workflow,
-            actor_email=actor_email,
+            user_email=user_email,
             payload=payload,
             systems=self._systems,
         )
@@ -159,7 +159,7 @@ class EnactClient:
         if not all_passed(policy_results):
             receipt = build_receipt(
                 workflow=workflow,
-                actor_email=actor_email,
+                user_email=user_email,
                 payload=payload,
                 policy_results=policy_results,
                 decision="BLOCK",
@@ -175,7 +175,7 @@ class EnactClient:
         # 6. Build + sign receipt including what the workflow actually did
         receipt = build_receipt(
             workflow=workflow,
-            actor_email=actor_email,
+            user_email=user_email,
             payload=payload,
             policy_results=policy_results,
             decision="PASS",
@@ -249,7 +249,7 @@ class EnactClient:
         # Build + sign + write rollback receipt
         receipt = build_receipt(
             workflow=f"rollback:{original_receipt.workflow}",
-            actor_email=original_receipt.actor_email,
+            user_email=original_receipt.user_email,
             payload={"original_run_id": run_id, "rollback": True},
             policy_results=[],
             decision="PASS" if all_success else "PARTIAL",

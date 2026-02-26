@@ -237,7 +237,7 @@ def _write_test_receipt(tmp_path, actions_taken, decision="PASS"):
     """Helper: write a receipt to tmp_path and return its run_id."""
     receipt = build_receipt(
         workflow="test_workflow",
-        actor_email="agent@test.com",
+        user_email="agent@test.com",
         payload={"x": 1},
         policy_results=[PolicyResult(policy="p", passed=True, reason="ok")],
         decision=decision,

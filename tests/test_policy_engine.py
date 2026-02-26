@@ -7,7 +7,7 @@ def make_context(**overrides):
     """Helper to build a WorkflowContext with defaults."""
     defaults = {
         "workflow": "test_workflow",
-        "actor_email": "agent@test.com",
+        "user_email": "agent@test.com",
         "payload": {"key": "value"},
         "systems": {},
     }
@@ -24,7 +24,7 @@ def policy_always_fail(ctx: WorkflowContext) -> PolicyResult:
 
 
 def policy_check_email(ctx: WorkflowContext) -> PolicyResult:
-    valid = "@" in ctx.actor_email
+    valid = "@" in ctx.user_email
     return PolicyResult(
         policy="check_email",
         passed=valid,
@@ -64,10 +64,10 @@ class TestEvaluateAll:
         received = {}
 
         def capture_policy(ctx):
-            received["email"] = ctx.actor_email
+            received["email"] = ctx.user_email
             return PolicyResult(policy="capture", passed=True, reason="ok")
 
-        ctx = make_context(actor_email="special@test.com")
+        ctx = make_context(user_email="special@test.com")
         evaluate_all(ctx, [capture_policy])
         assert received["email"] == "special@test.com"
 

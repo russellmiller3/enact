@@ -11,7 +11,7 @@ from enact.models import WorkflowContext, ActionResult
 def make_context(payload=None):
     return WorkflowContext(
         workflow="test",
-        actor_email="agent@test.com",
+        user_email="agent@test.com",
         payload=payload or {},
         systems={},
     )
@@ -137,7 +137,7 @@ class TestNoDeleteBranch:
 
     def test_blocks_any_workflow(self):
         ctx = WorkflowContext(
-            workflow="branch_cleanup", actor_email="agent@test.com",
+            workflow="branch_cleanup", user_email="agent@test.com",
             payload={"branch": "stale/branch"}, systems={},
         )
         result = dont_delete_branch(ctx)
@@ -218,7 +218,7 @@ class TestAgentPrWorkflow:
         gh = self._make_gh_mock()
         ctx = WorkflowContext(
             workflow="agent_pr_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={"repo": "owner/repo", "branch": "agent/feature-x"},
             systems={"github": gh},
         )
@@ -235,7 +235,7 @@ class TestAgentPrWorkflow:
         gh = self._make_gh_mock(branch_success=False)
         ctx = WorkflowContext(
             workflow="agent_pr_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={"repo": "owner/repo", "branch": "agent/feature-x"},
             systems={"github": gh},
         )
@@ -251,7 +251,7 @@ class TestAgentPrWorkflow:
         gh = self._make_gh_mock()
         ctx = WorkflowContext(
             workflow="agent_pr_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={
                 "repo": "owner/repo",
                 "branch": "agent/feature-x",

@@ -26,14 +26,14 @@ class TestBuildReceipt:
     def test_creates_receipt_with_uuid(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test_wf",
-            actor_email="agent@co.com",
+            user_email="agent@co.com",
             payload={"email": "jane@acme.com"},
             policy_results=sample_policy_results,
             decision="PASS",
         )
         assert receipt.run_id  # UUID is set
         assert receipt.workflow == "test_wf"
-        assert receipt.actor_email == "agent@co.com"
+        assert receipt.user_email == "agent@co.com"
         assert receipt.decision == "PASS"
         assert receipt.timestamp  # ISO timestamp is set
         assert receipt.signature == ""  # Not signed yet
@@ -43,7 +43,7 @@ class TestBuildReceipt:
     def test_block_receipt_has_no_actions(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test_wf",
-            actor_email="agent@co.com",
+            user_email="agent@co.com",
             payload={},
             policy_results=sample_policy_results,
             decision="BLOCK",
@@ -54,7 +54,7 @@ class TestBuildReceipt:
     def test_pass_receipt_has_actions(self, sample_policy_results, sample_actions):
         receipt = build_receipt(
             workflow="test_wf",
-            actor_email="agent@co.com",
+            user_email="agent@co.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -69,7 +69,7 @@ class TestSignReceipt:
     def test_sign_produces_hex_digest(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -81,7 +81,7 @@ class TestSignReceipt:
     def test_different_secrets_different_signatures(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -93,7 +93,7 @@ class TestSignReceipt:
     def test_signing_is_deterministic(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -107,7 +107,7 @@ class TestVerifySignature:
     def test_valid_signature_passes(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -118,7 +118,7 @@ class TestVerifySignature:
     def test_wrong_secret_fails(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -129,7 +129,7 @@ class TestVerifySignature:
     def test_tampered_receipt_fails(self, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -144,7 +144,7 @@ class TestWriteReceipt:
     def test_writes_json_file(self, tmp_path, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={"x": 1},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -161,7 +161,7 @@ class TestWriteReceipt:
     def test_creates_directory_if_missing(self, tmp_path, sample_policy_results):
         receipt = build_receipt(
             workflow="test",
-            actor_email="a@b.com",
+            user_email="a@b.com",
             payload={},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -176,7 +176,7 @@ class TestLoadReceipt:
         """Receipt written to disk can be loaded back and matches original."""
         receipt = build_receipt(
             workflow="test_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={"key": "val"},
             policy_results=sample_policy_results,
             decision="PASS",
@@ -220,7 +220,7 @@ class TestActionResultRollbackData:
         """
         receipt = build_receipt(
             workflow="rollback:test_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={"original_run_id": "abc", "rollback": True},
             policy_results=[],
             decision="PARTIAL",
@@ -254,7 +254,7 @@ class TestPathTraversalProtection:
     def test_write_receipt_rejects_crafted_run_id(self, tmp_path, sample_policy_results):
         """Manually crafted Receipt with malicious run_id is rejected at write time."""
         receipt = build_receipt(
-            workflow="test", actor_email="a@b.com", payload={},
+            workflow="test", user_email="a@b.com", payload={},
             policy_results=sample_policy_results, decision="PASS",
         )
         evil = receipt.model_copy(update={"run_id": "../../evil"})
@@ -265,7 +265,7 @@ class TestPathTraversalProtection:
     def test_valid_uuid_roundtrips(self, tmp_path, sample_policy_results):
         """Legitimate UUID run_ids still work correctly after validation."""
         receipt = build_receipt(
-            workflow="test", actor_email="a@b.com", payload={},
+            workflow="test", user_email="a@b.com", payload={},
             policy_results=sample_policy_results, decision="PASS",
         )
         signed = sign_receipt(receipt, "test-secret-key")
@@ -280,7 +280,7 @@ class TestHMACFullCoverage:
     def test_tampered_payload_fails_verification(self, sample_policy_results):
         """Modifying payload after signing invalidates the signature."""
         receipt = build_receipt(
-            workflow="test", actor_email="a@b.com",
+            workflow="test", user_email="a@b.com",
             payload={"key": "original"},
             policy_results=sample_policy_results, decision="PASS",
         )
@@ -291,7 +291,7 @@ class TestHMACFullCoverage:
     def test_tampered_policy_results_fails_verification(self, sample_policy_results):
         """Modifying policy_results after signing invalidates the signature."""
         receipt = build_receipt(
-            workflow="test", actor_email="a@b.com", payload={},
+            workflow="test", user_email="a@b.com", payload={},
             policy_results=sample_policy_results, decision="PASS",
         )
         signed = sign_receipt(receipt, "test-secret")
@@ -303,7 +303,7 @@ class TestHMACFullCoverage:
     def test_tampered_actions_taken_fails_verification(self, sample_policy_results, sample_actions):
         """Modifying actions_taken after signing invalidates the signature."""
         receipt = build_receipt(
-            workflow="test", actor_email="a@b.com", payload={},
+            workflow="test", user_email="a@b.com", payload={},
             policy_results=sample_policy_results, decision="PASS",
             actions_taken=sample_actions,
         )

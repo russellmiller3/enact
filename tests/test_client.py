@@ -98,7 +98,7 @@ class TestEnactClientRun:
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={"key": "val"},
         )
         assert result.success is True
@@ -116,7 +116,7 @@ class TestEnactClientRun:
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={},
         )
         assert result.success is False
@@ -134,7 +134,7 @@ class TestEnactClientRun:
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={},
         )
         assert len(receipt.policy_results) == 3  # All 3 ran
@@ -145,7 +145,7 @@ class TestEnactClientRun:
             secret="s", allow_insecure_secret=True,
         )
         with pytest.raises(ValueError, match="Unknown workflow"):
-            client.run(workflow="nonexistent", actor_email="a@b.com", payload={})
+            client.run(workflow="nonexistent", user_email="a@b.com", payload={})
 
     def test_receipt_written_to_disk(self, tmp_path):
         client = EnactClient(
@@ -156,7 +156,7 @@ class TestEnactClientRun:
         )
         _, receipt = client.run(
             workflow="dummy_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={},
         )
         receipt_file = tmp_path / f"{receipt.run_id}.json"
@@ -171,7 +171,7 @@ class TestEnactClientRun:
         )
         result, receipt = client.run(
             workflow="multi_action_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={},
         )
         assert result.success is True
@@ -185,7 +185,7 @@ class TestEnactClientRun:
 
         def capture_policy(ctx):
             captured["workflow"] = ctx.workflow
-            captured["email"] = ctx.actor_email
+            captured["email"] = ctx.user_email
             captured["payload"] = ctx.payload
             return PolicyResult(policy="capture", passed=True, reason="ok")
 
@@ -195,7 +195,7 @@ class TestEnactClientRun:
             receipt_dir=str(tmp_path),
             secret="s", allow_insecure_secret=True,
         )
-        client.run(workflow="dummy_workflow", actor_email="x@y.com", payload={"k": "v"})
+        client.run(workflow="dummy_workflow", user_email="x@y.com", payload={"k": "v"})
         assert captured["workflow"] == "dummy_workflow"
         assert captured["email"] == "x@y.com"
         assert captured["payload"] == {"k": "v"}
@@ -213,7 +213,7 @@ class TestEnactClientEndToEnd:
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={"email": "jane@acme.com"},
         )
         assert result.success is True
@@ -234,7 +234,7 @@ class TestEnactClientEndToEnd:
         )
         result, receipt = client.run(
             workflow="dummy_workflow",
-            actor_email="agent@test.com",
+            user_email="agent@test.com",
             payload={},  # Missing email → policy fails
         )
         assert result.success is False
