@@ -3,7 +3,7 @@ Tests for git safety policies and the agent_pr_workflow.
 """
 import pytest
 from unittest.mock import MagicMock
-from enact.policies.git import no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
+from enact.policies.git import dont_push_to_main, max_files_per_commit, require_branch_prefix, dont_delete_branch, dont_merge_to_main
 from enact.workflows.agent_pr_workflow import agent_pr_workflow
 from enact.models import WorkflowContext, ActionResult
 
@@ -20,34 +20,34 @@ def make_context(payload=None):
 class TestNoPushToMain:
     def test_blocks_main(self):
         ctx = make_context({"branch": "main"})
-        result = no_push_to_main(ctx)
+        result = dont_push_to_main(ctx)
         assert result.passed is False
         assert "blocked" in result.reason
 
     def test_blocks_master(self):
         ctx = make_context({"branch": "master"})
-        result = no_push_to_main(ctx)
+        result = dont_push_to_main(ctx)
         assert result.passed is False
 
     def test_blocks_case_insensitive(self):
         ctx = make_context({"branch": "MAIN"})
-        result = no_push_to_main(ctx)
+        result = dont_push_to_main(ctx)
         assert result.passed is False
 
     def test_allows_feature_branch(self):
         ctx = make_context({"branch": "agent/new-feature"})
-        result = no_push_to_main(ctx)
+        result = dont_push_to_main(ctx)
         assert result.passed is True
 
     def test_allows_empty_branch(self):
         ctx = make_context({})
-        result = no_push_to_main(ctx)
+        result = dont_push_to_main(ctx)
         assert result.passed is True  # empty string not in blocked list
 
     def test_policy_name(self):
         ctx = make_context({"branch": "main"})
-        result = no_push_to_main(ctx)
-        assert result.policy == "no_push_to_main"
+        result = dont_push_to_main(ctx)
+        assert result.policy == "dont_push_to_main"
 
 
 class TestMaxFilesPerCommit:
@@ -126,13 +126,13 @@ class TestNoDeleteBranch:
     def test_always_blocks(self):
         """Sentinel policy — blocks regardless of payload."""
         ctx = make_context()
-        result = no_delete_branch(ctx)
+        result = dont_delete_branch(ctx)
         assert result.passed is False
 
     def test_blocks_even_for_agent_branches(self):
         """Even agent-prefixed branches cannot be deleted on this client."""
         ctx = make_context({"branch": "agent/old-feature"})
-        result = no_delete_branch(ctx)
+        result = dont_delete_branch(ctx)
         assert result.passed is False
 
     def test_blocks_any_workflow(self):
@@ -140,61 +140,61 @@ class TestNoDeleteBranch:
             workflow="branch_cleanup", actor_email="agent@test.com",
             payload={"branch": "stale/branch"}, systems={},
         )
-        result = no_delete_branch(ctx)
+        result = dont_delete_branch(ctx)
         assert result.passed is False
 
     def test_reason_mentions_deletion(self):
         ctx = make_context()
-        result = no_delete_branch(ctx)
+        result = dont_delete_branch(ctx)
         assert "deletion" in result.reason.lower()
 
     def test_policy_name(self):
         ctx = make_context()
-        result = no_delete_branch(ctx)
-        assert result.policy == "no_delete_branch"
+        result = dont_delete_branch(ctx)
+        assert result.policy == "dont_delete_branch"
 
 
 class TestNoMergeToMain:
     def test_blocks_merge_to_main(self):
         ctx = make_context({"base": "main"})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert result.passed is False
 
     def test_blocks_merge_to_master(self):
         ctx = make_context({"base": "master"})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert result.passed is False
 
     def test_blocks_case_insensitive(self):
         ctx = make_context({"base": "MAIN"})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert result.passed is False
 
     def test_allows_merge_to_staging(self):
         ctx = make_context({"base": "staging"})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert result.passed is True
 
     def test_allows_merge_to_feature_branch(self):
         ctx = make_context({"base": "agent/release-candidate"})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert result.passed is True
 
     def test_allows_empty_base(self):
         """Missing base → can't determine target → pass through."""
         ctx = make_context({})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert result.passed is True
 
     def test_reason_mentions_blocked_on_block(self):
         ctx = make_context({"base": "main"})
-        result = no_merge_to_main(ctx)
+        result = dont_merge_to_main(ctx)
         assert "blocked" in result.reason.lower()
 
     def test_policy_name(self):
         ctx = make_context({"base": "main"})
-        result = no_merge_to_main(ctx)
-        assert result.policy == "no_merge_to_main"
+        result = dont_merge_to_main(ctx)
+        assert result.policy == "dont_merge_to_main"
 
 
 class TestAgentPrWorkflow:

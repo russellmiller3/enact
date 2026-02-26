@@ -20,7 +20,7 @@ if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
 from enact import EnactClient
 from enact.models import WorkflowContext, PolicyResult, ActionResult
 from enact.workflows.agent_pr_workflow import agent_pr_workflow
-from enact.policies.git import no_push_to_main, require_branch_prefix
+from enact.policies.git import dont_push_to_main, require_branch_prefix
 
 
 # ── ANSI colours ─────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ class DemoPostgresConnector:
 def direct_push_workflow(context: WorkflowContext) -> list[ActionResult]:
     """
     Workflow that pushes directly to main — the Kiro pattern.
-    Blocked by the no_push_to_main policy before it ever runs.
+    Blocked by the dont_push_to_main policy before it ever runs.
     """
     gh = context.systems["github"]
     return [gh.create_pr(
@@ -295,7 +295,7 @@ def run_demo():
 
     enact1 = EnactClient(
         systems={"github": gh},
-        policies=[no_push_to_main],
+        policies=[dont_push_to_main],
         workflows=[direct_push_workflow],
         secret="demo-secret", allow_insecure_secret=True,
     )
@@ -323,7 +323,7 @@ def run_demo():
 
     enact2 = EnactClient(
         systems={"github": gh},
-        policies=[no_push_to_main, require_branch_prefix("agent/")],
+        policies=[dont_push_to_main, require_branch_prefix("agent/")],
         workflows=[agent_pr_workflow],
         secret="demo-secret", allow_insecure_secret=True,
     )

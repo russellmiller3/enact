@@ -2,7 +2,7 @@
 CRM policies — prevent bad CRM operations before they reach the connector.
 
 Policies in this module may call connector methods (live lookups) because
-they run *before* the workflow executes. For example, no_duplicate_contacts
+they run *before* the workflow executes. For example, dont_duplicate_contacts
 checks HubSpot for an existing contact before the workflow creates one.
 This is the correct place for pre-flight checks — not inside the workflow.
 
@@ -12,7 +12,7 @@ This makes them safe to register even when a connector is not yet wired up.
 
 Payload keys used by this module
 ----------------------------------
-  "email"             — contact email address (no_duplicate_contacts)
+  "email"             — contact email address (dont_duplicate_contacts)
   "recent_task_count" — integer hint set by the caller (limit_tasks_per_contact v1)
 
 v1 limitation of limit_tasks_per_contact
@@ -25,7 +25,7 @@ engagements API directly.
 from enact.models import WorkflowContext, PolicyResult
 
 
-def no_duplicate_contacts(context: WorkflowContext) -> PolicyResult:
+def dont_duplicate_contacts(context: WorkflowContext) -> PolicyResult:
     """
     Block creating a contact that already exists in HubSpot.
 
@@ -52,7 +52,7 @@ def no_duplicate_contacts(context: WorkflowContext) -> PolicyResult:
     if not email:
         # No email in payload — nothing to deduplicate; pass through
         return PolicyResult(
-            policy="no_duplicate_contacts",
+            policy="dont_duplicate_contacts",
             passed=True,
             reason="No email in payload to check",
         )
@@ -61,7 +61,7 @@ def no_duplicate_contacts(context: WorkflowContext) -> PolicyResult:
     if not hubspot:
         # Connector not registered — can't check; pass through rather than fail
         return PolicyResult(
-            policy="no_duplicate_contacts",
+            policy="dont_duplicate_contacts",
             passed=True,
             reason="No HubSpot system registered",
         )
@@ -70,12 +70,12 @@ def no_duplicate_contacts(context: WorkflowContext) -> PolicyResult:
     if result.success and result.output.get("found"):
         # Contact exists — block the run
         return PolicyResult(
-            policy="no_duplicate_contacts",
+            policy="dont_duplicate_contacts",
             passed=False,
             reason=f"Contact {email} already exists (id={result.output.get('id')})",
         )
     return PolicyResult(
-        policy="no_duplicate_contacts",
+        policy="dont_duplicate_contacts",
         passed=True,
         reason=f"No existing contact for {email}",
     )

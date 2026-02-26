@@ -40,7 +40,7 @@ read_file / list_dir: rollback_data={} (read-only, nothing to undo)
 Payload keys for policies
 --------------------------
 Workflows should put the path in payload before calling enact.run() so that
-filesystem policies (restrict_paths, block_extensions, no_delete_file) can
+filesystem policies (restrict_paths, block_extensions, dont_delete_file) can
 inspect it:
 
     WorkflowContext(

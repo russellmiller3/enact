@@ -4,7 +4,7 @@ Tests for filesystem safety policies (enact/policies/filesystem.py).
 All policies are pure functions over WorkflowContext — no filesystem access needed.
 """
 import pytest
-from enact.policies.filesystem import no_delete_file, restrict_paths, block_extensions
+from enact.policies.filesystem import dont_delete_file, restrict_paths, block_extensions
 from enact.models import WorkflowContext
 
 
@@ -17,28 +17,28 @@ def make_context(payload=None):
     )
 
 
-# ── no_delete_file ─────────────────────────────────────────────────────────────
+# ── dont_delete_file ─────────────────────────────────────────────────────────────
 
 class TestNoDeleteFile:
     def test_always_blocks(self):
         ctx = make_context()
-        result = no_delete_file(ctx)
+        result = dont_delete_file(ctx)
         assert result.passed is False
 
     def test_blocks_even_with_path(self):
         ctx = make_context({"path": "logs/old.log"})
-        result = no_delete_file(ctx)
+        result = dont_delete_file(ctx)
         assert result.passed is False
 
     def test_reason_mentions_deletion(self):
         ctx = make_context()
-        result = no_delete_file(ctx)
+        result = dont_delete_file(ctx)
         assert "deletion" in result.reason.lower()
 
     def test_policy_name(self):
         ctx = make_context()
-        result = no_delete_file(ctx)
-        assert result.policy == "no_delete_file"
+        result = dont_delete_file(ctx)
+        assert result.policy == "dont_delete_file"
 
 
 # ── restrict_paths ─────────────────────────────────────────────────────────────

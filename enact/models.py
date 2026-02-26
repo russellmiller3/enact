@@ -26,7 +26,7 @@ class WorkflowContext(BaseModel):
 
     Passed unchanged to every policy and to the workflow itself, so all
     participants see the same picture of the run. Systems (connectors) are
-    included here so policies can do live lookups — e.g. no_duplicate_contacts
+    included here so policies can do live lookups — e.g. dont_duplicate_contacts
     calls context.systems["hubspot"].get_contact() before the workflow runs.
 
     Fields:

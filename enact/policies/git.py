@@ -17,7 +17,7 @@ a closure that satisfies the policy callable interface:
 This lets callers configure policies inline at EnactClient init time:
 
     EnactClient(policies=[
-        no_push_to_main,                     # plain function — no config needed
+        dont_push_to_main,                     # plain function — no config needed
         max_files_per_commit(10),            # factory called with max=10
         require_branch_prefix("agent/"),     # factory called with prefix
     ])
@@ -27,13 +27,13 @@ on every subsequent run() call.
 
 Payload keys used by this module
 ----------------------------------
-  "branch"     — branch name string (used by no_push_to_main, no_delete_branch, require_branch_prefix)
+  "branch"     — branch name string (used by dont_push_to_main, dont_delete_branch, require_branch_prefix)
   "file_count" — integer count of files in the commit (used by max_files_per_commit)
 """
 from enact.models import WorkflowContext, PolicyResult
 
 
-def no_push_to_main(context: WorkflowContext) -> PolicyResult:
+def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
     """
     Block any direct push or workflow targeting main or master.
 
@@ -54,7 +54,7 @@ def no_push_to_main(context: WorkflowContext) -> PolicyResult:
     branch = context.payload.get("branch", "")
     blocked = branch.lower() in ("main", "master")
     return PolicyResult(
-        policy="no_push_to_main",
+        policy="dont_push_to_main",
         passed=not blocked,
         reason=(
             f"Direct push to '{branch}' is blocked"
@@ -137,7 +137,7 @@ def require_branch_prefix(prefix: str = "agent/"):
     return _policy
 
 
-def no_delete_branch(context: WorkflowContext) -> PolicyResult:
+def dont_delete_branch(context: WorkflowContext) -> PolicyResult:
     """
     Block all branch deletion on this client — regardless of branch name.
 
@@ -157,13 +157,13 @@ def no_delete_branch(context: WorkflowContext) -> PolicyResult:
         PolicyResult — always passed=False
     """
     return PolicyResult(
-        policy="no_delete_branch",
+        policy="dont_delete_branch",
         passed=False,
         reason="Branch deletion is not permitted on this client",
     )
 
 
-def no_merge_to_main(context: WorkflowContext) -> PolicyResult:
+def dont_merge_to_main(context: WorkflowContext) -> PolicyResult:
     """
     Block any merge_pr operation whose target branch is main or master.
 
@@ -179,7 +179,7 @@ def no_merge_to_main(context: WorkflowContext) -> PolicyResult:
     The check is case-insensitive. An empty or missing base is allowed through
     — the policy can only block what it can see.
 
-    Use alongside no_push_to_main to prevent both direct pushes and PR merges
+    Use alongside dont_push_to_main to prevent both direct pushes and PR merges
     to the protected branch.
 
     Args:
@@ -191,7 +191,7 @@ def no_merge_to_main(context: WorkflowContext) -> PolicyResult:
     base = context.payload.get("base", "")
     blocked = base.lower() in ("main", "master")
     return PolicyResult(
-        policy="no_merge_to_main",
+        policy="dont_merge_to_main",
         passed=not blocked,
         reason=(
             f"Merge into '{base}' is blocked — PRs must target a non-protected branch"

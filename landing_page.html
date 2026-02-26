@@ -420,9 +420,9 @@ pip install enact-sdk
 <span class="kw">from</span> enact.connectors.github <span class="kw">import</span> <span class="fn">GitHubConnector</span>
 <span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
 <span class="kw">from</span> enact.connectors.filesystem <span class="kw">import</span> <span class="fn">FilesystemConnector</span>
-<span class="kw">from</span> enact.policies.git <span class="kw">import</span> no_push_to_main, no_merge_to_main
-<span class="kw">from</span> enact.policies.db <span class="kw">import</span> no_delete_without_where
-<span class="kw">from</span> enact.policies.filesystem <span class="kw">import</span> no_delete_file, restrict_paths
+<span class="kw">from</span> enact.policies.git <span class="kw">import</span> dont_push_to_main, dont_merge_to_main
+<span class="kw">from</span> enact.policies.db <span class="kw">import</span> dont_delete_without_where
+<span class="kw">from</span> enact.policies.filesystem <span class="kw">import</span> dont_delete_file, restrict_paths
 <span class="kw">from</span> enact.workflows.agent_pr_workflow <span class="kw">import</span> agent_pr_workflow
 
 enact = <span class="fn">EnactClient</span>(
@@ -433,10 +433,10 @@ enact = <span class="fn">EnactClient</span>(
         <span class="str">"filesystem"</span>: <span class="fn">FilesystemConnector</span>(base_dir=<span class="str">"/workspace"</span>),
     },
     policies=[
-        no_push_to_main,          <span class="cm"># blocks direct pushes to main</span>
-        no_merge_to_main,         <span class="cm"># blocks PRs targeting main or master</span>
-        no_delete_without_where,  <span class="cm"># blocks unsafe bulk deletes</span>
-        no_delete_file,           <span class="cm"># blocks all file deletions</span>
+        dont_push_to_main,          <span class="cm"># blocks direct pushes to main</span>
+        dont_merge_to_main,         <span class="cm"># blocks PRs targeting main or master</span>
+        dont_delete_without_where,  <span class="cm"># blocks unsafe bulk deletes</span>
+        dont_delete_file,           <span class="cm"># blocks all file deletions</span>
         restrict_paths([<span class="str">"/workspace/src"</span>]),  <span class="cm"># path confinement</span>
     ],
     workflows=[agent_pr_workflow],

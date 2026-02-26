@@ -3,12 +3,12 @@ Reference workflow: Agent creates a branch and opens a PR.
 
 This is the canonical "safe agent git workflow" — an agent should never push
 directly to main. Instead: create a feature branch, do the work there, and
-open a PR for human review. Pair this workflow with the no_push_to_main
+open a PR for human review. Pair this workflow with the dont_push_to_main
 and require_branch_prefix policies for full enforcement:
 
     EnactClient(
         systems={"github": GitHubConnector(token=...)},
-        policies=[no_push_to_main, require_branch_prefix("agent/")],
+        policies=[dont_push_to_main, require_branch_prefix("agent/")],
         workflows=[agent_pr_workflow],
     )
 

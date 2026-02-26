@@ -43,7 +43,7 @@ class EnactClient:
     Example:
         enact = EnactClient(
             systems={"github": GitHubConnector(token=os.environ["GITHUB_TOKEN"])},
-            policies=[no_push_to_main, require_branch_prefix("agent/")],
+            policies=[dont_push_to_main, require_branch_prefix("agent/")],
             workflows=[agent_pr_workflow],
         )
         result, receipt = enact.run(

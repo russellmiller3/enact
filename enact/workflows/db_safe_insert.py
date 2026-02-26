@@ -12,7 +12,7 @@ Why check in the workflow rather than in a policy?
 Policies run before the workflow and answer "is this action allowed?"
 Duplicate checks are workflow-level logic because they require inspecting
 the specific data being inserted — something policies don't have deep
-context about. The no_duplicate_contacts CRM policy is an exception
+context about. The dont_duplicate_contacts CRM policy is an exception
 (it's a pre-flight check on email) but the general "does this exact row
 exist?" question belongs here.
 

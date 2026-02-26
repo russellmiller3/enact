@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timezone
 
-from enact.policies.crm import no_duplicate_contacts, limit_tasks_per_contact
+from enact.policies.crm import dont_duplicate_contacts, limit_tasks_per_contact
 from enact.policies.access import contractor_cannot_write_pii, require_actor_role
 from enact.policies.time import within_maintenance_window
 from enact.models import WorkflowContext, ActionResult
@@ -25,13 +25,13 @@ def make_context(payload=None, systems=None):
 class TestNoDuplicateContacts:
     def test_passes_when_no_email_in_payload(self):
         ctx = make_context(payload={})
-        result = no_duplicate_contacts(ctx)
+        result = dont_duplicate_contacts(ctx)
         assert result.passed is True
         assert "No email" in result.reason
 
     def test_passes_when_no_hubspot_system(self):
         ctx = make_context(payload={"email": "jane@acme.com"}, systems={})
-        result = no_duplicate_contacts(ctx)
+        result = dont_duplicate_contacts(ctx)
         assert result.passed is True
         assert "No HubSpot" in result.reason
 
@@ -47,7 +47,7 @@ class TestNoDuplicateContacts:
             payload={"email": "jane@acme.com"},
             systems={"hubspot": mock_hs},
         )
-        result = no_duplicate_contacts(ctx)
+        result = dont_duplicate_contacts(ctx)
         assert result.passed is False
         assert "already exists" in result.reason
 
@@ -63,13 +63,13 @@ class TestNoDuplicateContacts:
             payload={"email": "new@acme.com"},
             systems={"hubspot": mock_hs},
         )
-        result = no_duplicate_contacts(ctx)
+        result = dont_duplicate_contacts(ctx)
         assert result.passed is True
 
     def test_policy_name(self):
         ctx = make_context()
-        result = no_duplicate_contacts(ctx)
-        assert result.policy == "no_duplicate_contacts"
+        result = dont_duplicate_contacts(ctx)
+        assert result.policy == "dont_duplicate_contacts"
 
 
 class TestLimitTasksPerContact:

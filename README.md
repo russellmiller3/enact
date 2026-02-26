@@ -8,11 +8,11 @@ Enact sits between your AI agent and the outside world. Every action goes throug
 from enact import EnactClient
 from enact.connectors.github import GitHubConnector
 from enact.workflows.agent_pr_workflow import agent_pr_workflow
-from enact.policies.git import no_push_to_main, require_branch_prefix
+from enact.policies.git import dont_push_to_main, require_branch_prefix
 
 enact = EnactClient(
     systems={"github": GitHubConnector(token="...")},
-    policies=[no_push_to_main, require_branch_prefix(prefix="agent/")],
+    policies=[dont_push_to_main, require_branch_prefix(prefix="agent/")],
     workflows=[agent_pr_workflow],
     secret="...",  # or set ENACT_SECRET env var
 )
@@ -141,10 +141,10 @@ enact/
 │   │   ├── agent_pr_workflow.py   # create branch → open PR (never to main)
 │   │   └── db_safe_insert.py      # check constraints → insert row
 │   └── policies/
-│       ├── git.py          # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
-│       ├── db.py           # no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
-│       ├── filesystem.py   # no_delete_file, restrict_paths, block_extensions
-│       ├── crm.py          # no_duplicate_contacts, limit_tasks_per_contact
+│       ├── git.py          # dont_push_to_main, max_files_per_commit, require_branch_prefix, dont_delete_branch, dont_merge_to_main
+│       ├── db.py           # dont_delete_row, dont_delete_without_where, dont_update_without_where, protect_tables
+│       ├── filesystem.py   # dont_delete_file, restrict_paths, block_extensions
+│       ├── crm.py          # dont_duplicate_contacts, limit_tasks_per_contact
 │       ├── access.py       # contractor_cannot_write_pii, require_actor_role
 │       └── time.py         # within_maintenance_window
 ├── tests/
@@ -189,7 +189,7 @@ enact.run(workflow="agent_pr_workflow", actor_email="agent@co.com", payload={"re
   ├─▶ WorkflowContext(workflow, actor_email, payload, systems)
   │
   ├─▶ policy_results = [
-  │       PolicyResult(policy="no_push_to_main",      passed=True, reason="Branch is not main/master"),
+  │       PolicyResult(policy="dont_push_to_main",      passed=True, reason="Branch is not main/master"),
   │       PolicyResult(policy="require_branch_prefix", passed=True, reason="Branch 'agent/fix' has required prefix"),
   │   ]
   │
@@ -225,19 +225,19 @@ Postgres connector works with any Postgres-compatible host: Supabase, Neon, Rail
 
 | File | Policy | What it blocks |
 |------|--------|----------------|
-| `git.py` | `no_push_to_main` | Any direct push to main/master |
+| `git.py` | `dont_push_to_main` | Any direct push to main/master |
 | `git.py` | `max_files_per_commit(n)` | Commits touching more than n files (blast radius) |
 | `git.py` | `require_branch_prefix(p)` | Agent branches not starting with prefix p |
-| `git.py` | `no_delete_branch` | All branch deletions — sentinel, unconditional |
-| `git.py` | `no_merge_to_main` | PR merges whose target branch is main or master |
-| `db.py` | `no_delete_row` | All row deletions — sentinel, unconditional |
-| `db.py` | `no_delete_without_where` | DELETE with empty or missing WHERE clause |
-| `db.py` | `no_update_without_where` | UPDATE with empty or missing WHERE clause |
+| `git.py` | `dont_delete_branch` | All branch deletions — sentinel, unconditional |
+| `git.py` | `dont_merge_to_main` | PR merges whose target branch is main or master |
+| `db.py` | `dont_delete_row` | All row deletions — sentinel, unconditional |
+| `db.py` | `dont_delete_without_where` | DELETE with empty or missing WHERE clause |
+| `db.py` | `dont_update_without_where` | UPDATE with empty or missing WHERE clause |
 | `db.py` | `protect_tables(list)` | Any operation targeting a protected table |
-| `filesystem.py` | `no_delete_file` | All file deletions — sentinel, unconditional |
+| `filesystem.py` | `dont_delete_file` | All file deletions — sentinel, unconditional |
 | `filesystem.py` | `restrict_paths(list)` | Operations on paths outside allowed directories |
 | `filesystem.py` | `block_extensions(list)` | Operations on files with sensitive extensions (.env, .key, .pem) |
-| `crm.py` | `no_duplicate_contacts` | Creating a contact that already exists |
+| `crm.py` | `dont_duplicate_contacts` | Creating a contact that already exists |
 | `crm.py` | `limit_tasks_per_contact` | Too many tasks created in a time window |
 | `access.py` | `contractor_cannot_write_pii` | Contractors writing PII fields |
 | `access.py` | `require_actor_role` | Actors without an allowed role |

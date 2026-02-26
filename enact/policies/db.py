@@ -9,12 +9,12 @@ connections are made. Workflows are responsible for putting the relevant fields
 in the payload so policies can inspect intent before execution:
 
   payload["table"]  — table name (protect_tables)
-  payload["where"]  — filter dict (no_delete_without_where, no_update_without_where)
+  payload["where"]  — filter dict (dont_delete_without_where, dont_update_without_where)
   payload["data"]   — row data being written (informational)
 
 Sentinel policies
 ------------------
-no_delete_row is a sentinel — it always blocks regardless of payload. Register it
+dont_delete_row is a sentinel — it always blocks regardless of payload. Register it
 on a client where row deletion should never happen, not on a client that has
 legitimate delete workflows. This mirrors how firewall rules work: the rule
 applies to all traffic through this client, not just specific operations.
@@ -26,7 +26,7 @@ Call it with the list of protected tables at init time; it returns a closure:
 
     EnactClient(policies=[
         protect_tables(["users", "payments", "orders"]),
-        no_delete_without_where,
+        dont_delete_without_where,
     ])
 
 Payload convention
@@ -42,7 +42,7 @@ max_files_per_commit — the workflow sets the context, the policy reads it.
 from enact.models import WorkflowContext, PolicyResult
 
 
-def no_delete_row(context: WorkflowContext) -> PolicyResult:
+def dont_delete_row(context: WorkflowContext) -> PolicyResult:
     """
     Block all row deletion on this client — regardless of table or WHERE clause.
 
@@ -57,13 +57,13 @@ def no_delete_row(context: WorkflowContext) -> PolicyResult:
         PolicyResult — always passed=False
     """
     return PolicyResult(
-        policy="no_delete_row",
+        policy="dont_delete_row",
         passed=False,
         reason="Row deletion is not permitted on this client",
     )
 
 
-def no_delete_without_where(context: WorkflowContext) -> PolicyResult:
+def dont_delete_without_where(context: WorkflowContext) -> PolicyResult:
     """
     Block delete_row operations that lack a WHERE clause.
 
@@ -73,7 +73,7 @@ def no_delete_without_where(context: WorkflowContext) -> PolicyResult:
 
     Allows deletes through when where contains at least one key-value pair.
     Passes through (does not block) if the workflow legitimately needs no
-    where filter — register no_delete_row instead if deletion must be banned.
+    where filter — register dont_delete_row instead if deletion must be banned.
 
     Payload keys:
         "where" — dict of {column: value} filter conditions. Empty or missing → block.
@@ -87,7 +87,7 @@ def no_delete_without_where(context: WorkflowContext) -> PolicyResult:
     where = context.payload.get("where")
     if not where:
         return PolicyResult(
-            policy="no_delete_without_where",
+            policy="dont_delete_without_where",
             passed=False,
             reason=(
                 "delete_row blocked: where clause is required to prevent deleting all rows. "
@@ -95,13 +95,13 @@ def no_delete_without_where(context: WorkflowContext) -> PolicyResult:
             ),
         )
     return PolicyResult(
-        policy="no_delete_without_where",
+        policy="dont_delete_without_where",
         passed=True,
         reason=f"WHERE clause present with {len(where)} condition(s)",
     )
 
 
-def no_update_without_where(context: WorkflowContext) -> PolicyResult:
+def dont_update_without_where(context: WorkflowContext) -> PolicyResult:
     """
     Block update_row operations that lack a WHERE clause.
 
@@ -121,7 +121,7 @@ def no_update_without_where(context: WorkflowContext) -> PolicyResult:
     where = context.payload.get("where")
     if not where:
         return PolicyResult(
-            policy="no_update_without_where",
+            policy="dont_update_without_where",
             passed=False,
             reason=(
                 "update_row blocked: where clause is required to prevent updating all rows. "
@@ -129,7 +129,7 @@ def no_update_without_where(context: WorkflowContext) -> PolicyResult:
             ),
         )
     return PolicyResult(
-        policy="no_update_without_where",
+        policy="dont_update_without_where",
         passed=True,
         reason=f"WHERE clause present with {len(where)} condition(s)",
     )

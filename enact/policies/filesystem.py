@@ -9,9 +9,9 @@ fields in the payload before calling enact.run():
 
 Sentinel policy
 ----------------
-no_delete_file is a sentinel — it always blocks regardless of payload. Register it
-on a client where file deletion should never happen. Same pattern as no_delete_row
-and no_delete_branch.
+dont_delete_file is a sentinel — it always blocks regardless of payload. Register it
+on a client where file deletion should never happen. Same pattern as dont_delete_row
+and dont_delete_branch.
 
 Factory policies
 -----------------
@@ -19,7 +19,7 @@ restrict_paths and block_extensions are factories — they accept configuration 
 return a closure satisfying (WorkflowContext) -> PolicyResult:
 
     EnactClient(policies=[
-        no_delete_file,
+        dont_delete_file,
         restrict_paths(["/workspace/project", "/tmp/scratch"]),
         block_extensions([".env", ".key", ".pem", ".pfx"]),
     ])
@@ -38,7 +38,7 @@ from pathlib import Path
 from enact.models import WorkflowContext, PolicyResult
 
 
-def no_delete_file(context: WorkflowContext) -> PolicyResult:
+def dont_delete_file(context: WorkflowContext) -> PolicyResult:
     """
     Block all file deletion on this client — regardless of path.
 
@@ -52,7 +52,7 @@ def no_delete_file(context: WorkflowContext) -> PolicyResult:
         PolicyResult — always passed=False
     """
     return PolicyResult(
-        policy="no_delete_file",
+        policy="dont_delete_file",
         passed=False,
         reason="File deletion is not permitted on this client",
     )
