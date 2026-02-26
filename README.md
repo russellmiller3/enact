@@ -32,6 +32,59 @@ Want the full show? `python examples/demo.py` runs a 3-act scenario: an agent bl
 
 ---
 
+## Already have an agent? Migration takes 10 minutes.
+
+Your agent's reasoning and planning logic doesn't change. You're adding a safety layer between it and your systems. Same calls, same results — now with policy enforcement, a signed audit trail, and rollback.
+
+**Three steps:**
+
+1. **Register your systems** — swap your existing SDK clients for Enact connectors (same credentials, now policy-gated)
+2. **Move your guard logic** — any `if/else` checks you write become Python policy functions, or use our 24 built-in ones
+3. **Replace direct calls** — `tool.do_thing()` becomes `enact.run()`
+
+**Before (your agent today):**
+
+```python
+import github_sdk, psycopg2
+
+# direct call — no policy check, no audit trail
+github_sdk.create_pr(repo="myorg/app", branch="agent/fix-123", title="Fix bug")
+
+# no WHERE protection — deletes every row
+db.execute("DELETE FROM sessions")
+```
+
+**After (wrapped with Enact):**
+
+```python
+from enact import EnactClient
+from enact.connectors.github import GitHubConnector
+from enact.connectors.postgres import PostgresConnector
+from enact.policies.git import dont_push_to_main
+from enact.policies.db import dont_delete_without_where
+
+# one-time setup — replaces your SDK clients
+enact = EnactClient(
+    secret="...",
+    systems={
+        "github":   GitHubConnector(token="..."),
+        "postgres": PostgresConnector(dsn="postgresql://..."),
+    },
+    policies=[dont_push_to_main, dont_delete_without_where],
+)
+
+# same intent — now policy-gated, receipt-backed, rollback-able
+result, receipt = enact.run(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/fix-123"},
+)
+```
+
+Works with LangChain, CrewAI, OpenAI, Claude tool_use — any framework that can call a Python function. Your agent's prompting and reasoning stay exactly as-is.
+
+---
+
 ## Core Concepts
 
 Think of Enact like a **foreman supervising an AI carpenter**. The carpenter is capable and fast, but needs oversight. When the carpenter says "I want to tear down this wall":
