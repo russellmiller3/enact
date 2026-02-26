@@ -95,37 +95,37 @@ It's like a store receipt, but for software decisions. "Your agent tried to do X
 
 ### Step 1: Define what your agent should do
 
-A workflow is a plain Python function. It takes a context (who's calling, with what data) and returns a list of action results.
+A workflow is a plain Python function. It takes a context (who's calling, with what data), uses **Connectors** to take actions, and returns a list of the results.
+
+Enact ships with GitHub, Postgres, and Filesystem connectors that handle the actual API calls for you. Every time you call a connector method, it returns an `ActionResult`.
+
+Here is how you execute multiple actions sequentially. Notice how we collect the results and stop early if something fails:
 
 ```python
 from enact.models import WorkflowContext, ActionResult
 
-def hello_workflow(context: WorkflowContext) -> list[ActionResult]:
-    email = context.payload["email"]
-    return [
-        ActionResult(
-            action="greet",
-            system="demo",
-            success=True,
-            output={"message": f"Hello, {email}!"},
-        )
-    ]
-```
-
-For real work, use a connector — Enact ships with GitHub, Postgres, and Filesystem connectors that handle the API calls for you:
-
-```python
 def agent_pr_workflow(context: WorkflowContext) -> list[ActionResult]:
+    # 1. Get the connector from the context
     gh = context.systems["github"]
     repo = context.payload["repo"]
     branch = context.payload["branch"]
 
-    result1 = gh.create_branch(repo=repo, branch=branch)
-    if not result1.success:
-        return [result1]
+    results = []
 
+    # 2. Take the first action
+    result1 = gh.create_branch(repo=repo, branch=branch)
+    results.append(result1)
+    
+    # 3. Stop early if it failed
+    if not result1.success:
+        return results
+
+    # 4. Take the next action
     result2 = gh.create_pr(repo=repo, title=f"Agent: {branch}", body="Automated PR", head=branch)
-    return [result1, result2]
+    results.append(result2)
+
+    # 5. Return the full history of what happened
+    return results
 ```
 
 ### Step 2: Wire up the workflows
