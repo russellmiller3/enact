@@ -5,6 +5,67 @@
 
 ---
 
+## What's Been Built (as of 2026-02-26)
+
+**317 tests, 0 failures. Published on PyPI as `enact-sdk`.**
+
+### Core SDK (v0.1)
+- **EnactClient** — `run()` orchestrates policy gate → workflow execution → signed receipt. `rollback(run_id)` reverses a prior run.
+- **Policy engine** — `evaluate_all()` runs every registered policy against `WorkflowContext`. Never bails early. Returns `list[PolicyResult]`.
+- **Receipt system** — HMAC-SHA256 signed JSON receipts. Signature covers all fields (payload, policy results, actions). Path traversal protection on `load_receipt()` / `write_receipt()`. Receipts written to `receipts/` directory.
+- **Models** — `WorkflowContext`, `PolicyResult`, `ActionResult` (with `rollback_data`), `Receipt`, `RunResult`. Pydantic v2.
+
+### Connectors (v0.1–v0.2)
+| Connector | Actions | Rollback | Idempotent |
+|-----------|---------|----------|------------|
+| **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `close_pr`, `close_issue` | ✅ (except `merge_pr`, `push_commit`) | ✅ `already_done` convention |
+| **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ (pre-SELECT captures state) | ✅ |
+| **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | ✅ (content captured before mutation) | ✅ |
+
+### Built-in Policies (24 policies across 6 files)
+| File | Policies |
+|------|----------|
+| `git.py` | `dont_push_to_main`, `max_files_per_commit`, `require_branch_prefix`, `dont_delete_branch`, `dont_merge_to_main` |
+| `db.py` | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl` |
+| `filesystem.py` | `dont_delete_file`, `restrict_paths`, `block_extensions` |
+| `access.py` | `contractor_cannot_write_pii`, `require_actor_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path`, `require_user_role` |
+| `crm.py` | `dont_duplicate_contacts`, `limit_tasks_per_contact` |
+| `time.py` | `within_maintenance_window`, `code_freeze_active` |
+
+### Workflows
+- **`agent_pr_workflow`** — create branch → open PR (never to main)
+- **`db_safe_insert`** — duplicate check → insert row
+
+### Rollback (v0.2)
+- `EnactClient.rollback(run_id)` — loads receipt, verifies signature, reverses actions in reverse order
+- Produces signed rollback receipt with `PASS` or `PARTIAL` decision
+- Gated behind `rollback_enabled=True`
+
+### Security (v0.2)
+- Required secret (no default) — 32+ chars or `allow_insecure_secret=True` for dev
+- HMAC covers ALL fields via JSON canonicalization
+- Rollback verifies receipt signature before executing (TOCTOU fix)
+- Receipt path traversal protection (UUID validation)
+
+### Shipping
+- `pip install enact-sdk` — [PyPI v0.1.0](https://pypi.org/project/enact-sdk/0.1.0/)
+- `examples/demo.py` — 3-act zero-credential demo (BLOCK → PASS → ROLLBACK) with row-level evidence
+- `examples/quickstart.py` — runnable GitHub + git policies demo
+- `examples/demo.cast` — asciinema recording for landing page
+- `landing_page.html` — v2 with rollback-first tabs, Replit/Kiro evidence
+
+### Plans Completed
+| Plan | What it delivered |
+|------|-------------------|
+| `2026-02-24-idempotency` | `already_done` convention on all GitHub connector methods |
+| `2026-02-24-rollback` | `rollback()`, `rollback_data`, `rollback.py`, inverse actions |
+| `2026-02-24-demo-and-landing-v2` | `demo.py`, competitive research in spec, landing page v2 |
+| `2026-02-24-demo-evidence-and-gif` | Row-level evidence in demo output, `record_demo.py`, `.cast` file |
+| `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
+| `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
+
+---
+
 ## Strategic Thesis
 
 **Why this matters now.**
@@ -295,7 +356,7 @@ enact/
 28. ✅ `enact/policies/git.py` — added `dont_delete_branch()`, `dont_merge_to_main()`
 29. ✅ `enact/connectors/filesystem.py` — `read_file`, `write_file`, `delete_file`, `list_dir`; base_dir path confinement; rollback_data on mutating actions
 30. ✅ `enact/policies/filesystem.py` — `dont_delete_file()`, `restrict_paths(list)`, `block_extensions(list)`
-31. ✅ Tests: 272 tests total, 0 failures
+31. ✅ Tests: 317 tests total, 0 failures
 32. 🔜 PyPI publish — bump to `enact-sdk 0.2.0`
 
 ---
