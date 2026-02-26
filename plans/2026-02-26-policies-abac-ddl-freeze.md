@@ -670,7 +670,7 @@ class TestCodeFreezeActive:
 
 Add import:
 ```python
-from enact.policies.db import no_delete_row, no_delete_without_where, no_update_without_where, protect_tables, block_ddl
+from enact.policies.db import dont_delete_row, dont_delete_without_where, dont_update_without_where, protect_tables, block_ddl
 ```
 
 Add test class:

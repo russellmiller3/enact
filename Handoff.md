@@ -47,9 +47,9 @@ enact/
   connectors/github.py          # rollback_data populated; close_pr, close_issue, create_branch_from_sha added
   connectors/postgres.py        # pre-SELECT in update_row/delete_row; rollback_data populated
   connectors/filesystem.py      # NEW — read_file, write_file, delete_file, list_dir; base_dir path confinement
-  policies/git.py               # no_push_to_main, max_files_per_commit, require_branch_prefix, no_delete_branch, no_merge_to_main
-  policies/db.py                # no_delete_row, no_delete_without_where, no_update_without_where, protect_tables
-  policies/filesystem.py        # NEW — no_delete_file, restrict_paths, block_extensions
+  policies/git.py               # dont_push_to_main, max_files_per_commit, require_branch_prefix, dont_delete_branch, dont_merge_to_main
+  policies/db.py                # dont_delete_row, dont_delete_without_where, dont_update_without_where, protect_tables
+  policies/filesystem.py        # NEW — dont_delete_file, restrict_paths, block_extensions
   policies/crm.py, access.py, time.py
   workflows/agent_pr_workflow.py, db_safe_insert.py
 CLAUDE.md, README.md, SPEC.md, PLAN-TEMPLATE.md
@@ -81,7 +81,7 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
   - `already_done` + `rollback_data` on all mutating actions
   - 29 tests in `tests/test_filesystem.py`
 - **Filesystem policies** ✅ (`enact/policies/filesystem.py` — new file)
-  - `no_delete_file` — sentinel, unconditional
+  - `dont_delete_file` — sentinel, unconditional
   - `restrict_paths(list)` — factory; blocks if path not within any allowed dir (traversal-safe)
   - `block_extensions(list)` — factory; case-insensitive, handles dotfiles (.env)
   - 20 tests in `tests/test_filesystem_policies.py`
@@ -90,14 +90,14 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
   - `delete_file` rollback: recreate file with stored content
   - `read_file`, `list_dir`: read-only, skipped
   - 5 tests in `tests/test_rollback.py::TestRollbackFilesystem`
-- **`no_merge_to_main`** added to `enact/policies/git.py` ✅ — reads `payload["base"]`; 8 tests
+- **`dont_merge_to_main`** added to `enact/policies/git.py` ✅ — reads `payload["base"]`; 8 tests
 - **Plan written**: `plans/2026-02-25-filesystem-connector.md` (Template A)
 - Total: 272 tests (210 → 272)
 
 ### What Was Done This Session (landing page)
 - **`landing_page.html` updated** ✅ — source of truth for shipped features:
   - Step 2: "HubSpot, Salesforce, Postgres" → "GitHub, Postgres, Filesystem"
-  - Quickstart code block: replaced HubSpot example with real shipped API (GitHubConnector, PostgresConnector, FilesystemConnector + no_push_to_main, no_merge_to_main, no_delete_without_where, no_delete_file, restrict_paths)
+  - Quickstart code block: replaced HubSpot example with real shipped API (GitHubConnector, PostgresConnector, FilesystemConnector + dont_push_to_main, dont_merge_to_main, dont_delete_without_where, dont_delete_file, restrict_paths)
   - LangChain wrapper: `new_lead_workflow` → `agent_pr_workflow`
   - Roadmap badge: `v0.2+` → `v0.3+`, heading: "What's coming next" → "Coming in v0.3"
   - Rollback capability card: marked `badge-live`, green border, icon color — no longer amber/coming-soon
@@ -105,7 +105,7 @@ Credentials read from `~/.pypirc` automatically — no token needed in the comma
 
 ### Next Steps (priority order)
 1. **ABAC + sensitive-read policies** (Template B) — see design notes below. ~2-3 hours.
-2. **Landing page — enumerate shipped actions/policies/workflows** — replace generic marketing copy with the actual names. Every connector method (`create_branch`, `write_file`, `select_rows`…), every policy (`no_push_to_main`, `no_delete_without_where`, `dont_read_sensitive_tables`…), both workflows (`agent_pr_workflow`, `db_safe_insert`). Show the real surface area — that's the product.
+2. **Landing page — enumerate shipped actions/policies/workflows** — replace generic marketing copy with the actual names. Every connector method (`create_branch`, `write_file`, `select_rows`…), every policy (`dont_push_to_main`, `dont_delete_without_where`, `dont_read_sensitive_tables`…), both workflows (`agent_pr_workflow`, `db_safe_insert`). Show the real surface area — that's the product.
 3. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
 4. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`.
 5. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
