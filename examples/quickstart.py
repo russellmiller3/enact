@@ -188,6 +188,9 @@ def main():
     print("  ENACT QUICKSTART — Block, Pass, Rollback")
     print("=" * 60)
 
+    # We don't pass allowed_actions here because Demo connectors don't enforce it,
+    # but in real usage you would do:
+    # gh = GitHubConnector(token="...", allowed_actions=["create_branch", "create_pr"])
     gh = DemoGitHubConnector()
     pg = DemoPostgresConnector()
 

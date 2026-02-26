@@ -4,6 +4,8 @@
 
 At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
 
+Note: Russell is an amateur dev, and this whole repo was written by AI.
+
 ## Coding
 
 1. Make a plan using `PLAN-TEMPLATE.md`. Plans go in `plans/`.
@@ -17,6 +19,7 @@ Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 **Core Rule:** If you mention a test, WRITE THE TEST CODE. If you mention an edge case, WRITE THE HANDLER CODE. If you mention an error, WRITE THE ERROR STRING. No vague bullshit.
 
 **Chat output MUST include:**
+
 1. 🎯 Attack summary table (with fixes already applied to plan file) — in CHAT only, not in plan file
 2. 📝 Complete test code (pytest, copy-paste ready)
 3. 📦 Data contracts (Pydantic models or ActionResult output shapes)

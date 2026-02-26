@@ -261,20 +261,44 @@ agent calls enact.run()
 
 ---
 
-## Connectors
+## Connectors & Allowed Actions
+
+Think of a **workflow** as a contractor you hired to renovate your kitchen. The workflow is the actual script the AI runs—it's the step-by-step plan saying, "I'm going to tear out these cabinets, then install the new sink."
+
+The `allowed_actions` list is the **physical toolbox** you handed that contractor before you left for work.
+
+If you only put a screwdriver and a wrench in that toolbox (`allowed_actions=["create_branch", "create_pr"]`), and the contractor suddenly hallucinates and decides they need to demolish a load-bearing wall (`delete_repository`), they literally don't have the sledgehammer to do it. The system just throws a `PermissionError` and tells them to fuck off.
+
+### Defense-in-Depth
+
+You might be thinking: *"Wait, don't we have Policies (the bouncer) to stop bad shit from happening?"*
+
+Yes, but this is **defense-in-depth**.
+* **Policies** are smart, dynamic rules ("You can push code, but *not* to the `master` branch").
+* **`allowed_actions`** is a dumb, brute-force lock ("You can only read data, you can never write data").
+
+You want both. AI agents are unpredictable. If an agent goes completely rogue and tries to call a destructive method that you didn't even think to write a policy for, the `allowed_actions` whitelist acts as your absolute bottom-line safety net.
+
+### How it works in code
+
+Actions are just literal Python methods defined on the Connector classes (e.g., `GitHubConnector.create_branch()`).
+
+Every connector uses an **allowlist** — you declare which actions it can perform at construction time. The very first thing every action method does is check this list. Anything not on the list raises `PermissionError` immediately, before any API call is ever made.
+
+```python
+# This connector can ONLY create branches and PRs — nothing else
+gh = GitHubConnector(token="...", allowed_actions=["create_branch", "create_pr"])
+
+# If the agent's workflow tries to do this:
+gh.delete_branch(repo="owner/repo", branch="main")
+# -> Raises PermissionError: Action 'delete_branch' not in allowlist
+```
 
 | System | Actions | Rollback | Idempotent |
 |--------|---------|----------|------------|
 | **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr` | Yes (except `merge_pr`, `push_commit`) | Yes — `already_done` convention |
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | Yes — pre-SELECT captures state | Yes |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | Yes — content captured before mutation | Yes |
-
-Every connector uses an **allowlist** — you declare which actions it can perform at construction time. Anything not on the list raises `PermissionError`, even if the workflow tries to call it.
-
-```python
-# This connector can ONLY create branches and PRs — nothing else
-gh = GitHubConnector(token="...", allowed_actions=["create_branch", "create_pr"])
-```
 
 ---
 
