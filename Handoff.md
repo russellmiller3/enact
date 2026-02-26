@@ -27,18 +27,18 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-02-24
+**Date:** 2026-02-26
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 - Branch: `master`
-- Remote: `origin` → https://github.com/russellmiller3/enact (pushed 2026-02-24)
-- `backup` remote → D:/backup/enact — user says D: drive is back, but bash still can't see it. Try remounting or check Disk Management. When it works: `git push backup master`
-- PyPI name: `enact-sdk` (plain `enact` was taken — different project, no traction)
-- License: ELv2 + no-resale clause (no managed service, no selling the software itself)
+- Last commit: `e74bf20` — "docs: add migration section to landing page and README; bump to v0.3.1"
+- Remote: `origin` → https://github.com/russellmiller3/enact (up to date)
+- PyPI: `enact-sdk 0.3.1` live at https://pypi.org/project/enact-sdk/0.3.1/
+- License: ELv2 + no-resale clause
 
 ### What Exists (fully built + tested)
-272 tests, all passing. Published to PyPI as `enact-sdk 0.1.0` (everything since rollback not yet published — bump to 0.2.0 is next).
+321 tests, all passing. Published to PyPI as `enact-sdk 0.3.1`.
 
 ```
 enact/
@@ -60,91 +60,45 @@ LICENSE, landing_page.html, pyproject.toml
 ```
 
 ### Conventions Established
-- **`already_done` flag**: Every mutating connector action includes `output["already_done"]` — `False` for fresh actions, descriptive string (`"created"`, `"deleted"`, `"merged"`) for noops. All future connectors must follow this. Documented in `CLAUDE.md` and `github.py` docstring.
-- **`rollback_data` field**: Every mutating `ActionResult` includes `rollback_data` dict with pre-action state needed to reverse the action. See `plans/2026-02-24-rollback.md` Appendix for the checklist when adding rollback to a new connector.
-- **Plan template**: `PLAN-TEMPLATE.md` — three templates (A: Full TDD, B: Small Plan, C: Refactoring). Plans go in `plans/`.
+- **`already_done` flag**: Every mutating connector action includes `output["already_done"]` — `False` for fresh actions, descriptive string for noops. All future connectors must follow this.
+- **`rollback_data` field**: Every mutating `ActionResult` includes `rollback_data` dict with pre-action state. See `plans/done/2026-02-24-rollback.md` Appendix for the checklist.
+- **Plan template**: `PLAN-TEMPLATE.md` — Template A (Full TDD), B (Small), C (Refactoring). Plans go in `plans/`.
 
 ### PyPI — LIVE ✅
-`enact-sdk 0.1.0` published at https://pypi.org/project/enact-sdk/0.1.0/
-Credentials in `~/.pypirc` (project-scoped token, `enact-sdk` only).
+`enact-sdk 0.3.1` published at https://pypi.org/project/enact-sdk/0.3.1/
+Credentials in `~/.pypirc` (project-scoped token). To release: bump `version` in `pyproject.toml` → `python -m build` → `python -m twine upload dist/enact_sdk-X.Y.Z*`
 
-### Releasing a new version
-1. Bump `version` in `pyproject.toml`
-2. `python -m build`
-3. `python -m twine upload dist/*`
-Credentials read from `~/.pypirc` automatically — no token needed in the command.
+### What Was Done This Session (2026-02-26)
+- **Migration section added to `landing_page.html`** ✅
+  - New `#migrate` section between Disasters and Quickstart
+  - 3-step migration flow (Register systems → Move guard logic → Replace direct calls)
+  - Side-by-side before/after code (raw SDK calls → `enact.run()`)
+  - Reassurance row: any framework, agent logic unchanged, no infra changes
+  - `Migrate` nav link added to header
+- **Migration section added to `README.md`** ✅ — same before/after for GitHub/PyPI readers
+- **`pyproject.toml`** bumped `0.3.0` → `0.3.1` (PyPI is immutable; docs-only changes still need a bump)
+- **`enact-sdk 0.3.1` pushed to PyPI** ✅
+- **321 tests, 0 failures** — all green before commit
 
-### What Was Done This Session
-- **`FilesystemConnector`** ✅ (`enact/connectors/filesystem.py` — new file)
-  - `read_file`, `write_file`, `delete_file`, `list_dir`
-  - `base_dir` path confinement — traversal blocked at connector level
-  - `already_done` + `rollback_data` on all mutating actions
-  - 29 tests in `tests/test_filesystem.py`
-- **Filesystem policies** ✅ (`enact/policies/filesystem.py` — new file)
-  - `dont_delete_file` — sentinel, unconditional
-  - `restrict_paths(list)` — factory; blocks if path not within any allowed dir (traversal-safe)
-  - `block_extensions(list)` — factory; case-insensitive, handles dotfiles (.env)
-  - 20 tests in `tests/test_filesystem_policies.py`
-- **Filesystem rollback** ✅ (`enact/rollback.py` updated)
-  - `write_file` rollback: restore previous content, or delete if file was new
-  - `delete_file` rollback: recreate file with stored content
-  - `read_file`, `list_dir`: read-only, skipped
-  - 5 tests in `tests/test_rollback.py::TestRollbackFilesystem`
-- **`dont_merge_to_main`** added to `enact/policies/git.py` ✅ — reads `payload["base"]`; 8 tests
-- **Plan written**: `plans/2026-02-25-filesystem-connector.md` (Template A)
-- Total: 272 tests (210 → 272)
-
-### What Was Done This Session (landing page)
-- **`landing_page.html` updated** ✅ — source of truth for shipped features:
-  - Step 2: "HubSpot, Salesforce, Postgres" → "GitHub, Postgres, Filesystem"
-  - Quickstart code block: replaced HubSpot example with real shipped API (GitHubConnector, PostgresConnector, FilesystemConnector + dont_push_to_main, dont_merge_to_main, dont_delete_without_where, dont_delete_file, restrict_paths)
-  - LangChain wrapper: `new_lead_workflow` → `agent_pr_workflow`
-  - Roadmap badge: `v0.2+` → `v0.3+`, heading: "What's coming next" → "Coming in v0.3"
-  - Rollback capability card: marked `badge-live`, green border, icon color — no longer amber/coming-soon
-- **PyPI 0.2.0 published** ✅ — `enact-sdk 0.2.0` live at https://pypi.org/project/enact-sdk/
+### Previously Completed (all plans in `plans/done/`)
+- ABAC policies (`require_user_role`, `require_clearance_for_path`, `contractor_cannot_write_pii`, etc.) ✅
+- `block_ddl`, `code_freeze_active`, `user_email` rename ✅
+- `FilesystemConnector` + filesystem policies + rollback ✅
+- Rollback engine (`enact.rollback(run_id)`) ✅
+- Idempotency (`already_done` convention) ✅
 
 ### Next Steps (priority order)
-1. **ABAC + sensitive-read policies** (Template B) — see design notes below. ~2-3 hours.
-2. **Landing page — enumerate shipped actions/policies/workflows** — replace generic marketing copy with the actual names. Every connector method (`create_branch`, `write_file`, `select_rows`…), every policy (`dont_push_to_main`, `dont_delete_without_where`, `dont_read_sensitive_tables`…), both workflows (`agent_pr_workflow`, `db_safe_insert`). Show the real surface area — that's the product.
-3. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox.
-4. **Demo evidence + terminal GIF** — plan at `docs/plans/2026-02-24-demo-evidence-and-gif.md`.
-5. **AWS connector** — EC2 + S3 (v0.3 — defer until landing page + GIF are done).
-
-### NEXT TASK: ABAC + Sensitive-Read Policies (Template B)
-
-**The problem:** Agents can READ anything — `read_file("/etc/passwd")`, `select_rows("credit_cards")` — no policy gate exists for reads. We also have no Attribute-Based Access Control: policies can't check WHO the actor is (role, clearance, department) against WHAT they're accessing.
-
-**The fix — two parts:**
-
-**Part 1: Add `user_attributes` to `WorkflowContext`** (`enact/models.py`)
-```python
-class WorkflowContext(BaseModel):
-    workflow: str
-    user_email: str  # rename from actor_email — consistent with "user" everywhere
-    payload: dict = {}
-    user_attributes: dict = {}  # NEW — role, clearance_level, dept, etc.
-    systems: dict = {}
-```
-Pass it through `EnactClient.run()` as a new kwarg: `user_attributes={"role": "engineer", "clearance_level": 2}`.
-Also rename `actor_email` → `user_email` everywhere (models.py, client.py, examples, tests) — no backward compat needed.
-
-**Part 2: New policies in `enact/policies/access.py`**
-- `dont_read_sensitive_tables(tables: list[str])` — factory; blocks `select_rows` when `payload["table"]` is in blocked set
-- `dont_read_sensitive_paths(paths: list[str])` — factory; blocks `read_file` when `payload["path"]` starts with any sensitive prefix
-- `require_clearance_for_path(paths: list[str], min_clearance: int)` — ABAC; blocks if `user_attributes["clearance_level"] < min_clearance` for sensitive paths
-- `require_user_role(*allowed_roles)` — ABAC factory; blocks if `user_attributes["role"]` not in allowed set
-
-**Reference:** `C:\Users\user\Desktop\programming\visa\backend\config\policies.py` — Russell's existing ABAC patterns (check_role_authorization, check_clearance_level, check_pii_restriction etc.)
-
-**Plan template:** Template B (small feature, ~2 files, ~100 lines + tests)
+1. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox. (Template A)
+2. **Demo evidence + terminal GIF** — plan at `docs/plans/done/2026-02-24-demo-evidence-and-gif.md`.
+3. **AWS connector** — EC2 + S3 (defer until HubSpot + GIF done).
+4. **Show HN post** — when demo GIF is ready. Lead with rollback story (Replit incident).
 
 ### Files to Reference
-- `SPEC.md` — full build plan with ✅/⏭️ status markers + strategic thesis
-- `README.md` — install, quickstart, connector/policy reference
+- `SPEC.md` — full build plan, strategic thesis, competitive analysis
+- `README.md` — install, quickstart, connector/policy/rollback reference
 - `CLAUDE.md` — conventions, design philosophy, git workflow
 - `PLAN-TEMPLATE.md` — how to write implementation plans
 - `examples/demo.py` — 3-act demo: BLOCK + PASS + ROLLBACK (no credentials)
 - `examples/quickstart.py` — minimal PASS + BLOCK demo
-- `enact/policies/access.py` — existing ABAC-adjacent policies (contractor_cannot_write_pii, require_actor_role)
 </content>
 </invoke>

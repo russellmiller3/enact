@@ -7,7 +7,7 @@
 
 ## What's Been Built (as of 2026-02-26)
 
-**317 tests, 0 failures. Published on PyPI as `enact-sdk`.**
+**321 tests, 0 failures. Published on PyPI as `enact-sdk` v0.3.1.**
 
 ### Core SDK (v0.1)
 - **EnactClient** — `run()` orchestrates policy gate → workflow execution → signed receipt. `rollback(run_id)` reverses a prior run.
@@ -48,11 +48,11 @@
 - Receipt path traversal protection (UUID validation)
 
 ### Shipping
-- `pip install enact-sdk` — [PyPI v0.1.0](https://pypi.org/project/enact-sdk/0.1.0/)
+- `pip install enact-sdk` — [PyPI v0.3.1](https://pypi.org/project/enact-sdk/0.3.1/)
 - `examples/demo.py` — 3-act zero-credential demo (BLOCK → PASS → ROLLBACK) with row-level evidence
 - `examples/quickstart.py` — runnable GitHub + git policies demo
 - `examples/demo.cast` — asciinema recording for landing page
-- `landing_page.html` — v2 with rollback-first tabs, Replit/Kiro evidence
+- `landing_page.html` — v2 with rollback-first tabs, Replit/Kiro evidence, migration section (#migrate)
 
 ### Plans Completed
 | Plan | What it delivered |
