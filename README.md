@@ -556,3 +556,13 @@ pytest tests/ -v
 | `ENACT_SECRET` | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
 | `GITHUB_TOKEN` | For GitHubConnector     | GitHub PAT or App token                            |
 | `ENACT_FREEZE` | Optional                | Set to `1` to activate `code_freeze_active` policy |
+
+---
+
+## Deployment
+
+The Enact landing page is hosted on **Vercel** with DNS managed via **Porkbun**.
+
+- **URL:** [https://enact.cloud](https://enact.cloud)
+- **Frontend:** Static HTML (`index.html`)
+- **CI/CD:** Auto-deploy on push to `master` branch
