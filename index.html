@@ -108,14 +108,6 @@
         .policy-detail span { font-size: 12px; color: var(--muted); }
         .policy-detail span.err { color: var(--red); }
 
-        /* ── OSS vs CLOUD TABLE ── */
-        .split-table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
-        .split-table th { background: var(--surface); padding: 14px 20px; text-align: left; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
-        .split-table td { padding: 14px 20px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text); vertical-align: top; }
-        .split-table tr:hover td { background: rgba(74,111,165,.04); }
-        .check { color: var(--green); }
-        .cross { color: var(--red); }
-
         /* ── PRICING ── */
         .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 980px; margin: 0 auto; }
         .pricing-card { background: var(--surface); border: 2px solid var(--border); border-radius: 12px; padding: 36px; position: relative; }
@@ -151,20 +143,6 @@
         .compat-badges { display: flex; gap: 10px; flex-wrap: wrap; }
         .compat-badge { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 600; font-family: var(--mono); color: var(--muted); transition: border-color .2s; }
         .compat-badge:hover { border-color: var(--accent); color: var(--text); }
-
-        /* ── MCP GAP SECTION ── */
-        .mcp-section { padding: 80px 0; }
-        .mcp-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
-        .mcp-headline { font-size: 38px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; margin-bottom: 20px; }
-        .mcp-headline em { font-style: normal; color: var(--accent); }
-        .mcp-body { font-size: 16px; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
-        .mcp-compare { display: flex; flex-direction: column; gap: 12px; }
-        .mcp-row { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
-        .mcp-row.theirs { border-color: var(--border); }
-        .mcp-row.ours { border-color: var(--accent); background: rgba(74,111,165,.06); }
-        .mcp-row-icon { font-family: var(--mono); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-        .mcp-row-content strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-        .mcp-row-content span { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
         /* ── WORKFLOW LIBRARY ── */
         .workflow-intro { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; margin-bottom: 48px; }
@@ -204,9 +182,7 @@
             .hero h1 { font-size: 34px; }
             .disaster-incidents, .problem-grid, .qs-steps, .pricing-grid, .value-row { grid-template-columns: 1fr; }
             nav .nav-cta { display: none; }
-            .pillar-grid { grid-template-columns: 1fr !important; }
-            .mcp-inner, .workflow-intro, .workflow-grid, .capability-grid { grid-template-columns: 1fr; }
-            .mcp-headline { font-size: 28px; }
+            .workflow-intro, .workflow-grid, .capability-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -220,8 +196,8 @@
         <div class="header-inner">
             <div class="logo">enact</div>
             <nav>
-                <a href="#migrate">Migrate</a>
                 <a href="#quickstart">Quickstart</a>
+                <a href="#migrate">Migrate</a>
                 <a href="#policies">Policies</a>
                 <a href="#receipt">See it work</a>
                 <a href="#roadmap">Roadmap</a>
@@ -271,31 +247,6 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
 </section>
 
 <!-- ═══════════════════════════════════════════════════
-     3-PILLAR STRIP
-════════════════════════════════════════════════════ -->
-<section style="padding: 48px 0; border-bottom: 1px solid var(--border);">
-    <div class="container">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: var(--border); border-radius: 12px; overflow: hidden;">
-            <div style="background: var(--surface); padding: 36px 32px;">
-                <i data-lucide="shield" class="pillar-icon"></i>
-                <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Vetted action allowlist</h3>
-                <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Define exactly which actions each agent can call — per system, per workflow, per actor. If it's not on the list, it doesn't exist.</p>
-            </div>
-            <div style="background: var(--surface); padding: 36px 32px;">
-                <i data-lucide="cpu" class="pillar-icon"></i>
-                <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Deterministic policy engine</h3>
-                <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Rules are Python functions — no LLMs in the decision path. Versioned in Git, testable with pytest. Same input always produces the same decision.</p>
-            </div>
-            <div style="background: var(--surface); padding: 36px 32px;">
-                <i data-lucide="file-text" class="pillar-icon"></i>
-                <h3 style="font-size: 17px; font-weight: 700; margin-bottom: 10px;">Human-readable receipts</h3>
-                <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Every run returns who, what, why, every policy check pass/fail, and what changed. Hand it to your auditor, link it in a postmortem, paste it in Slack.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════
      FRAMEWORK COMPAT STRIP
 ════════════════════════════════════════════════════ -->
 <div class="compat-strip">
@@ -316,44 +267,36 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
 </div>
 
 <!-- ═══════════════════════════════════════════════════
-     MCP GAP — POSITIONING SECTION
+     GOVERNANCE GAP — universal, no framework jargon
 ════════════════════════════════════════════════════ -->
-<section class="mcp-section">
+<section style="padding:60px 0; border-bottom:1px solid var(--border);">
     <div class="container">
-        <div class="mcp-inner">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;">
             <div>
                 <div class="section-label">The governance gap</div>
-                <h2 class="mcp-headline">MCP gives your agents <em>tools.</em><br>Enact gives them <em>rules.</em></h2>
-                <p class="mcp-body">
-                    Model Context Protocol is great — it connects agents to every system you have.
-                    The problem: MCP has no opinion on what agents are <em>allowed</em> to do with that access.
-                    One misconfigured prompt away from a production database wipe.
+                <h2 style="margin-bottom:20px;">Your framework connects agents to tools.<br>Nothing tells them what they're <em style="font-style:normal; color:var(--accent);">allowed</em> to do.</h2>
+                <p style="font-size:16px; color:var(--muted); line-height:1.7; margin-bottom:16px;">
+                    LangChain, CrewAI, OpenAI, Claude — they all route agent calls to your systems. Not one of them answers: <strong style="color:var(--text);">"Should this agent be doing this at all?"</strong>
                 </p>
-                <p class="mcp-body" style="margin-bottom:0;">
-                    Enact is the governance layer that sits between your agents and your systems.
-                    Every action is policy-gated before it touches anything real.
+                <p style="font-size:16px; color:var(--muted); line-height:1.7;">
+                    Enact is the layer that does. Every action is policy-checked before it touches anything real.
                 </p>
             </div>
-            <div class="mcp-compare">
-                <div class="mcp-row theirs">
-                    <div class="mcp-row-icon" style="color:var(--muted);">⚡</div>
-                    <div class="mcp-row-content">
-                        <strong>MCP / tool_use alone</strong>
-                        <span>Connects agents to tools. Routes calls. Returns results. Does not answer: "Should this agent be doing this at all?"</span>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="display:flex; align-items:flex-start; gap:16px; padding:18px 20px; border-radius:10px; border:1px solid var(--border); background:var(--surface);">
+                    <span style="font-size:18px; flex-shrink:0; margin-top:2px;">⚡</span>
+                    <div>
+                        <strong style="display:block; font-size:14px; font-weight:700; margin-bottom:4px;">Your agent framework</strong>
+                        <span style="font-size:13px; color:var(--muted); line-height:1.5; display:block;">Connects agents to tools. Routes calls. Returns results. Does not answer: "Should this agent be doing this at all?"</span>
                     </div>
                 </div>
                 <div style="text-align:center; font-size:20px; color:var(--border);">+</div>
-                <div class="mcp-row ours">
-                    <div class="mcp-row-icon" style="color:var(--accent);">🔒</div>
-                    <div class="mcp-row-content">
-                        <strong>Enact on top</strong>
-                        <span>Policy-gates every action before execution. Allowlists what's callable. Generates a signed receipt for every run. Blocks at 3:57am so you don't get paged.</span>
+                <div style="display:flex; align-items:flex-start; gap:16px; padding:18px 20px; border-radius:10px; border:1px solid var(--accent); background:rgba(74,111,165,.06);">
+                    <span style="font-size:18px; flex-shrink:0; margin-top:2px;">🔒</span>
+                    <div>
+                        <strong style="display:block; font-size:14px; font-weight:700; margin-bottom:4px;">Enact on top</strong>
+                        <span style="font-size:13px; color:var(--muted); line-height:1.5; display:block;">Policy-gates every action before execution. Allowlists what's callable. Generates a signed receipt for every run. Blocks at 3:57am so you don't get paged.</span>
                     </div>
-                </div>
-                <div style="padding: 16px 20px; border-radius: 8px; background: rgba(74,111,165,.06); border: 1px solid rgba(74,111,165,.2);">
-                    <p style="font-size:13px; color:var(--muted); line-height:1.6;">
-                        <strong style="color:var(--text);">Wrap any MCP server in Enact.</strong> Your agent calls <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.run()</code> instead of the tool directly. Same result — but now you have policy enforcement and a full audit trail.
-                    </p>
                 </div>
             </div>
         </div>
@@ -403,9 +346,69 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
 </section>
 
 <!-- ═══════════════════════════════════════════════════
+     QUICKSTART
+════════════════════════════════════════════════════ -->
+<section id="quickstart">
+    <div class="container">
+        <div class="section-label">Quickstart</div>
+        <h2>Running in 5 minutes</h2>
+        <p class="section-sub">Install, connect your systems, define policies, call <span class="inline-code">enact.run()</span>. That's it.</p>
+
+        <div class="qs-steps">
+            <div class="qs-step">
+                <div class="qs-num">1</div>
+                <h3>Install</h3>
+                <p>One package. No infra required to start.</p>
+            </div>
+            <div class="qs-step">
+                <div class="qs-num">2</div>
+                <h3>Connect your systems</h3>
+                <p>GitHub, Postgres, Filesystem — pass your credentials, get policy-gated, receipt-backed actions back.</p>
+            </div>
+            <div class="qs-step">
+                <div class="qs-num">3</div>
+                <h3>Define policies</h3>
+                <p>Deterministic Python functions. No LLMs. Versioned in Git. Testable with pytest.</p>
+            </div>
+            <div class="qs-step">
+                <div class="qs-num">4</div>
+                <h3>Call <span class="inline-code">enact.run()</span></h3>
+                <p>Your agent gets a result and a receipt. Blocked actions are logged with a reason.</p>
+            </div>
+        </div>
+
+        <!-- Minimal code example -->
+        <pre style="max-width:860px; margin:0 auto;"><code><span class="cm"># 1. install</span>
+pip install enact-sdk
+
+<span class="cm"># 2. set up your client</span>
+<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
+<span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
+<span class="kw">from</span> enact.policies.db <span class="kw">import</span> block_ddl, dont_delete_without_where
+
+enact = <span class="fn">EnactClient</span>(
+    secret=<span class="str">"your-secret"</span>,
+    systems={<span class="str">"postgres"</span>: <span class="fn">PostgresConnector</span>(dsn=<span class="str">"postgresql://..."</span>)},
+    policies=[block_ddl, dont_delete_without_where],
+)
+
+<span class="cm"># 3. your agent calls this — policy-gated, receipt-backed</span>
+result, receipt = enact.<span class="fn">run</span>(
+    workflow=<span class="str">"safe_insert"</span>,
+    user_email=<span class="str">"agent@company.com"</span>,
+    payload={<span class="str">"table"</span>: <span class="str">"users"</span>, <span class="str">"data"</span>: {...}},
+)</code></pre>
+
+        <p style="font-size:14px; color:var(--subtle); text-align:center; margin-top:24px;">
+            Already have an agent? See the <a href="#migrate" style="color:var(--accent);">Migration section ↓</a> for before/after code.
+        </p>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════
      MIGRATION — ALREADY HAVE AN AGENT?
 ════════════════════════════════════════════════════ -->
-<section id="migrate">
+<section id="migrate" class="alt">
     <div class="container">
         <div class="section-label">Already have an agent?</div>
         <h2>Migration takes 10 minutes.</h2>
@@ -489,109 +492,18 @@ result, receipt = enact.<span class="fn">run</span>(
 
         <!-- Reassurance row -->
         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
-            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--surface);">
+            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--bg);">
                 <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--green); flex-shrink:0;"></i>
                 <span style="font-size:13px; color:var(--muted);">Works with LangChain, CrewAI, OpenAI, Claude — any framework that calls Python</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--surface);">
+            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--bg);">
                 <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--green); flex-shrink:0;"></i>
                 <span style="font-size:13px; color:var(--muted);">Your agent's reasoning, planning, and prompting logic stays exactly the same</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--surface);">
+            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--bg);">
                 <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--green); flex-shrink:0;"></i>
                 <span style="font-size:13px; color:var(--muted);">No infra changes — self-host for free or point to enact.cloud in 30 seconds</span>
             </div>
-        </div>
-    </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════
-     QUICKSTART
-════════════════════════════════════════════════════ -->
-<section id="quickstart">
-    <div class="container">
-        <div class="section-label">Quickstart</div>
-        <h2>Running in 5 minutes</h2>
-        <p class="section-sub">Install, connect your systems, define policies, call <span class="inline-code">enact.run()</span>. That's it.</p>
-
-        <div class="qs-steps">
-            <div class="qs-step">
-                <div class="qs-num">1</div>
-                <h3>Install</h3>
-                <p>One package. No infra required to start.</p>
-            </div>
-            <div class="qs-step">
-                <div class="qs-num">2</div>
-                <h3>Connect your systems</h3>
-                <p>GitHub, Postgres, Filesystem — pass your credentials, get policy-gated, receipt-backed actions back.</p>
-            </div>
-            <div class="qs-step">
-                <div class="qs-num">3</div>
-                <h3>Define policies</h3>
-                <p>Deterministic Python functions. No LLMs. Versioned in Git. Testable with pytest.</p>
-            </div>
-            <div class="qs-step">
-                <div class="qs-num">4</div>
-                <h3>Call <span class="inline-code">enact.run()</span></h3>
-                <p>Your agent gets a result and a receipt. Blocked actions are logged with a reason.</p>
-            </div>
-        </div>
-
-        <pre><code><span class="cm"># Step 1 — install  (from enact.cloud, not the other enact)</span>
-pip install enact-sdk
-
-<span class="cm"># Step 2–4 — in your agent code</span>
-<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
-<span class="kw">from</span> enact.connectors.github <span class="kw">import</span> <span class="fn">GitHubConnector</span>
-<span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
-<span class="kw">from</span> enact.connectors.filesystem <span class="kw">import</span> <span class="fn">FilesystemConnector</span>
-<span class="kw">from</span> enact.policies.git <span class="kw">import</span> dont_push_to_main, dont_merge_to_main
-<span class="kw">from</span> enact.policies.db <span class="kw">import</span> dont_delete_without_where, block_ddl
-<span class="kw">from</span> enact.policies.filesystem <span class="kw">import</span> dont_delete_file, restrict_paths
-<span class="kw">from</span> enact.policies.time <span class="kw">import</span> code_freeze_active
-<span class="kw">from</span> enact.policies.access <span class="kw">import</span> require_user_role
-<span class="kw">from</span> enact.workflows.agent_pr_workflow <span class="kw">import</span> agent_pr_workflow
-
-enact = <span class="fn">EnactClient</span>(
-    secret=<span class="str">"your-hmac-secret"</span>,
-    systems={
-        <span class="str">"github"</span>:     <span class="fn">GitHubConnector</span>(token=<span class="str">"..."</span>, allowed_actions=[<span class="str">"create_branch"</span>, <span class="str">"create_pr"</span>]),
-        <span class="str">"postgres"</span>:   <span class="fn">PostgresConnector</span>(dsn=<span class="str">"postgresql://..."</span>),
-        <span class="str">"filesystem"</span>: <span class="fn">FilesystemConnector</span>(base_dir=<span class="str">"/workspace"</span>),
-    },
-    policies=[
-        dont_push_to_main,          <span class="cm"># blocks direct pushes to main</span>
-        dont_merge_to_main,         <span class="cm"># blocks PRs targeting main or master</span>
-        dont_delete_without_where,  <span class="cm"># blocks unsafe bulk deletes</span>
-        block_ddl,                  <span class="cm"># blocks DROP/ALTER/CREATE in SQL payloads</span>
-        dont_delete_file,           <span class="cm"># blocks all file deletions</span>
-        restrict_paths([<span class="str">"/workspace/src"</span>]),  <span class="cm"># path confinement</span>
-        code_freeze_active,         <span class="cm"># respects ENACT_FREEZE env var</span>
-        require_user_role(<span class="str">"admin"</span>, <span class="str">"engineer"</span>),  <span class="cm"># ABAC role check</span>
-    ],
-    workflows=[agent_pr_workflow],
-)
-
-<span class="cm"># Your agent calls this one function</span>
-result, receipt = enact.<span class="fn">run</span>(
-    workflow=<span class="str">"agent_pr_workflow"</span>,
-    user_email=<span class="str">"agent@company.com"</span>,
-    payload={<span class="str">"repo"</span>: <span class="str">"myorg/myapp"</span>, <span class="str">"branch"</span>: <span class="str">"agent/fix-123"</span>, <span class="str">"title"</span>: <span class="str">"Fix bug"</span>},
-)
-
-<span class="cm"># Works with any framework that can call a Python function</span></code></pre>
-
-        <div style="margin-top:32px;">
-            <p style="font-size:14px; color:var(--muted); margin-bottom:14px;"><strong style="color:var(--text);">Using LangChain, Claude tool_use, or OpenAI?</strong> Wrap it in a tool:</p>
-<pre><code><span class="kw">from</span> langchain_core.tools <span class="kw">import</span> tool
-
-<span class="fn">@tool</span>(<span class="str">"enact_open_pr"</span>)
-<span class="kw">def</span> <span class="fn">enact_open_pr</span>(payload: dict) -> dict:
-    <span class="str">"""Safely create a branch and open a PR via Enact"""</span>
-    result, _ = enact.<span class="fn">run</span>(workflow=<span class="str">"agent_pr_workflow"</span>, user_email=<span class="str">"agent@company.com"</span>, payload=payload)
-    <span class="kw">return</span> result
-
-<span class="cm"># Same pattern works with Claude tool_use, OpenAI Responses API, CrewAI, AutoGen, etc.</span></code></pre>
         </div>
     </div>
 </section>
@@ -1036,78 +948,6 @@ result, receipt = enact.<span class="fn">run</span>(
                 </div>
             </div>
         </div>
-    </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════
-     OSS vs CLOUD TABLE
-════════════════════════════════════════════════════ -->
-<section class="alt">
-    <div class="container">
-        <h2>Self-Hosted vs Cloud</h2>
-
-        <table class="split-table">
-            <thead>
-                <tr>
-                    <th>Layer</th>
-                    <th>Self-Hosted (OSS)</th>
-                    <th>Cloud</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Policy engine</td>
-                    <td><span class="check">✓</span> Full</td>
-                    <td><span class="check">✓</span> Full</td>
-                </tr>
-                <tr>
-                    <td>Receipts (local)</td>
-                    <td><span class="check">✓</span> Yes</td>
-                    <td><span class="check">✓</span> Yes</td>
-                </tr>
-                <tr>
-                    <td>Workflows</td>
-                    <td><span class="check">✓</span> Reference implementations</td>
-                    <td><span class="check">✓</span> Validated workflow library — versioned, red-teamed, maintained</td>
-                </tr>
-                <tr style="background: rgba(74,111,165,.06); box-shadow: inset 3px 0 0 var(--accent);">
-                    <td style="font-weight:600; padding-left:17px;">Real-time alerting</td>
-                    <td><span class="cross">✗</span> Console logs</td>
-                    <td><span class="check">✓</span> SMS, phone call, PagerDuty, Slack — <em style="color:var(--muted);">know at 3:57am, not standup</em></td>
-                </tr>
-                <tr>
-                    <td>Receipt search + UI</td>
-                    <td><span class="cross">✗</span> grep text files</td>
-                    <td><span class="check">✓</span> Sub-second search by actor, date, outcome</td>
-                </tr>
-                <tr>
-                    <td>Retention + SIEM export</td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span class="check">✓</span> 90-day / 1-year · Splunk, Sentinel</td>
-                </tr>
-                <tr>
-                    <td>Human-in-loop gates <span class="badge-soon">coming soon</span></td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span style="color:var(--amber);">◐</span> Pause workflow → Slack/email approval → resume or abort</td>
-                </tr>
-                <tr>
-                    <td>Rollback</td>
-                    <td><span class="check">✓</span></td>
-                    <td><span class="check">✓</span> <code style="font-family:var(--mono); font-size:12px;">enact.rollback(run_id)</code> reverses all reversible actions in one call. Irreversible actions (merged PRs, pushed commits) are recorded in the rollback receipt with honest limits.</td>
-                </tr>
-                <tr>
-                    <td>Compliance export <span class="badge-soon">coming soon</span></td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span style="color:var(--amber);">◐</span> SOC2 / ISO27001 / HIPAA-formatted report, one click</td>
-                </tr>
-                <tr>
-                    <td>Vertical policy packs <span class="badge-soon">coming soon</span></td>
-                    <td><span class="cross">✗</span></td>
-                    <td><span style="color:var(--amber);">◐</span> FinTech, Healthcare, DevOps — pre-built policy sets for your industry</td>
-                </tr>
-            </tbody>
-        </table>
-
     </div>
 </section>
 

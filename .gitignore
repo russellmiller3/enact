@@ -28,6 +28,9 @@ Thumbs.db
 # Playwright artifacts
 .playwright-mcp/
 
+# Landing page drafts
+landing_pages/
+
 # Security scan artifacts
 bandit-report.json
 SECURITY-REPORT-COMPLETE.md
