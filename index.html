@@ -38,6 +38,8 @@
         nav a:hover { color: var(--text); }
         .nav-cta { background: var(--accent); color: var(--bg) !important; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-family: var(--mono); font-size: 13px; }
         .nav-cta:hover { background: var(--accent-d) !important; }
+        .nav-toggle { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+        .nav-toggle span { display: block; width: 24px; height: 2px; background: var(--text); margin: 5px 0; transition: .3s; }
 
         /* ── HERO ── */
         .hero { padding: 100px 0 80px; text-align: center; }
@@ -179,11 +181,312 @@
 
         /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
-            .hero h1 { font-size: 34px; }
+            /* Typography scaling */
+            .hero h1 { font-size: 32px; }
+            .hero .sub { font-size: 16px; }
+            h2 { font-size: 26px; }
+            .section-sub { font-size: 15px; }
+            .footer-cta h2 { font-size: 28px; }
+            
+            /* Spacing reduction */
+            .hero { padding: 60px 0 50px; }
+            section { padding: 50px 0; }
+            .footer-cta { padding: 50px 0; }
+            .container { padding: 0 16px; }
+            
+            /* Grid layouts → single column */
             .disaster-incidents, .problem-grid, .qs-steps, .pricing-grid, .value-row { grid-template-columns: 1fr; }
-            nav .nav-cta { display: none; }
             .workflow-intro, .workflow-grid, .capability-grid { grid-template-columns: 1fr; }
+            
+            /* Navigation → hamburger */
+            nav {
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background: var(--bg);
+                flex-direction: column;
+                padding: 20px;
+                gap: 16px;
+                border-bottom: 1px solid var(--border);
+                display: none;
+            }
+            nav.open { display: flex; }
+            .nav-toggle { display: block; }
+            nav a { font-size: 16px; }
+            nav .nav-cta { display: block; text-align: center; }
+            
+            
+            /* Code blocks */
+            pre {
+                padding: 16px;
+                font-size: 11px;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .receipt { padding: 16px; font-size: 12px; }
+            
+            /* Tab buttons */
+            .tab-row { flex-wrap: wrap; }
+            .tab-btn { padding: 8px 14px; font-size: 12px; }
+            
+            /* Cards — more breathing room */
+            .incident, .problem-card, .pricing-card, .capability-card {
+                padding: 24px;
+                margin-bottom: 16px;
+            }
+            
+            /* ── GOVERNANCE SECTION MOBILE FIXES ── */
+            .governance-section { padding: 40px 0; }
+            .governance-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 32px !important;
+                align-items: stretch !important;
+            }
+            .governance-callouts { gap: 16px !important; }
+            .governance-callout {
+                padding: 16px !important;
+                gap: 12px !important;
+            }
+            .governance-callout strong { font-size: 13px !important; }
+            .governance-callout span { font-size: 12px !important; }
+            
+            /* ── MOBILE FIXES FOR FLEX SECTIONS ── */
+            /* Before/After headers */
+            .before-after-header { flex-wrap: wrap; }
+            .before-after-label { font-size: 11px !important; }
+            
+            /* Reassurance items */
+            .reassurance-item {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+                padding: 16px !important;
+            }
+            .reassurance-icon { margin-bottom: 4px; }
+            .reassurance-text { font-size: 12px !important; }
+            
+            /* Policy cards */
+            .policy-card {
+                padding: 20px !important;
+                margin-bottom: 16px !important;
+            }
+            .policy-card-header {
+                flex-wrap: wrap !important;
+                gap: 8px !important;
+            }
+            .policy-card-title { font-size: 12px !important; }
+            .policy-card-subtitle {
+                width: 100% !important;
+                margin-left: 0 !important;
+                margin-top: 8px !important;
+                font-size: 11px !important;
+            }
+            .policy-card-icon { width: 14px !important; height: 14px !important; }
+            
+            /* Workflow benefits */
+            .workflow-benefits { padding: 20px !important; }
+            .workflow-benefits-item {
+                flex-direction: row !important;
+                align-items: flex-start !important;
+            }
+            .workflow-benefits-check { font-size: 14px !important; }
+            .workflow-benefits-text { font-size: 12px !important; }
+            
+            /* ── WORKFLOW SECTION MOBILE FIXES ── */
+            .workflow-intro {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 32px !important;
+            }
+            .workflow-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+            .workflow-item {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+                padding: 16px !important;
+            }
+            .workflow-dot { margin-top: 0 !important; }
+            
+            /* ── MIGRATION SECTION MOBILE FIXES ── */
+            .migration-steps {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 24px !important;
+                margin-bottom: 32px !important;
+            }
+            .before-after-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 24px !important;
+                margin-bottom: 24px !important;
+            }
+            .reassurance-row {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+            .policy-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 20px !important;
+            }
+            .policy-inner-grid {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 1px !important;
+            }
+            .policy-inner-grid > div {
+                grid-column: auto !important;
+                border-radius: 0 !important;
+            }
+            .policy-inner-grid > div:first-child {
+                border-radius: 8px 8px 0 0 !important;
+            }
+            .policy-inner-grid > div:last-child {
+                border-radius: 0 0 8px 8px !important;
+            }
+
+            .incident h3, .problem-card h3 { font-size: 15px; }
+            .incident p, .problem-card p { font-size: 13px; }
+            
+            /* Grid gaps — more space between stacked items */
+            .disaster-incidents { gap: 20px; }
+            .problem-grid { gap: 20px; }
+            .qs-steps { gap: 32px; }
+            .pricing-grid { gap: 24px; }
+            .value-row { gap: 20px; }
+            .workflow-grid { gap: 16px; }
+            .capability-grid { gap: 20px; }
+            
+            /* Pricing */
+            .price { font-size: 36px; }
+            .feature-list li { font-size: 13px; }
+            
+            /* Workflow intro */
+            .workflow-intro { gap: 40px; }
+            
+            /* Value items */
+            .value-item { padding: 20px; }
+            
+            /* Section subtitles need more bottom margin */
+            .section-sub { margin-bottom: 36px; }
+            
+            /* Receipt rows */
+            .r-row { flex-direction: column; gap: 4px; }
+            .r-label { width: auto; font-size: 11px; }
+            .r-val { font-size: 12px; }
+            
+            /* Policy rows */
+            .policy-row { padding: 12px; }
         }
+        
+        /* Show hamburger, hide desktop nav on mobile */
+        @media (max-width: 768px) {
+            .nav-toggle { display: block; }
+            nav { display: none; }
+            nav.open { display: flex; }
+        }
+    
+        /* ── AUTO-EXTRACTED STYLES ── */
+        .auto-style-1 { color:var(--accent); }
+        .auto-style-2 { margin-left:auto; margin-right:auto; margin-top:44px; max-width:700px; text-align:left; }
+        .auto-style-3 { color:var(--subtle); font-size:11px; font-weight:700; letter-spacing:0.1em; margin-bottom:10px; text-align:center; text-transform:uppercase; }
+        .auto-style-4 { font-size:12px; line-height:1.75; }
+        .auto-style-5 { border-bottom:1px solid var(--border); padding:60px 0; }
+        .auto-style-6 { align-items:center; display:grid; gap:60px; grid-template-columns:1fr 1fr; }
+        .auto-style-7 { margin-bottom:20px; }
+        .auto-style-8 { color:var(--accent); font-style:normal; }
+        .auto-style-9 { color:var(--muted); font-size:16px; line-height:1.7; margin-bottom:16px; }
+        .auto-style-10 { color:var(--text); }
+        .auto-style-11 { color:var(--muted); font-size:16px; line-height:1.7; }
+        .auto-style-12 { display:flex; flex-direction:column; gap:12px; }
+        .auto-style-13 { align-items:flex-start; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; gap:16px; padding:18px 20px; }
+        .auto-style-14 { flex-shrink:0; font-size:18px; margin-top:2px; }
+        .auto-style-15 { display:block; font-size:14px; font-weight:700; margin-bottom:4px; }
+        .auto-style-16 { color:var(--muted); display:block; font-size:13px; line-height:1.5; }
+        .auto-style-17 { color:var(--border); font-size:20px; text-align:center; }
+        .auto-style-18 { align-items:flex-start; background:rgba(74,111,165,.06); border-radius:10px; border:1px solid var(--accent); display:flex; gap:16px; padding:18px 20px; }
+        .auto-style-19 { color:var(--accent); font-size:13px; margin-top:10px; }
+        .auto-style-20 { background:rgba(74,111,165,.12); border-radius:3px; font-family:var(--mono); font-size:11px; padding:1px 5px; }
+        .auto-style-21 { font-size:16px; font-weight:700; margin-bottom:32px; text-align:center; }
+        .auto-style-22 { margin:0 auto; max-width:860px; }
+        .auto-style-23 { color:var(--subtle); font-size:14px; margin-top:24px; text-align:center; }
+        .auto-style-24 { display:grid; gap:32px; grid-template-columns: repeat(3, 1fr); margin-bottom:48px; }
+        .auto-style-25 { color:var(--accent); font-family:var(--mono); font-size:12px; }
+        .auto-style-26 { display:grid; gap:20px; grid-template-columns: 1fr 1fr; margin-bottom:28px; }
+        .auto-style-27 { align-items:center; display:flex; gap:10px; margin-bottom:10px; }
+        .auto-style-28 { background:var(--red); border-radius:50%; display:block; flex-shrink:0; height:10px; width:10px; }
+        .auto-style-29 { color:var(--red); font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+        .auto-style-30 { font-size:12px; height:100%; line-height:1.75; }
+        .auto-style-31 { background:var(--green); border-radius:50%; display:block; flex-shrink:0; height:10px; width:10px; }
+        .auto-style-32 { color:var(--green); font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; }
+        .auto-style-33 { display:grid; gap:16px; grid-template-columns: repeat(3, 1fr); }
+        .auto-style-34 { align-items:center; background:var(--bg); border-radius:8px; border:1px solid var(--border); display:flex; gap:12px; padding:16px 18px; }
+        .auto-style-35 { color:var(--green); flex-shrink:0; height:18px; width:18px; }
+        .auto-style-36 { color:var(--muted); font-size:13px; }
+        .auto-style-37 { display:grid; gap:20px; grid-template-columns:repeat(2, 1fr); }
+        .auto-style-38 { background:var(--bg); border-radius:12px; border:1px solid rgba(220,38,38,.4); grid-column: 1 / -1; padding:24px; }
+        .auto-style-39 { align-items:center; border-bottom:1px solid var(--border); display:flex; gap:10px; margin-bottom:16px; padding-bottom:14px; }
+        .auto-style-40 { color:var(--red); flex-shrink:0; height:16px; width:16px; }
+        .auto-style-41 { color:var(--red); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+        .auto-style-42 { color:var(--subtle); font-size:12px; margin-left:auto; }
+        .auto-style-43 { background:var(--border); border-radius:8px; display:grid; gap:1px; grid-template-columns:repeat(2, 1fr); overflow:hidden; }
+        .auto-style-44 { background:var(--surface); padding:10px 14px; }
+        .auto-style-45 { color:var(--muted); font-size:12px; }
+        .auto-style-46 { background:var(--surface); grid-column:span 2; padding:10px 14px; }
+        .auto-style-47 { color:var(--muted); font-size:12px; margin-left:10px; }
+        .auto-style-48 { background:var(--surface); border-radius:12px; border:1px solid rgba(217,119,6,.35); padding:24px; }
+        .auto-style-49 { color:var(--amber); flex-shrink:0; height:16px; width:16px; }
+        .auto-style-50 { color:var(--amber); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+        .auto-style-51 { background:var(--border); border-radius:8px; display:flex; flex-direction:column; gap:1px; overflow:hidden; }
+        .auto-style-52 { background:var(--surface); border-radius:12px; border:1px solid var(--border); padding:24px; }
+        .auto-style-53 { color:var(--accent); flex-shrink:0; height:16px; width:16px; }
+        .auto-style-54 { color:var(--accent); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+        .auto-style-55 { color:var(--green); flex-shrink:0; height:16px; width:16px; }
+        .auto-style-56 { color:var(--green); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+        .auto-style-57 { color:var(--muted); flex-shrink:0; height:16px; width:16px; }
+        .auto-style-58 { color:var(--muted); font-size:13px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
+        .auto-style-59 { background:var(--border); border-radius:8px; display:flex; flex-direction:column; gap:1px; margin-bottom:24px; overflow:hidden; }
+        .auto-style-60 { align-items:flex-start; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-wrap:wrap; gap:32px; margin-top:24px; padding:20px 24px; }
+        .auto-style-61 { flex:1; min-width:240px; }
+        .auto-style-62 { display:block; font-size:14px; margin-bottom:6px; }
+        .auto-style-63 { flex:1; font-size:12px; line-height:1.65; min-width:300px; }
+        .auto-style-64 { justify-content:center; }
+        .auto-style-65 { margin:0 auto; }
+        .auto-style-66 { color:var(--red); }
+        .auto-style-67 { color:var(--amber); font-weight:600; }
+        .auto-style-68 { background:rgba(217,119,6,.15); border-radius:5px; border:1px solid rgba(217,119,6,.3); color:var(--amber); display:inline-block; font-weight:700; padding:3px 10px; }
+        .auto-style-69 { color:var(--amber); }
+        .auto-style-70 { color:var(--green); }
+        .auto-style-71 { color:var(--subtle); font-size:12px; }
+        .auto-style-72 { color:var(--muted); font-size:16px; line-height:1.7; margin-bottom:20px; }
+        .auto-style-73 { color:var(--subtle); font-size:14px; line-height:1.6; }
+        .auto-style-74 { background:var(--surface); border-radius:12px; border:1px solid var(--border); display:flex; flex-direction:column; gap:12px; padding:28px; }
+        .auto-style-75 { color:var(--subtle); font-size:12px; font-weight:700; letter-spacing:0.08em; margin-bottom:4px; text-transform:uppercase; }
+        .auto-style-76 { align-items:flex-start; display:flex; gap:12px; }
+        .auto-style-77 { color:var(--green); flex-shrink:0; font-size:16px; }
+        .auto-style-78 { color:var(--muted); font-size:13px; line-height:1.6; }
+        .auto-style-79 { margin-bottom:0; }
+        .auto-style-80 { font-size:12px; padding:4px 10px; }
+        .auto-style-81 { margin-bottom:40px; }
+        .auto-style-82 { background: rgba(5,150,105,.04); border-color: rgba(5,150,105,.3); }
+        .auto-style-83 { color: var(--green); }
+        .auto-style-84 { align-items:center; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; flex-wrap:wrap; gap:20px; margin-top:32px; padding:24px 28px; }
+        .auto-style-85 { flex:1; min-width:260px; }
+        .auto-style-86 { display:block; font-size:15px; margin-bottom:6px; }
+        .auto-style-87 { color:var(--muted); font-size:14px; }
+        .auto-style-88 { flex-shrink:0; }
+        .auto-style-89 { color:var(--subtle); }
+        .auto-style-90 { color:var(--muted); font-size:18px; font-weight:400; }
+        .auto-style-91 { font-family:var(--mono); font-size:11px; }
+        .auto-style-92 { color:var(--subtle); font-size:12px; margin-top:10px; }
+        .auto-style-93 { margin-top:6px; }
     </style>
 </head>
 <body>
@@ -195,6 +498,11 @@
     <div class="container">
         <div class="header-inner">
             <div class="logo">enact</div>
+            <button class="nav-toggle" onclick="document.querySelector('nav').classList.toggle('open')">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
             <nav>
                 <a href="#quickstart">Quickstart</a>
                 <a href="#migrate">Migrate</a>
@@ -222,11 +530,11 @@
             <a href="#" class="btn btn-primary">Start free trial →</a>
             <a href="#quickstart" class="btn btn-secondary">pip install enact-sdk</a>
         </div>
-        <p class="hero-note">Open source · <a href="https://enact.cloud" style="color:var(--accent);">enact.cloud</a> · Self-host free · Cloud from $299/mo</p>
+        <p class="hero-note">Open source · <a class="auto-style-1" href="https://enact.cloud">enact.cloud</a> · Self-host free · Cloud from $299/mo</p>
 
-        <div style="margin-top:44px; max-width:700px; margin-left:auto; margin-right:auto; text-align:left;">
-            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--subtle); margin-bottom:10px; text-align:center;">Minimal setup — add to any agent in minutes</p>
-            <pre style="font-size:12px; line-height:1.75;"><code><span class="cm"># 1. install</span>
+        <div class="auto-style-2">
+            <p class="auto-style-3">Minimal setup — add to any agent in minutes</p>
+            <pre class="auto-style-4"><code><span class="cm"># 1. install</span>
 pip install enact-sdk
 
 <span class="cm"># 2. add to your agent</span>
@@ -269,33 +577,33 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
 <!-- ═══════════════════════════════════════════════════
      GOVERNANCE GAP — universal, no framework jargon
 ════════════════════════════════════════════════════ -->
-<section style="padding:60px 0; border-bottom:1px solid var(--border);">
+<section class="governance-section auto-style-5">
     <div class="container">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:60px; align-items:center;">
+        <div class="governance-grid auto-style-6">
             <div>
                 <div class="section-label">The governance gap</div>
-                <h2 style="margin-bottom:20px;">Your framework connects agents to tools.<br>Nothing tells them what they're <em style="font-style:normal; color:var(--accent);">allowed</em> to do.</h2>
-                <p style="font-size:16px; color:var(--muted); line-height:1.7; margin-bottom:16px;">
-                    LangChain, CrewAI, OpenAI, Claude — they all route agent calls to your systems. Not one of them answers: <strong style="color:var(--text);">"Should this agent be doing this at all?"</strong>
+                <h2 class="auto-style-7">Your framework connects agents to tools.<br>Nothing tells them what they're <em class="auto-style-8">allowed</em> to do.</h2>
+                <p class="auto-style-9">
+                    LangChain, CrewAI, OpenAI, Claude — they all route agent calls to your systems. Not one of them answers: <strong class="auto-style-10">"Should this agent be doing this at all?"</strong>
                 </p>
-                <p style="font-size:16px; color:var(--muted); line-height:1.7;">
+                <p class="auto-style-11">
                     Enact is the layer that does. Every action is policy-checked before it touches anything real.
                 </p>
             </div>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-                <div style="display:flex; align-items:flex-start; gap:16px; padding:18px 20px; border-radius:10px; border:1px solid var(--border); background:var(--surface);">
-                    <span style="font-size:18px; flex-shrink:0; margin-top:2px;">⚡</span>
+            <div class="governance-callouts auto-style-12">
+                <div class="governance-callout auto-style-13">
+                    <span class="auto-style-14">⚡</span>
                     <div>
-                        <strong style="display:block; font-size:14px; font-weight:700; margin-bottom:4px;">Your agent framework</strong>
-                        <span style="font-size:13px; color:var(--muted); line-height:1.5; display:block;">Connects agents to tools. Routes calls. Returns results. Does not answer: "Should this agent be doing this at all?"</span>
+                        <strong class="auto-style-15">Your agent framework</strong>
+                        <span class="auto-style-16">Connects agents to tools. Routes calls. Returns results. Does not answer: "Should this agent be doing this at all?"</span>
                     </div>
                 </div>
-                <div style="text-align:center; font-size:20px; color:var(--border);">+</div>
-                <div style="display:flex; align-items:flex-start; gap:16px; padding:18px 20px; border-radius:10px; border:1px solid var(--accent); background:rgba(74,111,165,.06);">
-                    <span style="font-size:18px; flex-shrink:0; margin-top:2px;">🔒</span>
+                <div class="auto-style-17">+</div>
+                <div class="governance-callout auto-style-18">
+                    <span class="auto-style-14">🔒</span>
                     <div>
-                        <strong style="display:block; font-size:14px; font-weight:700; margin-bottom:4px;">Enact on top</strong>
-                        <span style="font-size:13px; color:var(--muted); line-height:1.5; display:block;">Policy-gates every action before execution. Allowlists what's callable. Generates a signed receipt for every run. Blocks at 3:57am so you don't get paged.</span>
+                        <strong class="auto-style-15">Enact on top</strong>
+                        <span class="auto-style-16">Policy-gates every action before execution. Allowlists what's callable. Generates a signed receipt for every run. Blocks at 3:57am so you don't get paged.</span>
                     </div>
                 </div>
             </div>
@@ -323,11 +631,11 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
                 <h3>Replit Agent — Deleted Production Database</h3>
                 <p>An AI agent doing "database maintenance" identified what it thought were unused tables and deleted them. They were critical production tables. When questioned, the agent generated plausible explanations for why the deletion was safe. The data was gone.</p>
                 <p class="root">Root cause: Full write access to production schema. No approval workflow. No audit trail.</p>
-                <p style="margin-top:10px; font-size:13px; color:var(--accent);">With Enact: pre-action row capture means <code style="font-family:var(--mono); font-size:11px; background:rgba(74,111,165,.12); padding:1px 5px; border-radius:3px;">enact.rollback(run_id)</code> restores every deleted record in one command. See the rollback receipt below.</p>
+                <p class="auto-style-19">With Enact: pre-action row capture means <code class="auto-style-20">enact.rollback(run_id)</code> restores every deleted record in one command. See the rollback receipt below.</p>
             </div>
         </div>
 
-        <p style="text-align:center; font-size:16px; font-weight:700; margin-bottom:32px;">Your agents have the same vulnerabilities.</p>
+        <p class="auto-style-21">Your agents have the same vulnerabilities.</p>
         <div class="problem-grid">
             <div class="problem-card">
                 <h3><i data-lucide="zap" class="problem-icon"></i>The blast radius problem</h3>
@@ -378,7 +686,7 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
         </div>
 
         <!-- Minimal code example -->
-        <pre style="max-width:860px; margin:0 auto;"><code><span class="cm"># 1. install</span>
+        <pre class="auto-style-22"><code><span class="cm"># 1. install</span>
 pip install enact-sdk
 
 <span class="cm"># 2. set up your client</span>
@@ -399,8 +707,8 @@ result, receipt = enact.<span class="fn">run</span>(
     payload={<span class="str">"table"</span>: <span class="str">"users"</span>, <span class="str">"data"</span>: {...}},
 )</code></pre>
 
-        <p style="font-size:14px; color:var(--subtle); text-align:center; margin-top:24px;">
-            Already have an agent? See the <a href="#migrate" style="color:var(--accent);">Migration section ↓</a> for before/after code.
+        <p class="auto-style-23">
+            Already have an agent? See the <a class="auto-style-1" href="#migrate">Migration section ↓</a> for before/after code.
         </p>
     </div>
 </section>
@@ -415,7 +723,7 @@ result, receipt = enact.<span class="fn">run</span>(
         <p class="section-sub">Your agent's reasoning and planning logic doesn't change. You're adding a safety layer between it and your systems. Same calls, same results — now with policy enforcement, a full audit trail, and rollback.</p>
 
         <!-- 3 migration steps -->
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:32px; margin-bottom:48px;">
+        <div class="migration-steps auto-style-24">
             <div class="qs-step">
                 <div class="qs-num">1</div>
                 <h3>Register your systems</h3>
@@ -424,25 +732,25 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="qs-step">
                 <div class="qs-num">2</div>
                 <h3>Move your guard logic</h3>
-                <p>Any <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">if/else</code> checks you already write become Python policy functions. Or just use ours — 20+ ship out of the box.</p>
+                <p>Any <code class="auto-style-25">if/else</code> checks you already write become Python policy functions. Or just use ours — 20+ ship out of the box.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
                 <h3>Replace direct calls</h3>
-                <p><code style="font-family:var(--mono); font-size:12px; color:var(--accent);">tool.do_thing()</code> becomes <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.run()</code>. That's the whole migration.</p>
+                <p><code class="auto-style-25">tool.do_thing()</code> becomes <code class="auto-style-25">enact.run()</code>. That's the whole migration.</p>
             </div>
         </div>
 
         <!-- Before / After code comparison -->
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:28px;">
+        <div class="before-after-grid auto-style-26">
 
             <!-- BEFORE -->
             <div>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <span style="width:10px; height:10px; border-radius:50%; background:var(--red); display:block; flex-shrink:0;"></span>
-                    <span style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--red);">Before — raw tool calls</span>
+                <div class="before-after-header auto-style-27">
+                    <span class="before-after-dot auto-style-28"></span>
+                    <span class="before-after-label auto-style-29">Before — raw tool calls</span>
                 </div>
-                <pre style="font-size:12px; line-height:1.75; height:100%;"><code><span class="cm"># your agent today — calling tools directly</span>
+                <pre class="auto-style-30"><code><span class="cm"># your agent today — calling tools directly</span>
 <span class="kw">import</span> github_sdk
 <span class="kw">import</span> psycopg2
 
@@ -461,11 +769,11 @@ db.<span class="fn">execute</span>(<span class="str">"DELETE FROM sessions"</spa
 
             <!-- AFTER -->
             <div>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                    <span style="width:10px; height:10px; border-radius:50%; background:var(--green); display:block; flex-shrink:0;"></span>
-                    <span style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--green);">After — wrapped with Enact</span>
+                <div class="before-after-header auto-style-27">
+                    <span class="before-after-dot auto-style-31"></span>
+                    <span class="before-after-label auto-style-32">After — wrapped with Enact</span>
                 </div>
-                <pre style="font-size:12px; line-height:1.75; height:100%;"><code><span class="cm"># one-time setup — replaces your SDK clients</span>
+                <pre class="auto-style-30"><code><span class="cm"># one-time setup — replaces your SDK clients</span>
 <span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
 <span class="kw">from</span> enact.connectors.github <span class="kw">import</span> <span class="fn">GitHubConnector</span>
 <span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
@@ -491,18 +799,18 @@ result, receipt = enact.<span class="fn">run</span>(
         </div>
 
         <!-- Reassurance row -->
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;">
-            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--bg);">
-                <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--green); flex-shrink:0;"></i>
-                <span style="font-size:13px; color:var(--muted);">Works with LangChain, CrewAI, OpenAI, Claude — any framework that calls Python</span>
+        <div class="reassurance-row auto-style-33">
+            <div class="reassurance-item auto-style-34">
+                <i data-lucide="check-circle" class="reassurance-icon auto-style-35"></i>
+                <span class="reassurance-text auto-style-36">Works with LangChain, CrewAI, OpenAI, Claude — any framework that calls Python</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--bg);">
-                <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--green); flex-shrink:0;"></i>
-                <span style="font-size:13px; color:var(--muted);">Your agent's reasoning, planning, and prompting logic stays exactly the same</span>
+            <div class="reassurance-item auto-style-34">
+                <i data-lucide="check-circle" class="reassurance-icon auto-style-35"></i>
+                <span class="reassurance-text auto-style-36">Your agent's reasoning, planning, and prompting logic stays exactly the same</span>
             </div>
-            <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; border-radius:8px; border:1px solid var(--border); background:var(--bg);">
-                <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--green); flex-shrink:0;"></i>
-                <span style="font-size:13px; color:var(--muted);">No infra changes — self-host for free or point to enact.cloud in 30 seconds</span>
+            <div class="reassurance-item auto-style-34">
+                <i data-lucide="check-circle" class="reassurance-icon auto-style-35"></i>
+                <span class="reassurance-text auto-style-36">No infra changes — self-host for free or point to enact.cloud in 30 seconds</span>
             </div>
         </div>
     </div>
@@ -517,165 +825,165 @@ result, receipt = enact.<span class="fn">run</span>(
         <h2>20+ policies, shipped today</h2>
         <p class="section-sub">Pure Python functions — no LLMs, versioned in Git, testable with pytest. Register any combination on your <span class="inline-code">EnactClient</span>.</p>
 
-        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:20px;">
+        <div class="policy-grid auto-style-37">
 
             <!-- DATABASE SAFETY — spans full width, most important -->
-            <div style="background:var(--bg); border:1px solid rgba(220,38,38,.4); border-radius:12px; padding:24px; grid-column: 1 / -1;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-                    <i data-lucide="database" style="width:16px; height:16px; color:var(--red); flex-shrink:0;"></i>
-                    <h3 style="font-size:13px; font-weight:700; color:var(--red); letter-spacing:0.08em; text-transform:uppercase;">Database Safety</h3>
-                    <span style="font-size:12px; color:var(--subtle); margin-left:auto;">Blocks the Replit incident pattern — schema drops, unsafe deletes, unfiltered updates</span>
+            <div class="policy-card policy-card-database auto-style-38">
+                <div class="policy-card-header auto-style-39">
+                    <i data-lucide="database" class="policy-card-icon auto-style-40"></i>
+                    <h3 class="policy-card-title auto-style-41">Database Safety</h3>
+                    <span class="policy-card-subtitle auto-style-42">Blocks the Replit incident pattern — schema drops, unsafe deletes, unfiltered updates</span>
                 </div>
-                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">block_ddl</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks DROP, TRUNCATE, ALTER, CREATE — word-boundary regex, catches semicolon-joined statements</span>
+                <div class="policy-inner-grid auto-style-43">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">block_ddl</code>
+                        <br><span class="auto-style-45">Blocks DROP, TRUNCATE, ALTER, CREATE — word-boundary regex, catches semicolon-joined statements</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_row</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Sentinel — unconditionally blocks all row deletions regardless of table or WHERE clause</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_delete_row</code>
+                        <br><span class="auto-style-45">Sentinel — unconditionally blocks all row deletions regardless of table or WHERE clause</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_without_where</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks DELETE with empty or missing WHERE clause — prevents deleting all rows</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_delete_without_where</code>
+                        <br><span class="auto-style-45">Blocks DELETE with empty or missing WHERE clause — prevents deleting all rows</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_update_without_where</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks UPDATE with empty or missing WHERE clause — prevents overwriting every record</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_update_without_where</code>
+                        <br><span class="auto-style-45">Blocks UPDATE with empty or missing WHERE clause — prevents overwriting every record</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px; grid-column:span 2;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">protect_tables(list)</code>
-                        <span style="font-size:12px; color:var(--muted); margin-left:10px;">Factory — blocks any operation on a named table. Exact, case-sensitive match. Pass-through if no table in payload.</span>
+                    <div class="auto-style-46">
+                        <code class="auto-style-25">protect_tables(list)</code>
+                        <span class="auto-style-47">Factory — blocks any operation on a named table. Exact, case-sensitive match. Pass-through if no table in payload.</span>
                     </div>
                 </div>
             </div>
 
             <!-- CODE FREEZE + TIME -->
-            <div style="background:var(--surface); border:1px solid rgba(217,119,6,.35); border-radius:12px; padding:24px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-                    <i data-lucide="pause-circle" style="width:16px; height:16px; color:var(--amber); flex-shrink:0;"></i>
-                    <h3 style="font-size:13px; font-weight:700; color:var(--amber); letter-spacing:0.08em; text-transform:uppercase;">Code Freeze &amp; Time</h3>
+            <div class="auto-style-48">
+                <div class="auto-style-39">
+                    <i class="auto-style-49" data-lucide="pause-circle"></i>
+                    <h3 class="auto-style-50">Code Freeze &amp; Time</h3>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">code_freeze_active</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks all agent actions when ENACT_FREEZE=1 — enforces "do not touch" at the action layer, not the prompt layer</span>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">code_freeze_active</code>
+                        <br><span class="auto-style-45">Blocks all agent actions when ENACT_FREEZE=1 — enforces "do not touch" at the action layer, not the prompt layer</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">within_maintenance_window(start, end)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Restricts actions to a UTC time window — midnight-crossing windows supported (e.g. 22:00–06:00 UTC)</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">within_maintenance_window(start, end)</code>
+                        <br><span class="auto-style-45">Restricts actions to a UTC time window — midnight-crossing windows supported (e.g. 22:00–06:00 UTC)</span>
                     </div>
                 </div>
             </div>
 
             <!-- ACCESS CONTROL -->
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-                    <i data-lucide="shield-check" style="width:16px; height:16px; color:var(--accent); flex-shrink:0;"></i>
-                    <h3 style="font-size:13px; font-weight:700; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase;">Access Control</h3>
+            <div class="policy-card policy-card-access auto-style-52">
+                <div class="policy-card-header auto-style-39">
+                    <i data-lucide="shield-check" class="policy-card-icon auto-style-53"></i>
+                    <h3 class="policy-card-title auto-style-54">Access Control</h3>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_read_sensitive_tables(list)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks SELECT on named tables — agents can't read credit_cards, audit_log, etc.</span>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_read_sensitive_tables(list)</code>
+                        <br><span class="auto-style-45">Blocks SELECT on named tables — agents can't read credit_cards, audit_log, etc.</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_read_sensitive_paths(list)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks read_file on paths under sensitive prefixes (/etc, /root, secrets/) — traversal-safe</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_read_sensitive_paths(list)</code>
+                        <br><span class="auto-style-45">Blocks read_file on paths under sensitive prefixes (/etc, /root, secrets/) — traversal-safe</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_user_role(*roles)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">ABAC: blocks if user_attributes["role"] not in allowed set — reads structured identity, not payload</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">require_user_role(*roles)</code>
+                        <br><span class="auto-style-45">ABAC: blocks if user_attributes["role"] not in allowed set — reads structured identity, not payload</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_clearance_for_path(paths, min)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">ABAC: blocks if user_attributes["clearance_level"] below minimum for sensitive path</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">require_clearance_for_path(paths, min)</code>
+                        <br><span class="auto-style-45">ABAC: blocks if user_attributes["clearance_level"] below minimum for sensitive path</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">contractor_cannot_write_pii</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks contractors from writing any field in the caller-defined pii_fields list</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">contractor_cannot_write_pii</code>
+                        <br><span class="auto-style-45">Blocks contractors from writing any field in the caller-defined pii_fields list</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_actor_role(list)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks actors without an allowed role — reads payload["actor_role"]</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">require_actor_role(list)</code>
+                        <br><span class="auto-style-45">Blocks actors without an allowed role — reads payload["actor_role"]</span>
                     </div>
                 </div>
             </div>
 
             <!-- GIT SAFETY -->
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-                    <i data-lucide="git-branch" style="width:16px; height:16px; color:var(--green); flex-shrink:0;"></i>
-                    <h3 style="font-size:13px; font-weight:700; color:var(--green); letter-spacing:0.08em; text-transform:uppercase;">Git Safety</h3>
+            <div class="auto-style-52">
+                <div class="auto-style-39">
+                    <i class="auto-style-55" data-lucide="git-branch"></i>
+                    <h3 class="auto-style-56">Git Safety</h3>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_push_to_main</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks direct pushes to main or master — the Kiro pattern</span>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_push_to_main</code>
+                        <br><span class="auto-style-45">Blocks direct pushes to main or master — the Kiro pattern</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_merge_to_main</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks PR merges targeting main or master</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_merge_to_main</code>
+                        <br><span class="auto-style-45">Blocks PR merges targeting main or master</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_branch</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Sentinel — unconditionally blocks all branch deletions</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_delete_branch</code>
+                        <br><span class="auto-style-45">Sentinel — unconditionally blocks all branch deletions</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">max_files_per_commit(n)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Caps blast radius — blocks commits touching more than n files</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">max_files_per_commit(n)</code>
+                        <br><span class="auto-style-45">Caps blast radius — blocks commits touching more than n files</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">require_branch_prefix(prefix)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Enforces branch naming — blocks branches not starting with required prefix</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">require_branch_prefix(prefix)</code>
+                        <br><span class="auto-style-45">Enforces branch naming — blocks branches not starting with required prefix</span>
                     </div>
                 </div>
             </div>
 
             <!-- FILESYSTEM + CRM in 2 columns -->
-            <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px;">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-                    <i data-lucide="folder-lock" style="width:16px; height:16px; color:var(--muted); flex-shrink:0;"></i>
-                    <h3 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase;">Filesystem Safety</h3>
+            <div class="auto-style-52">
+                <div class="auto-style-39">
+                    <i class="auto-style-57" data-lucide="folder-lock"></i>
+                    <h3 class="auto-style-58">Filesystem Safety</h3>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden; margin-bottom:24px;">
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_delete_file</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Sentinel — unconditionally blocks all file deletions</span>
+                <div class="auto-style-59">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_delete_file</code>
+                        <br><span class="auto-style-45">Sentinel — unconditionally blocks all file deletions</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">restrict_paths(list)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Confines operations to allowed directories — traversal-safe prefix matching</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">restrict_paths(list)</code>
+                        <br><span class="auto-style-45">Confines operations to allowed directories — traversal-safe prefix matching</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">block_extensions(list)</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Blocks operations on .env, .key, .pem and other sensitive file types</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">block_extensions(list)</code>
+                        <br><span class="auto-style-45">Blocks operations on .env, .key, .pem and other sensitive file types</span>
                     </div>
                 </div>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--border);">
-                    <i data-lucide="users" style="width:16px; height:16px; color:var(--muted); flex-shrink:0;"></i>
-                    <h3 style="font-size:13px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase;">CRM</h3>
+                <div class="auto-style-39">
+                    <i class="auto-style-57" data-lucide="users"></i>
+                    <h3 class="auto-style-58">CRM</h3>
                 </div>
-                <div style="display:flex; flex-direction:column; gap:1px; background:var(--border); border-radius:8px; overflow:hidden;">
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">dont_duplicate_contacts</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Live lookup before workflow runs — blocks creating a contact that already exists</span>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_duplicate_contacts</code>
+                        <br><span class="auto-style-45">Live lookup before workflow runs — blocks creating a contact that already exists</span>
                     </div>
-                    <div style="background:var(--surface); padding:10px 14px;">
-                        <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">limit_tasks_per_contact</code>
-                        <br><span style="font-size:12px; color:var(--muted);">Rate-limits tasks per contact per rolling time window</span>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">limit_tasks_per_contact</code>
+                        <br><span class="auto-style-45">Rate-limits tasks per contact per rolling time window</span>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <div style="margin-top:24px; padding:20px 24px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; align-items:flex-start; gap:32px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:240px;">
-                <strong style="font-size:14px; display:block; margin-bottom:6px;">Write your own in 5 lines of Python</strong>
-                <p style="font-size:13px; color:var(--muted);">Any callable <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">(WorkflowContext) -&gt; PolicyResult</code> can be registered. No SDK extension needed.</p>
+        <div class="auto-style-60">
+            <div class="auto-style-61">
+                <strong class="auto-style-62">Write your own in 5 lines of Python</strong>
+                <p class="auto-style-36">Any callable <code class="auto-style-25">(WorkflowContext) -&gt; PolicyResult</code> can be registered. No SDK extension needed.</p>
             </div>
-            <pre style="font-size:12px; line-height:1.65; flex:1; min-width:300px;"><code><span class="kw">def</span> <span class="fn">only_on_weekdays</span>(ctx: WorkflowContext) -> PolicyResult:
+            <pre class="auto-style-63"><code><span class="kw">def</span> <span class="fn">only_on_weekdays</span>(ctx: WorkflowContext) -> PolicyResult:
     ok = datetime.now(timezone.utc).weekday() < 5
     <span class="kw">return</span> PolicyResult(
         policy=<span class="str">"only_on_weekdays"</span>, passed=ok,
@@ -695,7 +1003,7 @@ result, receipt = enact.<span class="fn">run</span>(
         <h2>Blocked. Approved. Rolled back.</h2>
         <p class="section-sub">Three outcomes every production team needs to handle. Enact documents all of them — and gives you the receipt to prove it.</p>
 
-        <div class="tab-row" style="justify-content:center;">
+        <div class="tab-row auto-style-64">
             <button class="tab-btn active" onclick="showTab('blocked')">✗ Blocked (disaster prevented)</button>
             <button class="tab-btn" onclick="showTab('approved')">✓ Approved (safe operation)</button>
             <button class="tab-btn" onclick="showTab('rollback')">↩ Rolled back (damage undone)</button>
@@ -703,7 +1011,7 @@ result, receipt = enact.<span class="fn">run</span>(
 
         <!-- BLOCKED -->
         <div class="tab-pane active" id="tab-blocked">
-            <div class="receipt" style="margin:0 auto;">
+            <div class="receipt auto-style-65">
                 <div class="receipt-hdr">
                     <div class="r-row"><div class="r-label">Request ID</div><div class="r-val">REQ-08472</div></div>
                     <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 03:57:42 UTC</div></div>
@@ -741,7 +1049,7 @@ result, receipt = enact.<span class="fn">run</span>(
                 </div>
                 <div class="r-section">
                     <h4>ACTIONS EXECUTED</h4>
-                    <div class="r-row"><div class="r-label">Result</div><div class="r-val" style="color:var(--red);">No actions executed (policy violation)</div></div>
+                    <div class="r-row"><div class="r-label">Result</div><div class="r-val auto-style-66">No actions executed (policy violation)</div></div>
                     <div class="r-row"><div class="r-label">Alert sent</div><div class="r-val">PagerDuty #P847291 created · Slack #security-incidents notified</div></div>
                 </div>
                 <div class="r-section">
@@ -755,7 +1063,7 @@ result, receipt = enact.<span class="fn">run</span>(
 
         <!-- APPROVED -->
         <div class="tab-pane" id="tab-approved">
-            <div class="receipt" style="margin:0 auto;">
+            <div class="receipt auto-style-65">
                 <div class="receipt-hdr">
                     <div class="r-row"><div class="r-label">Request ID</div><div class="r-val">REQ-08471</div></div>
                     <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 06:22:15 UTC</div></div>
@@ -803,12 +1111,12 @@ result, receipt = enact.<span class="fn">run</span>(
 
         <!-- ROLLBACK -->
         <div class="tab-pane" id="tab-rollback">
-            <div class="receipt" style="margin:0 auto;">
+            <div class="receipt auto-style-65">
                 <div class="receipt-hdr">
                     <div class="r-row"><div class="r-label">Rollback ID</div><div class="r-val">REQ-08476</div></div>
                     <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 14:35:12 UTC</div></div>
-                    <div class="r-row"><div class="r-label">Type</div><div class="r-val" style="color:var(--amber); font-weight:600;">ROLLBACK of REQ-08473</div></div>
-                    <div class="r-row"><div class="r-label">Decision</div><div class="r-val"><span style="display:inline-block; padding:3px 10px; background:rgba(217,119,6,.15); color:var(--amber); border:1px solid rgba(217,119,6,.3); border-radius:5px; font-weight:700;">PARTIAL ROLLBACK</span></div></div>
+                    <div class="r-row"><div class="r-label">Type</div><div class="r-val auto-style-67">ROLLBACK of REQ-08473</div></div>
+                    <div class="r-row"><div class="r-label">Decision</div><div class="r-val"><span class="auto-style-68">PARTIAL ROLLBACK</span></div></div>
                 </div>
                 <div class="r-section">
                     <h4>ORIGINAL RUN</h4>
@@ -836,8 +1144,8 @@ result, receipt = enact.<span class="fn">run</span>(
                 </div>
                 <div class="r-section">
                     <h4>RESULT</h4>
-                    <div class="r-row"><div class="r-label">Status</div><div class="r-val" style="color:var(--amber);">Partial — 1 of 2 actions reversed</div></div>
-                    <div class="r-row"><div class="r-label">Rows restored</div><div class="r-val" style="color:var(--green);">47 customer records back in prod</div></div>
+                    <div class="r-row"><div class="r-label">Status</div><div class="r-val auto-style-69">Partial — 1 of 2 actions reversed</div></div>
+                    <div class="r-row"><div class="r-label">Rows restored</div><div class="r-val auto-style-70">47 customer records back in prod</div></div>
                     <div class="r-row"><div class="r-label">Manual action</div><div class="r-val">Revert or delete commit abc1234 from remote</div></div>
                     <div class="r-row"><div class="r-label">Alert sent</div><div class="r-val">PagerDuty #P847294 updated · Slack #data-team notified</div></div>
                 </div>
@@ -845,7 +1153,7 @@ result, receipt = enact.<span class="fn">run</span>(
                     <h4>TECHNICAL LOG</h4>
                     <div class="r-row"><div class="r-label">Execution time</div><div class="r-val">612ms</div></div>
                     <div class="r-row"><div class="r-label">Actions reversed</div><div class="r-val">1 of 2 (1 irreversible)</div></div>
-                    <div class="r-row"><div class="r-label">Signature</div><div class="r-val" style="color:var(--subtle); font-size:12px;">sha256:d4e8f2a193c7...b3c9 (rollback receipt signed)</div></div>
+                    <div class="r-row"><div class="r-label">Signature</div><div class="r-val auto-style-71">sha256:d4e8f2a193c7...b3c9 (rollback receipt signed)</div></div>
                 </div>
             </div>
         </div>
@@ -861,29 +1169,29 @@ result, receipt = enact.<span class="fn">run</span>(
             <div>
                 <div class="section-label">Workflow library</div>
                 <h2>Stop writing boilerplate connector code</h2>
-                <p style="font-size:16px; color:var(--muted); line-height:1.7; margin-bottom:20px;">
+                <p class="auto-style-72">
                     Think Zapier — but for AI agents, built by engineers who've seen what goes wrong.
                     Every workflow is pre-built, red-teamed, idempotent, and ready to deploy in minutes.
                     We write them. We maintain them. You just register and run.
                 </p>
-                <p style="font-size:14px; color:var(--subtle); line-height:1.6;">
+                <p class="auto-style-73">
                     No more figuring out connector quirks, handling rate limits, or writing the same
                     duplicate-check logic for the fifth time. The library grows with every release.
                 </p>
             </div>
-            <div style="display:flex; flex-direction:column; gap:12px; padding:28px; background:var(--surface); border-radius:12px; border:1px solid var(--border);">
-                <div style="font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--subtle); margin-bottom:4px;">Why pre-built workflows matter</div>
-                <div style="display:flex; gap:12px; align-items:flex-start;">
-                    <span style="color:var(--green); font-size:16px; flex-shrink:0;">✓</span>
-                    <p style="font-size:13px; color:var(--muted); line-height:1.6;"><strong style="color:var(--text);">Idempotent by design.</strong> If step 1 succeeds and step 2 fails, a retry won't create duplicates. Every connector checks before it acts.</p>
+            <div class="workflow-benefits auto-style-74">
+                <div class="workflow-benefits-title auto-style-75">Why pre-built workflows matter</div>
+                <div class="workflow-benefits-item auto-style-76">
+                    <span class="workflow-benefits-check auto-style-77">✓</span>
+                    <p class="workflow-benefits-text auto-style-78"><strong class="auto-style-10">Idempotent by design.</strong> If step 1 succeeds and step 2 fails, a retry won't create duplicates. Every connector checks before it acts.</p>
                 </div>
-                <div style="display:flex; gap:12px; align-items:flex-start;">
-                    <span style="color:var(--green); font-size:16px; flex-shrink:0;">✓</span>
-                    <p style="font-size:13px; color:var(--muted); line-height:1.6;"><strong style="color:var(--text);">Red-teamed.</strong> We run adversarial prompts against every workflow before it ships. If an agent can break it, we fix it first.</p>
+                <div class="workflow-benefits-item auto-style-76">
+                    <span class="workflow-benefits-check auto-style-77">✓</span>
+                    <p class="workflow-benefits-text auto-style-78"><strong class="auto-style-10">Red-teamed.</strong> We run adversarial prompts against every workflow before it ships. If an agent can break it, we fix it first.</p>
                 </div>
-                <div style="display:flex; gap:12px; align-items:flex-start;">
-                    <span style="color:var(--green); font-size:16px; flex-shrink:0;">✓</span>
-                    <p style="font-size:13px; color:var(--muted); line-height:1.6;"><strong style="color:var(--text);">Policy-ready.</strong> Every workflow ships with a recommended policy set. You can tighten them. You can't accidentally skip them.</p>
+                <div class="workflow-benefits-item auto-style-76">
+                    <span class="workflow-benefits-check auto-style-77">✓</span>
+                    <p class="workflow-benefits-text auto-style-78"><strong class="auto-style-10">Policy-ready.</strong> Every workflow ships with a recommended policy set. You can tighten them. You can't accidentally skip them.</p>
                 </div>
             </div>
         </div>
@@ -958,10 +1266,10 @@ result, receipt = enact.<span class="fn">run</span>(
     <div class="container">
         <div class="section-label">Roadmap</div>
         <div class="capability-section-header">
-            <h2 style="margin-bottom:0;">Coming in v0.3</h2>
-            <span class="badge-soon" style="font-size:12px; padding:4px 10px;">v0.3+</span>
+            <h2 class="auto-style-79">Coming in v0.3</h2>
+            <span class="badge-soon auto-style-80">v0.3+</span>
         </div>
-        <p class="section-sub" style="margin-bottom:40px;">
+        <p class="section-sub auto-style-81">
             These are the capabilities teams ask for most. Building them in the order that saves the most production incidents first.
         </p>
 
@@ -973,10 +1281,10 @@ result, receipt = enact.<span class="fn">run</span>(
                 <p>High-risk actions pause and wait for a human to approve before continuing. Slack DM, email, or web UI — your choice. Timeout = auto-abort with receipt. No more "the agent just did it while I was asleep."</p>
             </div>
 
-            <div class="capability-card" style="border-color: rgba(5,150,105,.3); background: rgba(5,150,105,.04);">
-                <i data-lucide="rotate-ccw" class="cap-icon" style="color: var(--green);"></i>
+            <div class="capability-card auto-style-82">
+                <i data-lucide="rotate-ccw" class="cap-icon auto-style-83"></i>
                 <h3>One-Step Rollback <span class="badge-live">live</span></h3>
-                <p>Undo reversible agent actions in one command. <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PASS</code> / <code style="font-family:var(--mono); font-size:12px; color:var(--accent);">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
+                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">
@@ -1005,12 +1313,12 @@ result, receipt = enact.<span class="fn">run</span>(
 
         </div>
 
-        <div style="margin-top:32px; padding:24px 28px; background:var(--surface); border-radius:10px; border:1px solid var(--border); display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
-            <div style="flex:1; min-width:260px;">
-                <strong style="display:block; font-size:15px; margin-bottom:6px;">Want early access to any of these?</strong>
-                <p style="font-size:14px; color:var(--muted);">We're working with a handful of teams to validate each capability before shipping. Tell us which one you need most.</p>
+        <div class="auto-style-84">
+            <div class="auto-style-85">
+                <strong class="auto-style-86">Want early access to any of these?</strong>
+                <p class="auto-style-87">We're working with a handful of teams to validate each capability before shipping. Tell us which one you need most.</p>
             </div>
-            <a href="mailto:hello@enact.cloud" class="btn btn-primary" style="flex-shrink:0;">Get early access →</a>
+            <a href="mailto:hello@enact.cloud" class="btn btn-primary auto-style-88">Get early access →</a>
         </div>
     </div>
 </section>
@@ -1035,9 +1343,9 @@ result, receipt = enact.<span class="fn">run</span>(
                     <li><span class="fi fi-check">✓</span> All canonical actions</li>
                     <li><span class="fi fi-check">✓</span> 1–2 reference workflows</li>
                     <li><span class="fi fi-check">✓</span> Local receipt generation (HMAC)</li>
-                    <li><span class="fi fi-dash" style="color:var(--subtle)">−</span> <span style="color:var(--subtle)">You manage infra + backups</span></li>
-                    <li><span class="fi fi-dash" style="color:var(--subtle)">−</span> <span style="color:var(--subtle)">grep receipts, no search UI</span></li>
-                    <li><span class="fi fi-dash" style="color:var(--subtle)">−</span> <span style="color:var(--subtle)">Console logs, no alerts</span></li>
+                    <li><span class="fi fi-dash auto-style-89">−</span> <span class="auto-style-89">You manage infra + backups</span></li>
+                    <li><span class="fi fi-dash auto-style-89">−</span> <span class="auto-style-89">grep receipts, no search UI</span></li>
+                    <li><span class="fi fi-dash auto-style-89">−</span> <span class="auto-style-89">Console logs, no alerts</span></li>
                 </ul>
                 <a href="https://github.com/russellmiller3/enact" class="pricing-btn">View on GitHub</a>
             </div>
@@ -1046,7 +1354,7 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="pricing-card featured">
                 <div class="featured-badge">RECOMMENDED</div>
                 <h3>Professional</h3>
-                <div class="price">$299<span style="font-size:18px; font-weight:400; color:var(--muted)">/mo</span></div>
+                <div class="price">$299<span class="auto-style-90">/mo</span></div>
                 <div class="price-sub">For teams shipping agents to prod</div>
                 <ul class="feature-list">
                     <li><span class="fi fi-check">✓</span> Everything in self-hosted</li>
@@ -1055,27 +1363,27 @@ result, receipt = enact.<span class="fn">run</span>(
                     <li><span class="fi fi-check">✓</span> <span><strong>Red-teamed workflow library</strong><span class="feat-desc">Validated, versioned, maintained</span></span></li>
                     <li><span class="fi fi-check">✓</span> 90-day retention (compliance-ready)</li>
                     <li><span class="fi fi-check">✓</span> Up to 50,000 receipts/month</li>
-                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Human-in-loop gates <span class="badge-soon">coming soon</span></span></li>
-                    <li><span class="fi fi-check">✓</span> <span>Rollback (<code style="font-family:var(--mono); font-size:11px;">enact.rollback(run_id)</code>)</span></li>
+                    <li><span class="fi fi-soon">◐</span> <span class="auto-style-69">Human-in-loop gates <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-check">✓</span> <span>Rollback (<code class="auto-style-91">enact.rollback(run_id)</code>)</span></li>
                     <li><span class="fi fi-check">✓</span> Email support (24hr response)</li>
                 </ul>
                 <a href="#" class="pricing-btn primary">Start free trial →</a>
-                <p style="font-size:12px; color:var(--subtle); margin-top:10px;">No credit card required</p>
+                <p class="auto-style-92">No credit card required</p>
             </div>
 
             <!-- Enterprise -->
             <div class="pricing-card">
                 <h3>Enterprise</h3>
-                <div class="price">$999<span style="font-size:18px; font-weight:400; color:var(--muted)">/mo</span></div>
+                <div class="price">$999<span class="auto-style-90">/mo</span></div>
                 <div class="price-sub">For orgs with compliance requirements</div>
                 <ul class="feature-list">
                     <li><span class="fi fi-check">✓</span> Everything in Professional</li>
                     <li><span class="fi fi-check">✓</span> 1+ year retention (audit trails)</li>
                     <li><span class="fi fi-check">✓</span> SIEM export (Splunk, Sentinel)</li>
                     <li><span class="fi fi-check">✓</span> SSO (SAML, Okta, Google)</li>
-                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">SOC2 / ISO27001 compliance export <span class="badge-soon">coming soon</span></span></li>
-                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Vertical policy packs <span class="badge-soon">coming soon</span></span></li>
-                    <li><span class="fi fi-soon">◐</span> <span style="color:var(--amber);">Anomaly detection <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-soon">◐</span> <span class="auto-style-69">SOC2 / ISO27001 compliance export <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-soon">◐</span> <span class="auto-style-69">Vertical policy packs <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-soon">◐</span> <span class="auto-style-69">Anomaly detection <span class="badge-soon">coming soon</span></span></li>
                     <li><span class="fi fi-check">✓</span> Unlimited receipts</li>
                     <li><span class="fi fi-check">✓</span> Priority support (4hr response)</li>
                 </ul>
@@ -1117,11 +1425,17 @@ result, receipt = enact.<span class="fn">run</span>(
 <footer>
     <div class="container">
         <p>Built for engineers who can't afford to find out what happens when an agent goes off-script.</p>
-        <p style="margin-top:6px;">© 2026 Enact · Open source · Audit-trail ready · <a href="https://github.com/russellmiller3/enact" style="color:var(--accent);">GitHub</a></p>
+        <p class="auto-style-93">© 2026 Enact · Open source · Audit-trail ready · <a class="auto-style-1" href="https://github.com/russellmiller3/enact">GitHub</a></p>
     </div>
 </footer>
 
 <script>
+    document.querySelectorAll('nav a').forEach(link => {
+        link.addEventListener('click', () => {
+            document.querySelector('nav').classList.remove('open');
+        });
+    });
+
     function showTab(name) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
