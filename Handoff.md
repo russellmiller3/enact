@@ -31,42 +31,69 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
-- Branch: `claude/merge-branches-update-docs-dOg68` (merging all feature branches)
-- Remote: `origin` → https://github.com/russellmiller3/enact (up to date)
-- PyPI: `enact-sdk 0.3.1` live — needs bump to `0.3.2` for Slack connector
+- Branch: `claude/merge-branches-update-docs-dOg68` (merged all feature branches → push to master)
+- Remote: `origin` → https://github.com/russellmiller3/enact
+- PyPI: `enact-sdk 0.4` — bump when ready to publish
 - License: ELv2 + no-resale clause
 
 ### What Exists (fully built + tested)
-348 tests, all passing. PyPI at `enact-sdk 0.3.1`.
 
+**SDK:**
 ```
 enact/
   models.py, policy.py, receipt.py, client.py
   rollback.py                       # dispatch for GitHub + Postgres + Filesystem + Slack
+  cloud_client.py                   # thin HTTP client for cloud API, lazy-imported
+  ui.py                             # local receipt browser, dark mode, enact-ui CLI
   connectors/github.py, postgres.py, filesystem.py
-  connectors/slack.py               # NEW — post_message, delete_message; rollback via ts
+  connectors/slack.py               # post_message, delete_message; rollback via ts
   policies/git.py, db.py, filesystem.py, crm.py, access.py, time.py
-  policies/slack.py                 # NEW — require_channel_allowlist, block_dms
+  policies/slack.py                 # require_channel_allowlist, block_dms
   workflows/agent_pr_workflow.py, db_safe_insert.py
-  workflows/post_slack_message.py   # NEW
-plans/2026-03-01-slack-connector.md
+  workflows/post_slack_message.py
 ```
 
-### Conventions Established
-- **`already_done` flag**: Every mutating action has `output["already_done"]` — `False` for fresh, descriptive string for noops. Exception: `post_message` is always `False` (duplicate posts are intentional).
-- **`rollback_data` field**: Every mutating `ActionResult` includes `rollback_data`. Slack: uses `response["channel"]` (resolved ID), not input channel — critical for DM posts.
-- **Plan template**: `PLAN-TEMPLATE.md` — Template A (Full TDD), B (Small), C (Refactoring).
+**Cloud backend (`cloud/` package):**
+```
+cloud/
+  __init__.py
+  db.py           # SQLite, ENACT_DB_PATH read fresh per call (test isolation)
+  auth.py         # X-Enact-Api-Key header; SHA-256 hash stored, raw key never persisted
+  token.py        # HMAC-signed approve/deny tokens; action bound to token
+  email.py        # smtplib; ENACT_EMAIL_DRY_RUN=1 for local dev
+  main.py         # FastAPI app with lifespan startup
+  routes/
+    receipts.py   # POST /receipts (idempotent), GET /receipts/{run_id}
+    hitl.py       # POST /hitl/request, GET /hitl/{id}, approve/deny + confirm pages
+    badge.py      # GET /badge/{team_id}/{workflow}.svg — public, green/red/grey
+```
 
-### PyPI — NEEDS BUMP
-Credentials in `~/.pypirc`. To release: bump `version` in `pyproject.toml` → `python -m build` → `python -m twine upload dist/enact_sdk-0.3.2*`
+**Tests:** 356+ tests total (SDK + cloud), all passing.
+
+**Run cloud locally:**
+```
+CLOUD_SECRET=changeme ENACT_EMAIL_DRY_RUN=1 uvicorn cloud.main:app --reload
+```
+
+### Key Design Decisions (cloud)
+- **DateTime format:** All stored as `"%Y-%m-%dT%H:%M:%SZ"` — Python 3.9's `fromisoformat` can't parse `+00:00`
+- **Signature contract:** `_write_hitl_receipt` signs canonical JSON (`sort_keys=True, separators=(",",":")`) and stores the same canonical string
+- **Badge ordering:** `ORDER BY rowid DESC` — handles same-second inserts correctly
+- **DB path isolation:** `get_connection()` reads `ENACT_DB_PATH` fresh on every call — no module reload needed in tests
+
+### Conventions Established
+- **`already_done` flag**: Every mutating connector action includes `output["already_done"]` — `False` for fresh, descriptive string for noop
+- **`rollback_data` field**: Every mutating `ActionResult` captures pre-action state
+- **Plan template**: `PLAN-TEMPLATE.md` → red-team with `plans/guides/RED-TEAM-MODE-GUIDE.md` before coding
 
 ### What Was Done This Session (2026-03-01)
-- **`SlackConnector`** ✅ — `post_message` + `delete_message`; rollback_data uses resolved channel ID
-- **Slack policies** ✅ — `require_channel_allowlist(channels)`, `block_dms` (blocks `D...` + `U...`)
-- **`post_slack_message` workflow** ✅ — single-step, receipt-backed, rollback-able
-- **Rollback wiring** ✅ — `_rollback_slack()` in `rollback.py`
-- **Receipt UI** ✅ — `enact/ui.py`, local receipt browser with dark mode toggle, `enact-ui` CLI
-- **`pyproject.toml`** ✅ — `slack = ["slack-sdk"]`, `all` group updated, v0.4
+- **Merged all feature branches** into `claude/merge-branches-update-docs-dOg68`:
+  - `receipt-ui-build` — `enact/ui.py`, local receipt browser with dark mode, `enact-ui` CLI ✅
+  - `red-team-slack-exercise` — `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback ✅
+  - `cloud-service-architecture` — Cloud MVP: HITL, receipt storage, status badge, approval receipts ✅
+  - `review-demo-index-page` — landing page receipt section fix ✅
+  - `handoff-pytedt-fix`, `complete-handoff-tasks` — docs/plan updates ✅
+- **README, SPEC, index.html** — updated for all merged features ✅
 
 ### Previously Completed
 - ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename ✅
@@ -75,17 +102,17 @@ Credentials in `~/.pypirc`. To release: bump `version` in `pyproject.toml` → `
 - `enact-sdk 0.3.1` on PyPI ✅
 
 ### Next Steps (priority order)
-1. **PyPI bump to `0.3.2`** — bump `pyproject.toml`, build, upload
-2. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. HubSpot free sandbox. (Template A)
-3. **Show HN post** — demo GIF is ready. Lead with rollback story (Replit incident).
-4. **AWS connector** — defer until HubSpot done.
+1. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
+2. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
+3. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact` (Template A)
+4. **Show HN post** — after receipt UI ships
 
 ### Files to Reference
-- `SPEC.md` — full build plan, strategic thesis, competitive analysis
+- `SPEC.md` — full build plan, strategic thesis, workflow roadmap
 - `README.md` — install, quickstart, connector/policy/rollback reference
 - `CLAUDE.md` — conventions, design philosophy, git workflow
 - `PLAN-TEMPLATE.md` — how to write implementation plans
-- `examples/demo.py` — 3-act demo: BLOCK + PASS + ROLLBACK (no credentials)
-- `examples/quickstart.py` — minimal PASS + BLOCK demo
-</content>
-</invoke>
+- `plans/guides/RED-TEAM-MODE-GUIDE.md` — red-team checklist
+- `plans/2026-03-01-cloud-mvp.md` — cloud MVP plan (implemented)
+- `plans/2026-03-01-slack-connector.md` — Slack plan (implemented)
+- `examples/demo.py` — 3-act demo: BLOCK + PASS + ROLLBACK
