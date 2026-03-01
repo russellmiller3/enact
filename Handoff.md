@@ -77,7 +77,6 @@ CLOUD_SECRET=changeme ENACT_EMAIL_DRY_RUN=1 uvicorn cloud.main:app --reload
 **Run tests:**
 ```
 pytest tests/cloud/ tests/test_cloud_client.py -v
-# NOTE: pytest must have fastapi+httpx installed. If "no module fastapi": uv tool install pytest --with fastapi --with httpx --with pydantic
 ```
 
 ### Key Design Decisions (cloud)
