@@ -4,10 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "enact-sdk"
-version = "0.3.1"
+version = "0.3.2"
 description = "An action firewall for AI agents"
 readme = "README.md"
-license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = [
     "pydantic>=2.0",
@@ -26,6 +25,9 @@ dev = [
     "responses",
     "psycopg2-binary",
 ]
+
+[tool.setuptools]
+license-files = []
 
 [tool.setuptools.packages.find]
 include = ["enact*"]
