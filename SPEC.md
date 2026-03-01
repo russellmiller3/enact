@@ -1,13 +1,56 @@
 # Enact — Build Spec
 
-> Source of truth: `landing_page.html`
+> Source of truth: `index.html`
 > Goal: Ship OSS MVP → get GitHub traction → convert to Cloud at $299/mo
+
+---
+
+## What Enact Is
+
+An action firewall for AI agents. Three things:
+
+1. **Vetted action allowlist** — agents can only call what you explicitly permit
+2. **Deterministic policy engine** — Python functions, no LLMs, versioned in Git, testable
+3. **Human-readable receipts** — every run returns who/what/why/pass/fail/what changed
+
+Single call from your agent:
+```python
+from enact import EnactClient
+from enact.connectors.github import GitHubConnector
+from enact.workflows.agent_pr_workflow import agent_pr_workflow
+from enact.policies.git import dont_push_to_main
+
+enact = EnactClient(
+    systems={"github": GitHubConnector(token="...")},
+    policies=[dont_push_to_main],
+    workflows=[agent_pr_workflow],
+    secret="your-secret-here",
+)
+
+result, receipt = enact.run(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/fix-123"},
+)
+```
 
 ---
 
 ## What's Been Built (as of 2026-03-01)
 
 **356+ tests, 0 failures. Published on PyPI as `enact-sdk` v0.4.**
+
+### Recently Shipped
+| Plan | What it delivered |
+|------|-------------------|
+| `2026-03-01-cloud-mvp` | Cloud backend (FastAPI), HITL gates, receipt storage, status badge, `cloud_client.py`, `enact/ui.py` receipt browser |
+| `2026-03-01-slack-connector` | `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback wiring |
+| `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
+| `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
+| `2026-02-24-demo-evidence-and-gif` | Row-level evidence in demo output, `record_demo.py`, `.cast` file |
+| `2026-02-24-demo-and-landing-v2` | `demo.py`, competitive research in spec, landing page v2 |
+| `2026-02-24-rollback` | `rollback()`, `rollback_data`, `rollback.py`, inverse actions |
+| `2026-02-24-idempotency` | `already_done` convention on all GitHub connector methods |
 
 ### Core SDK (v0.1)
 - **EnactClient** — `run()` orchestrates policy gate → workflow execution → signed receipt. `rollback(run_id)` reverses a prior run.
@@ -18,7 +61,7 @@
 ### Connectors (v0.1–v0.2)
 | Connector | Actions | Rollback | Idempotent |
 |-----------|---------|----------|------------|
-| **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `close_pr`, `close_issue` | ✅ (except `merge_pr`, `push_commit`) | ✅ `already_done` convention |
+| **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `close_pr`, `close_issue` | ✅ (except `push_commit`) | ✅ `already_done` convention |
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ (pre-SELECT captures state) | ✅ |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | ✅ (content captured before mutation) | ✅ |
 | **Slack** | `post_message`, `delete_message` | ✅ `post_message` → `delete_message` via `ts`; needs `chat:delete` scope | No — duplicate posts are intentional |
@@ -71,23 +114,11 @@
 - Receipt path traversal protection (UUID validation)
 
 ### Shipping
-- `pip install enact-sdk` — [PyPI v0.3.2](https://pypi.org/project/enact-sdk/0.3.2/)
+- `pip install enact-sdk` — [PyPI v0.4](https://pypi.org/project/enact-sdk/0.4/)
 - `examples/demo.py` — 3-act zero-credential demo (BLOCK → PASS → ROLLBACK) with row-level evidence
 - `examples/quickstart.py` — runnable GitHub + git policies demo
 - `examples/demo.cast` — asciinema recording for landing page
-- `landing_page.html` — v2 with rollback-first tabs, Replit/Kiro evidence, migration section (#migrate)
-
-### Plans Completed
-| Plan | What it delivered |
-|------|-------------------|
-| `2026-02-24-idempotency` | `already_done` convention on all GitHub connector methods |
-| `2026-02-24-rollback` | `rollback()`, `rollback_data`, `rollback.py`, inverse actions |
-| `2026-02-24-demo-and-landing-v2` | `demo.py`, competitive research in spec, landing page v2 |
-| `2026-02-24-demo-evidence-and-gif` | Row-level evidence in demo output, `record_demo.py`, `.cast` file |
-| `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
-| `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
-| `2026-03-01-slack-connector` | `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback wiring |
-| `2026-03-01-cloud-mvp` | Cloud backend (FastAPI), HITL gates, receipt storage, status badge, `cloud_client.py`, `enact/ui.py` receipt browser |
+- `index.html` — v2 with rollback-first tabs, Replit/Kiro evidence, migration section (#migrate)
 
 ---
 
@@ -125,211 +156,77 @@ Each of those is a billion-dollar company. Enact is the one product that does al
 
 **Build sequencing principle.** Ship 20 hardened workflows before building the ML model. Workflows are the data collection points and the reason to subscribe. The model comes after the data exists.
 
-**Demo before connectors.** The most important next artifact is `examples/demo.py` — a self-contained, zero-credential 3-act script showing the Kiro scenario (BLOCK), normal operation (PASS + receipt), and the Replit scenario (PASS + rollback). This is what lands on HN and converts GitHub stars to trials. HubSpot connector comes after the demo is sharp.
-
-**The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records. Enact's saga approach (connector methods that check-before-act) directly addresses this. Ship in v0.2 as a named feature, not an implementation detail.
+**The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records. Enact's saga approach (connector methods that check-before-act) directly addresses this. Shipped in v0.2 as a named feature, not an implementation detail.
 
 ---
 
-## What Enact Is
-
-An action firewall for AI agents. Three things:
-
-1. **Vetted action allowlist** — agents can only call what you explicitly permit
-2. **Deterministic policy engine** — Python functions, no LLMs, versioned in Git, testable
-3. **Human-readable receipts** — every run returns who/what/why/pass/fail/what changed
-
-Single call from your agent:
-```python
-from enact import EnactClient
-from enact.connectors.hubspot import HubSpotConnector
-from enact.workflows.new_lead import new_lead_workflow
-from enact.policies.crm import dont_duplicate_contacts
-
-enact = EnactClient(
-    systems={"hubspot": HubSpotConnector(api_key="...")},
-    policies=[dont_duplicate_contacts],
-    workflows=[new_lead_workflow],
-)
-
-result, receipt = enact.run(
-    workflow="new_lead_workflow",
-    actor_email="agent@company.com",
-    payload={"email": "jane@acme.com", "company": "Acme Inc"},
-)
-```
-
----
-
-## What We Have (Reuse)
-
-| File | Status | Reuse plan |
-|------|--------|-----------|
-| `backend/config/policies.py` | ✅ Working | Generalize → Enact policy engine |
-| `backend/agents/policy.py` | ✅ Working | Port core logic → `EnactClient.run()` |
-| `backend/receipts.py` | ✅ Working | Port + add HMAC signing |
-| `backend/models.py` | ✅ Working | Refactor for Enact data model |
-| `backend/server.py` | ✅ Working | Reuse for Cloud API layer |
-| `backend/tests/test_policy_agent.py` | ✅ Working | Expand for Enact |
-| `backend/agents/notify.py` | ⚠️ Partial | Pattern reusable for Cloud alerting |
-| `backend/workflow.py` | ⚠️ Partial | Orchestrator pattern reusable |
-
-
-
----
-
-## MVP Scope
-
-**Target:** `pip install enact` works, README example runs in 5 minutes, GitHub-starable.
-
-### Connectors (v1)
-- **Postgres** — via `psycopg2`. Works with Supabase, Neon, Railway, RDS — any Postgres-compatible host
-- **GitHub** — via `PyGithub`. Coding agents are the most common AI agents; this resonates immediately with engineers
-- **HubSpot** — via `hubspot-api-client`. Primary RevOps use case on landing page; needs sandbox to test
-- Salesforce → v2
-
-### Canonical Actions (v1)
-| System | Actions |
-|--------|---------|
-| Postgres | `insert_row`, `update_row`, `select_rows`, `delete_row` |
-| GitHub | `create_branch`, `create_pr`, `push_commit`, `delete_branch`, `create_issue`, `merge_pr` |
-| HubSpot | `create_contact`, `update_deal`, `create_task`, `get_contact` |
-
-### Reference Workflows (v1)
-- `db_safe_insert` — Postgres: check constraints → insert row → receipt
-- `agent_pr_workflow` — GitHub: create branch → push → open PR (never to main directly)
-- `new_lead_workflow` — HubSpot: create contact → create deal → create task
-
-### Policy Engine (v1)
-Port and generalize from `config/policies.py`. Policies are plain Python functions:
-```python
-def dont_duplicate_contacts(context):
-    existing = context.systems["hubspot"].get_contact(context.payload["email"])
-    return PolicyResult(
-        policy="dont_duplicate_contacts",
-        passed=existing is None,
-        reason=f"Contact {context.payload['email']} already exists" if existing else "No duplicate found"
-    )
-```
-
-Built-in policies to ship:
-
-**CRM (`enact/policies/crm.py`)**
-- `dont_duplicate_contacts()`
-- `limit_tasks_per_contact(max_tasks, window_days)`
-
-**Access (`enact/policies/access.py`)**
-- `contractor_cannot_write_pii()`
-- `require_actor_role(allowed_roles)`
-
-**Time (`enact/policies/time.py`)**
-- `within_maintenance_window(start_utc, end_utc)`
-
-**Git (`enact/policies/git.py`)**
-- `dont_push_to_main()` — blocks any push directly to main/master
-- `no_push_during_deploy_freeze(start_utc, end_utc)` — time-based block
-- `max_files_per_commit(n)` — blast radius control
-- `require_branch_prefix(prefix)` — e.g. agent branches must start with `agent/`
-
-### Receipt Writer (v1)
-Port from `receipts.py` + add:
-- HMAC-SHA256 signing (makes "audit-trail ready" claim true)
-- Return as structured dict (not just text file)
-- Write to `receipts/` directory (local, OSS)
-
-### Models (v1)
-
-```python
-class WorkflowContext(BaseModel):
-    workflow: str
-    actor_email: str
-    payload: dict
-    systems: dict           # connector instances keyed by name
-
-class PolicyResult(BaseModel):
-    policy: str
-    passed: bool
-    reason: str
-
-class ActionResult(BaseModel):
-    action: str             # e.g. "create_contact"
-    system: str             # e.g. "hubspot"
-    success: bool
-    output: dict            # raw response from the connector
-
-class Receipt(BaseModel):
-    run_id: str             # UUID
-    workflow: str
-    actor_email: str
-    payload: dict
-    policy_results: list[PolicyResult]
-    decision: str           # "PASS" | "BLOCK"
-    actions_taken: list[ActionResult]   # empty if BLOCK
-    timestamp: str          # ISO8601
-    signature: str          # HMAC-SHA256 hex digest
-
-class RunResult(BaseModel):
-    success: bool
-    workflow: str
-    output: dict
-```
-
-### EnactClient (v1)
-```python
-class EnactClient:
-    def __init__(self, systems, policies, workflows): ...
-    def run(self, workflow, actor_email, payload) -> tuple[RunResult, Receipt]: ...
-```
-
-`run()` execution order:
-1. Build `WorkflowContext` from args + registered systems
-2. Run all registered policies → `list[PolicyResult]`
-3. If any policy fails → `decision = BLOCK`, write receipt (`actions_taken=[]`), return `RunResult(success=False)`
-4. If all pass → `decision = PASS`, execute workflow → `list[ActionResult]`
-5. Write signed receipt (includes `actions_taken`)
-6. Return `RunResult(success=True, output=...)`
-
----
-
-## Repo Structure (Target)
+## Repo Structure (Current)
 
 ```
 enact/
-├── enact/                    # The pip-installable package
-│   ├── __init__.py           # Exports: EnactClient, Receipt
-│   ├── client.py             # EnactClient — main entry point
-│   ├── policy.py             # Policy engine (ported from agents/policy.py)
-│   ├── receipt.py            # Receipt writer (ported from receipts.py)
-│   ├── models.py             # WorkflowContext, PolicyResult, ActionResult, Receipt, RunResult
+├── enact/                        # The pip-installable package
+│   ├── __init__.py               # Exports: EnactClient, Receipt
+│   ├── client.py                 # EnactClient — main entry point; cloud_api_key param
+│   ├── cloud_client.py           # HTTP client for cloud API (stdlib urllib, no extra deps)
+│   ├── policy.py                 # Policy engine
+│   ├── receipt.py                # Receipt writer + verifier
+│   ├── rollback.py               # Rollback action dispatch
+│   ├── ui.py                     # Local receipt browser (enact-ui CLI)
+│   ├── models.py                 # WorkflowContext, PolicyResult, ActionResult, Receipt, RunResult
 │   ├── connectors/
-│   │   ├── __init__.py
-│   │   ├── hubspot.py        # HubSpot connector (hubspot-api-client)
-│   │   ├── postgres.py       # Postgres connector (psycopg2)
-│   │   └── github.py         # GitHub connector (PyGithub)
+│   │   ├── github.py             # GitHub connector (PyGithub)
+│   │   ├── postgres.py           # Postgres connector (psycopg2)
+│   │   ├── filesystem.py         # Filesystem connector
+│   │   └── slack.py              # Slack connector (slack-sdk)
 │   ├── workflows/
-│   │   ├── __init__.py
-│   │   ├── new_lead.py           # new_lead_workflow reference impl
-│   │   ├── db_safe_insert.py     # db_safe_insert_workflow reference impl
-│   │   └── agent_pr_workflow.py  # agent_pr_workflow reference impl
-│   └── policies/             # Built-in policy functions (ships with pip install enact)
-│       ├── __init__.py
-│       ├── crm.py            # dont_duplicate_contacts, limit_tasks_per_contact
-│       ├── access.py         # contractor_cannot_write_pii, require_actor_role
-│       ├── git.py            # dont_push_to_main, max_files_per_commit, require_branch_prefix, dont_delete_branch, dont_merge_to_main
-│       ├── db.py             # dont_delete_row, dont_delete_without_where, dont_update_without_where, protect_tables
-│       ├── filesystem.py     # dont_delete_file, restrict_paths, block_extensions
-│       └── time.py           # within_maintenance_window
+│   │   ├── agent_pr_workflow.py  # create branch → open PR (never to main)
+│   │   ├── db_safe_insert.py     # duplicate check → insert row
+│   │   └── post_slack_message.py # policy-gated Slack message with rollback
+│   └── policies/
+│       ├── git.py                # dont_push_to_main, require_branch_prefix, max_files_per_commit, dont_delete_branch, dont_merge_to_main
+│       ├── db.py                 # dont_delete_row, dont_delete_without_where, dont_update_without_where, protect_tables, block_ddl
+│       ├── filesystem.py         # dont_delete_file, restrict_paths, block_extensions
+│       ├── access.py             # contractor_cannot_write_pii, require_actor_role, require_user_role, dont_read_sensitive_tables, dont_read_sensitive_paths, require_clearance_for_path
+│       ├── crm.py                # dont_duplicate_contacts, limit_tasks_per_contact
+│       ├── time.py               # within_maintenance_window, code_freeze_active
+│       └── slack.py              # require_channel_allowlist, block_dms
+├── cloud/                        # Cloud backend (FastAPI, deploy separately)
+│   ├── main.py                   # FastAPI app entry point
+│   ├── auth.py                   # API key auth (SHA-256 hash, never raw)
+│   ├── db.py                     # SQLite via ENACT_DB_PATH
+│   ├── email.py                  # smtplib; ENACT_EMAIL_DRY_RUN=1 for dev
+│   ├── token.py                  # HMAC-signed approve/deny tokens
+│   └── routes/
+│       ├── receipts.py           # POST /receipts, GET /receipts/{run_id}
+│       ├── hitl.py               # POST /hitl/request, approve/deny endpoints
+│       └── badge.py              # GET /badge/{team_id}/{workflow}.svg
 ├── tests/
-│   ├── test_policy_engine.py # Port + expand from test_policy_agent.py
+│   ├── test_client.py
 │   ├── test_receipt.py
-│   ├── test_hubspot.py       # Mock HubSpot API
-│   └── test_postgres.py      # Test with local PG
-├── receipts/                 # Auto-generated per run (gitignored)
+│   ├── test_github.py
+│   ├── test_postgres.py
+│   ├── test_slack.py
+│   ├── test_ui.py
+│   ├── test_cloud_client.py
+│   ├── test_workflows.py
+│   ├── test_policies.py
+│   └── cloud/
+│       ├── conftest.py
+│       ├── test_auth.py
+│       ├── test_receipts.py
+│       ├── test_hitl.py
+│       ├── test_hitl_receipt.py
+│       └── test_badge.py
+├── receipts/                     # Auto-generated per run (gitignored)
 ├── examples/
-│   └── quickstart.py         # Matches landing page exactly
-├── README.md                 # Matches landing page quickstart section
-├── pyproject.toml            # For PyPI publish
-└── SPEC.md                   # This file
+│   ├── demo.py                   # 3-act zero-credential demo (BLOCK → PASS → ROLLBACK)
+│   ├── quickstart.py             # Runnable GitHub + git policies demo
+│   └── demo.cast                 # asciinema recording for landing page
+├── plans/                        # Implementation plans
+├── README.md
+├── SPEC.md                       # This file
+├── index.html                    # Landing page (deployed via Vercel)
+└── pyproject.toml
 ```
 
 ---
@@ -537,18 +434,20 @@ Target: companies that have publicly announced AI agent deployments (press relea
 # OSS core
 psycopg2-binary     # Postgres connector (Supabase, Neon, RDS, Railway)
 PyGithub            # GitHub connector
-hubspot-api-client  # HubSpot connector
+slack-sdk           # Slack connector
 pydantic>=2.0       # Models + validation
 python-dotenv       # .env support
+
+# Cloud backend
+fastapi
+uvicorn
 
 # Dev/test
 pytest
 pytest-asyncio
-responses           # Mock HTTP for HubSpot/GitHub tests
+responses           # Mock HTTP for connector tests
+httpx               # Test client for FastAPI
 ```
-
-Drop from Visa app: `anthropic`, `sse-starlette`, `watchfiles`, `python-jose`
-Keep for Cloud layer: `fastapi`, `uvicorn`
 
 ---
 
@@ -556,7 +455,7 @@ Keep for Cloud layer: `fastapi`, `uvicorn`
 
 **No LLMs in the decision path.** The policy engine is pure Python. This is the whole point.
 
-**Connectors call real APIs.** Use vendor SDKs (`hubspot-api-client`, `psycopg2`). Don't reinvent HTTP clients.
+**Connectors call real APIs.** Use vendor SDKs (`slack-sdk`, `psycopg2`, `PyGithub`). Don't reinvent HTTP clients.
 
 **Receipts are signed.** HMAC-SHA256 with a secret key. Makes "audit-trail ready" literally true without SOC2.
 
