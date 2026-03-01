@@ -710,6 +710,20 @@ result, receipt = enact.<span class="fn">run</span>(
         <p class="auto-style-23">
             Already have an agent? See the <a class="auto-style-1" href="#migrate">Migration section ↓</a> for before/after code.
         </p>
+
+        <!-- Terminal demo recording -->
+        <div style="margin-top: 48px;">
+            <p style="font-size: 13px; color: var(--subtle); margin-bottom: 12px; font-family: var(--mono);">$ python examples/demo.py</p>
+            <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/player.css" />
+            <div id="demo-player" style="border-radius: 10px; overflow: hidden; border: 1px solid var(--border);"></div>
+            <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/player.min.js"></script>
+            <script>
+                AsciinemaPlayer.create('examples/demo.cast', document.getElementById('demo-player'), {
+                    cols: 100, rows: 28, autoPlay: true, loop: true, speed: 1.5,
+                    theme: 'dracula', fit: 'width', terminalFontFamily: "'IBM Plex Mono', monospace"
+                });
+            </script>
+        </div>
     </div>
 </section>
 

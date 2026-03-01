@@ -446,61 +446,6 @@ The rollback receipt looks like this — note the `revert_sha` showing exactly w
 
 ---
 
-## Built-in Policies
-
-Enact ships 26 built-in policies across 7 categories so you don't have to write them from scratch:
-
-| Category       | Policies                                                                                                                                                          | What they block                                              |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| **Git**        | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main`                                                  | Direct pushes to main, wrong branch names, blast radius      |
-| **Database**   | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl`                                                        | Dangerous deletes, unscoped updates, DDL like `DROP TABLE`   |
-| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions`                                                                                                          | File deletions, path traversal, sensitive files (.env, .key) |
-| **Access**     | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure                            |
-| **CRM**        | `dont_duplicate_contacts`, `limit_tasks_per_contact`                                                                                                              | Duplicate records, rate limiting                             |
-| **Time**       | `within_maintenance_window`, `code_freeze_active`                                                                                                                 | Actions outside allowed hours, during code freezes           |
-| **Slack**      | `require_channel_allowlist`, `block_dms`                                                                                                                          | Off-list channel posts, direct messages to users             |
-
-```python
-from enact.policies.git import dont_push_to_main, require_branch_prefix
-from enact.policies.db import protect_tables, block_ddl
-from enact.policies.time import code_freeze_active
-from enact.policies.slack import require_channel_allowlist, block_dms
-```
-
----
-
-## How It Flows
-
-```
-agent calls enact.run()
-        |
-        v
-+-------------------+
-|  Policy Gate      |  All policies run. Any failure = BLOCK.
-|  (pure Python,    |  No LLMs. Versioned in Git. Testable.
-|   no LLMs)        |
-+--------+----------+
-    PASS |  BLOCK
-         |        +-->  Receipt (decision=BLOCK, actions_taken=[])
-         v
-+-------------------+
-|  Workflow runs    |  Enact executes the workflow against real systems.
-|  against real     |  Each action produces an ActionResult.
-|  systems          |
-+--------+----------+
-         |
-         v
-+-------------------+
-|  Signed Receipt   |  HMAC-SHA256 signed. Captures who/what/why/
-|                   |  pass-fail/what changed.
-+--------+----------+
-         |
-         v
-  (RunResult, Receipt) returned to caller
-```
-
----
-
 ## Connectors & Allowed Actions
 
 You might be thinking: _"Don't we already have Policies?"_ Yes — but `allowed_actions` adds a complementary layer that works differently.
@@ -539,6 +484,29 @@ Policies handle the scenarios you anticipated. `allowed_actions` caps the blast 
 | `slack.delete_message` | ❌ | You can't un-delete a Slack message |
 
 **One caveat on `merge_pr` rollback:** After reverting a merge, if you fix the issue and try to re-merge the same branch, Git will skip those commits (they look already-merged). Revert the revert commit first (`git revert <revert_sha>`), then re-merge. This is standard Git behavior.
+
+---
+
+## Built-in Policies
+
+Enact ships 26 built-in policies across 7 categories so you don't have to write them from scratch:
+
+| Category       | Policies                                                                                                                                                          | What they block                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Git**        | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main`                                                  | Direct pushes to main, wrong branch names, blast radius      |
+| **Database**   | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl`                                                        | Dangerous deletes, unscoped updates, DDL like `DROP TABLE`   |
+| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions`                                                                                                          | File deletions, path traversal, sensitive files (.env, .key) |
+| **Access**     | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure                            |
+| **CRM**        | `dont_duplicate_contacts`, `limit_tasks_per_contact`                                                                                                              | Duplicate records, rate limiting                             |
+| **Time**       | `within_maintenance_window`, `code_freeze_active`                                                                                                                 | Actions outside allowed hours, during code freezes           |
+| **Slack**      | `require_channel_allowlist`, `block_dms`                                                                                                                          | Off-list channel posts, direct messages to users             |
+
+```python
+from enact.policies.git import dont_push_to_main, require_branch_prefix
+from enact.policies.db import protect_tables, block_ddl
+from enact.policies.time import code_freeze_active
+from enact.policies.slack import require_channel_allowlist, block_dms
+```
 
 ---
 
