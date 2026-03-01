@@ -26,6 +26,9 @@ dev = [
     "psycopg2-binary",
 ]
 
+[project.scripts]
+enact-ui = "enact.ui:main"
+
 [tool.setuptools.packages.find]
 include = ["enact*"]
 
