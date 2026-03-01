@@ -293,13 +293,13 @@ def run_demo():
     print(f"  {DIM}          payload={{\"repo\": \"company/api\", \"branch\": \"main\"}}){RST}")
     print()
 
-    enact1 = EnactClient(
+    git_enact = EnactClient(
         systems={"github": gh},
         policies=[dont_push_to_main],
         workflows=[direct_push_workflow],
         secret="demo-secret", allow_insecure_secret=True,
     )
-    _, receipt1 = enact1.run(
+    _, receipt1 = git_enact.run(
         workflow="direct_push_workflow",
         user_email="infra-agent@company.com",
         payload={"repo": "company/api", "branch": "main"},
@@ -321,13 +321,13 @@ def run_demo():
     print(f"  {DIM}          payload={{\"repo\": \"company/api\", \"branch\": \"agent/fix-149\"}}){RST}")
     print()
 
-    enact2 = EnactClient(
+    pr_enact = EnactClient(
         systems={"github": gh},
         policies=[dont_push_to_main, require_branch_prefix("agent/")],
         workflows=[agent_pr_workflow],
         secret="demo-secret", allow_insecure_secret=True,
     )
-    _, receipt2 = enact2.run(
+    _, receipt2 = pr_enact.run(
         workflow="agent_pr_workflow",
         user_email="agent@company.com",
         payload={
@@ -365,14 +365,14 @@ def run_demo():
             reason="Routine maintenance — approved by ops team",
         )
 
-    enact3 = EnactClient(
+    db_enact = EnactClient(
         systems={"postgres": pg},
         policies=[ops_approved],
         workflows=[db_cleanup_workflow],
         rollback_enabled=True,
         secret="demo-secret", allow_insecure_secret=True,
     )
-    _, receipt3 = enact3.run(
+    _, receipt3 = db_enact.run(
         workflow="db_cleanup_workflow",
         user_email="cleanup-agent@company.com",
         payload={"table": "customers", "status_filter": "inactive"},
@@ -419,7 +419,7 @@ def run_demo():
     print(f"  {DIM}enact.rollback(\"{receipt3.run_id[:8]}...\"){RST}")
     print()
 
-    _, rollback_receipt = enact3.rollback(receipt3.run_id)
+    _, rollback_receipt = db_enact.rollback(receipt3.run_id)
 
     print(f"  {B}Rollback:{RST}")
     _print_rollback_actions(rollback_receipt.actions_taken)

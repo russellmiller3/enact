@@ -63,7 +63,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - When Russell says **"commit"** or **"git workflow"**: invoke `commit-commands:commit-and-push` skill
 - Main branch: `master`
 - No need for backward compatibility — just change things
-- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `landing_page.html` — remove any "coming soon" badges for shipped features, (5) delete dead code and stale files, (6) push to remote
+- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `index.html` — add features, remove any "coming soon" badges for shipped features, etc (5) delete dead code and stale files, (6) push to remote
 
 ## File & Code Discipline
 
@@ -77,7 +77,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - **Prefer long-term quality over speed.** If the "right way" is only slightly more work than the quick hack, do it right the first time. If the right way is significantly more work, ask Russell before committing to it.
 - **Standardize conventions early.** When adding a pattern that will repeat across connectors/modules, define the convention now — don't plan to "refactor later."
 - **Plain English naming.** Avoid jargon in APIs and data contracts. If a non-programmer wouldn't understand the field name, pick a clearer one.
-- **Verbose boolean variable names.** Name booleans after what you *want* to be true, not what you're guarding against. Prefer `branch_is_not_main` over `blocked`. This eliminates the `passed = not blocked` double-negative pattern. Example: `branch_is_not_main = branch not in ("main", "master")` → `passed=branch_is_not_main`. No flip, no mental gymnastics.
+- **Verbose boolean variable names.** Name booleans after what you _want_ to be true, not what you're guarding against. Prefer `branch_is_not_main` over `blocked`. This eliminates the `passed = not blocked` double-negative pattern. Example: `branch_is_not_main = branch not in ("main", "master")` → `passed=branch_is_not_main`. No flip, no mental gymnastics.
 
 ## Connector Conventions
 
