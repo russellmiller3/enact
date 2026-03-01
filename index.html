@@ -168,6 +168,46 @@
         .capability-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .capability-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
 
+        /* ── RECEIPT BROWSER UI ── */
+        .rb-window { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; max-width: 900px; margin: 48px auto 0; }
+        .rb-titlebar { background: var(--surface); padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+        .rb-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .rb-url { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: 4px 12px; font-size: 11px; font-family: var(--mono); color: var(--subtle); margin: 0 12px; }
+        .rb-body { display: flex; min-height: 300px; background: var(--bg); }
+        .rb-sidebar { width: 260px; flex-shrink: 0; border-right: 1px solid var(--border); }
+        .rb-filter { padding: 10px; border-bottom: 1px solid var(--border); display: flex; gap: 6px; }
+        .rb-filter input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 5px 8px; font-size: 11px; font-family: var(--mono); color: var(--muted); outline: none; }
+        .rb-filter select { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 5px 6px; font-size: 11px; font-family: var(--mono); color: var(--muted); }
+        .rb-row { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: default; transition: background .15s; }
+        .rb-row.rb-active { background: var(--surface); }
+        .rb-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+        .rb-run-id { font-size: 11px; font-family: var(--mono); color: var(--muted); }
+        .rb-row-bot { font-size: 11px; color: var(--subtle); }
+        .rb-detail { flex: 1; padding: 16px 20px; overflow: auto; }
+        .rb-sig-ok { font-size: 11px; font-family: var(--mono); background: rgba(5,150,105,.1); color: var(--green); border: 1px solid rgba(5,150,105,.25); padding: 2px 8px; border-radius: 4px; }
+
+        /* ── HITL FLOW ── */
+        .hitl-flow { display: flex; align-items: stretch; gap: 0; margin: 40px 0; }
+        .hitl-step { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px 20px; text-align: center; }
+        .hitl-arrow { display: flex; align-items: center; justify-content: center; padding: 0 12px; color: var(--subtle); font-size: 18px; flex-shrink: 0; }
+        .hitl-step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(14,165,233,.12); color: var(--accent); border: 1px solid rgba(14,165,233,.25); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: var(--mono); margin: 0 auto 12px; }
+        .hitl-step h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+        .hitl-step p { font-size: 12px; color: var(--muted); line-height: 1.5; }
+        .hitl-email { max-width: 520px; margin: 40px auto 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .hitl-email-hdr { background: var(--surface); padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 2; }
+        .hitl-email-body { padding: 24px; background: var(--bg); }
+        .hitl-email-body p { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+        .hitl-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .hitl-approve { padding: 10px 24px; background: rgba(5,150,105,.15); color: var(--green); border: 1px solid rgba(5,150,105,.3); border-radius: 6px; font-size: 13px; font-weight: 700; font-family: var(--mono); cursor: default; }
+        .hitl-deny { padding: 10px 24px; background: rgba(220,38,38,.1); color: var(--red); border: 1px solid rgba(220,38,38,.25); border-radius: 6px; font-size: 13px; font-weight: 700; font-family: var(--mono); cursor: default; }
+        .hitl-footer-note { font-size: 11px; color: var(--subtle); margin-top: 16px; line-height: 1.5; }
+        @media (max-width: 768px) {
+            .hitl-flow { flex-direction: column; }
+            .hitl-arrow { transform: rotate(90deg); padding: 4px 0; }
+            .rb-body { flex-direction: column; }
+            .rb-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+        }
+
         /* ── FOOTER CTA ── */
         .footer-cta { padding: 80px 0; text-align: center; }
         .footer-cta h2 { font-size: 38px; margin-bottom: 16px; }
@@ -1164,6 +1204,77 @@ result, receipt = enact.<span class="fn">run</span>(
 </section>
 
 <!-- ═══════════════════════════════════════════════════
+     RECEIPT BROWSER UI
+════════════════════════════════════════════════════ -->
+<section id="receipt-browser">
+    <div class="container">
+        <div class="section-label">Receipt Browser</div>
+        <h2>Browse receipts locally. No cloud required.</h2>
+        <p class="section-sub">Run one command. Get a local web UI showing every PASS, BLOCK, and ROLLBACK — with full JSON, actor, timestamp, and HMAC signature verification. Ships with <code>pip install enact-sdk</code>. No account needed.</p>
+
+        <pre style="max-width:580px;margin:0 auto 0"><code><span class="cm"># launch the browser</span>
+$ enact-ui --port 8042 --secret $ENACT_SECRET
+<span style="color:var(--green)">✓</span>  Loaded 143 receipts from ./receipts
+<span style="color:var(--green)">✓</span>  Open http://localhost:8042</code></pre>
+
+        <div class="rb-window">
+            <div class="rb-titlebar">
+                <div class="rb-dot" style="background:#ef4444"></div>
+                <div class="rb-dot" style="background:#f59e0b"></div>
+                <div class="rb-dot" style="background:#10b981"></div>
+                <div class="rb-url">http://localhost:8042</div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--subtle)">enact-ui v0.4</span>
+            </div>
+            <div class="rb-body">
+                <div class="rb-sidebar">
+                    <div class="rb-filter">
+                        <input type="text" placeholder="search..." disabled>
+                        <select disabled><option>All outcomes</option></select>
+                    </div>
+                    <div class="rb-row rb-active">
+                        <div class="rb-row-top"><span class="rb-run-id">a3f7c291…</span><span class="badge-denied" style="font-size:9px;padding:1px 6px">BLOCK</span></div>
+                        <div class="rb-row-bot">db_cleanup_workflow · 03:47Z</div>
+                    </div>
+                    <div class="rb-row">
+                        <div class="rb-row-top"><span class="rb-run-id">b7d2e849…</span><span class="badge-approved" style="font-size:9px;padding:1px 6px">PASS</span></div>
+                        <div class="rb-row-bot">agent_pr_workflow · 09:14Z</div>
+                    </div>
+                    <div class="rb-row">
+                        <div class="rb-row-top"><span class="rb-run-id">c9e4f7a1…</span><span class="badge-approved" style="font-size:9px;padding:1px 6px">PASS</span></div>
+                        <div class="rb-row-bot">post_slack_message · 11:03Z</div>
+                    </div>
+                    <div class="rb-row" style="opacity:.55">
+                        <div class="rb-row-top"><span class="rb-run-id">d2b8c5e3…</span><span class="badge-denied" style="font-size:9px;padding:1px 6px">BLOCK</span></div>
+                        <div class="rb-row-bot">db_cleanup_workflow · 14:19Z</div>
+                    </div>
+                </div>
+                <div class="rb-detail">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                        <span style="font-size:12px;font-weight:700;font-family:var(--mono)">a3f7c291-4d8e-4b2a-9c1f-e6d3b5a7f902</span>
+                        <span class="rb-sig-ok">signature valid</span>
+                    </div>
+                    <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-denied">BLOCK</span></div></div>
+                    <div class="r-row"><div class="r-label">workflow</div><div class="r-val">db_cleanup_workflow</div></div>
+                    <div class="r-row"><div class="r-label">user_email</div><div class="r-val">cleanup-agent@company.com</div></div>
+                    <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-03-01T03:47:22Z</div></div>
+                    <div class="r-section">
+                        <h4>POLICY EVALUATION</h4>
+                        <div class="policy-row">
+                            <div class="pbadge fail">✗</div>
+                            <div class="policy-detail"><strong>dont_delete_without_where</strong><span class="err">DELETE on "sessions" has no WHERE clause. Operation would wipe the entire table.</span></div>
+                        </div>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail"><strong>protect_tables</strong><span>Table "sessions" not in protected list</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════
      WORKFLOW LIBRARY — "we write it for you"
 ════════════════════════════════════════════════════ -->
 <section>
@@ -1265,6 +1376,81 @@ result, receipt = enact.<span class="fn">run</span>(
 <!-- ═══════════════════════════════════════════════════
      COMING SOON CAPABILITIES
 ════════════════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════
+     HUMAN-IN-THE-LOOP
+════════════════════════════════════════════════════ -->
+<section class="alt" id="hitl">
+    <div class="container">
+        <div class="section-label">Human-in-the-Loop</div>
+        <h2>Pause before the risky stuff</h2>
+        <p class="section-sub">High-risk actions wait for a human to approve before continuing. Signed email link. One-time-use. Timeout = auto-deny with receipt. No login required for the approver.</p>
+
+        <div class="hitl-flow">
+            <div class="hitl-step">
+                <div class="hitl-step-num">1</div>
+                <h4>Agent calls run_with_hitl()</h4>
+                <p>Your agent calls the workflow as normal. Enact detects the gate and pauses execution before anything touches production.</p>
+            </div>
+            <div class="hitl-arrow">→</div>
+            <div class="hitl-step">
+                <div class="hitl-step-num">2</div>
+                <h4>Email sent to human</h4>
+                <p>Your ops contact gets a signed approve/deny link. No login. No account. Link expires after your configured timeout.</p>
+            </div>
+            <div class="hitl-arrow">→</div>
+            <div class="hitl-step">
+                <div class="hitl-step-num">3</div>
+                <h4>Workflow resumes or aborts</h4>
+                <p>Approve → workflow runs, signed receipt generated. Deny or timeout → BLOCK receipt. Agent gets the reason either way.</p>
+            </div>
+        </div>
+
+        <pre><code><span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
+
+enact = <span class="fn">EnactClient</span>(
+    systems={<span class="str">"github"</span>: gh},
+    policies=[dont_push_to_main],
+    workflows=[agent_pr_workflow],
+    secret=<span class="str">"your-secret"</span>,
+    cloud_api_key=<span class="str">"eak_..."</span>,   <span class="cm"># enables HITL + cloud receipt storage</span>
+)
+
+result, receipt = enact.<span class="fn">run_with_hitl</span>(
+    workflow=<span class="str">"agent_pr_workflow"</span>,
+    user_email=<span class="str">"agent@company.com"</span>,
+    payload={<span class="str">"repo"</span>: <span class="str">"myorg/app"</span>, <span class="str">"branch"</span>: <span class="str">"agent/nuke-main"</span>},
+    notify_email=<span class="str">"ops@company.com"</span>,     <span class="cm"># who gets the approve/deny email</span>
+    timeout_seconds=<span class="str">3600</span>,                 <span class="cm"># auto-deny after 1 hour of silence</span>
+)
+
+<span class="kw">print</span>(result.decision)   <span class="cm"># "PASS" if approved, "BLOCK" if denied or timed out</span></code></pre>
+
+        <!-- Email approval mockup -->
+        <div class="hitl-email">
+            <div class="hitl-email-hdr">
+                <div><span style="color:var(--subtle)">From:</span> Enact &lt;noreply@enact.cloud&gt;</div>
+                <div><span style="color:var(--subtle)">To:</span> ops@company.com</div>
+                <div><span style="color:var(--subtle)">Subject:</span> <strong>Action approval required — agent_pr_workflow</strong></div>
+            </div>
+            <div class="hitl-email-body">
+                <p>Your AI agent wants to execute a workflow and needs your approval before continuing.</p>
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:4px">
+                    <div class="r-row"><div class="r-label">workflow</div><div class="r-val">agent_pr_workflow</div></div>
+                    <div class="r-row"><div class="r-label">triggered by</div><div class="r-val">agent@company.com</div></div>
+                    <div class="r-row"><div class="r-label">payload.repo</div><div class="r-val">myorg/app</div></div>
+                    <div class="r-row"><div class="r-label">payload.branch</div><div class="r-val">agent/nuke-main</div></div>
+                    <div class="r-row"><div class="r-label">expires</div><div class="r-val">2026-03-01T04:47:22Z (1 hour)</div></div>
+                </div>
+                <div class="hitl-btns">
+                    <button class="hitl-approve">Approve →</button>
+                    <button class="hitl-deny">Deny</button>
+                </div>
+                <p class="hitl-footer-note">This link is single-use and HMAC-signed. It cannot be reused or forged. If you didn't expect this request, deny it.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
 <section id="roadmap">
     <div class="container">
         <div class="section-label">Roadmap</div>
@@ -1281,13 +1467,13 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="capability-card">
                 <i data-lucide="hand" class="cap-icon"></i>
                 <h3>Human-in-Loop Gates <span class="badge-live">live</span></h3>
-                <p>High-risk actions pause and wait for a human to approve before continuing. Email approval link — signed, one-time-use. Timeout = auto-abort with receipt. No more "the agent just did it while I was asleep."</p>
+                <p>High-risk actions pause and wait for a human to approve before continuing. Signed email link, one-time-use, auto-expire. <a href="#hitl" style="color:var(--accent)">See how it works ↑</a></p>
             </div>
 
             <div class="capability-card">
                 <i data-lucide="layout-list" class="cap-icon"></i>
                 <h3>Receipt Browser <span class="badge-live">live</span></h3>
-                <p>Browse, filter, and verify your agent receipts locally — no cloud account needed. Run <code>enact-ui</code> to open a web UI showing every PASS, BLOCK, and ROLLBACK with full JSON and signature verification. Ships with <code>pip install enact-sdk</code>.</p>
+                <p>Browse, filter, and verify your agent receipts locally. Run <code>enact-ui</code> for a local web UI with signature verification. Ships with <code>pip install enact-sdk</code>. <a href="#receipt-browser" style="color:var(--accent)">See the UI ↑</a></p>
             </div>
 
             <div class="capability-card auto-style-82">
