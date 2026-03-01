@@ -1,5 +1,9 @@
 # enact — Claude Instructions
 
+## File Write Rule (top priority)
+
+**Always write files in small chunks — never more than ~150 lines per Write call.** Large writes fail silently or error out and lose all content. If a file is longer than 150 lines, write it in sequential parts: create the file with the first chunk, then append subsequent chunks via Edit. This applies to plan files, code, HTML, everything.
+
 ## Startup
 
 At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
@@ -50,6 +54,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - `tests/` — pytest suite
 - `examples/` — usage examples
 - `plans/` — implementation plans
+- `index.html` — the landing page (when Russell says "landing page", he means this file)
 
 ## Stack
 
@@ -98,7 +103,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 
 ## Asking Questions
 
-**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `landing_page.html`, and the relevant connector/workflow code to form an opinion. Then ask like this:
+**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `index.html` (the landing page), and the relevant connector/workflow code to form an opinion. Then ask like this:
 
 > "Should rollback apply at the whole-run level or per-action? My read: whole-run — that's what the receipt already models and what enterprise buyers mean by 'undo.' Per-action is more flexible but doubles the API surface for little gain."
 

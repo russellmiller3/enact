@@ -7,7 +7,6 @@ name = "enact-sdk"
 version = "0.4"
 description = "An action firewall for AI agents"
 readme = "README.md"
-license-files = ["LICENSE"]
 requires-python = ">=3.9"
 dependencies = [
     "pydantic>=2.0",
@@ -18,13 +17,22 @@ dependencies = [
 postgres = ["psycopg2-binary"]
 github = ["PyGithub"]
 hubspot = ["hubspot-api-client"]
-all = ["psycopg2-binary", "PyGithub", "hubspot-api-client"]
+slack = ["slack-sdk"]
+all = ["psycopg2-binary", "PyGithub", "hubspot-api-client", "slack-sdk"]
 dev = [
     "pytest",
     "pytest-asyncio",
     "responses",
     "psycopg2-binary",
+    "fastapi",
+    "httpx",
 ]
+
+[project.scripts]
+enact-ui = "enact.ui:main"
+
+[tool.setuptools]
+license-files = []
 
 [tool.setuptools.packages.find]
 include = ["enact*"]

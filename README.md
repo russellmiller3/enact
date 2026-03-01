@@ -26,7 +26,7 @@ pip install enact-sdk
 python examples/quickstart.py
 ```
 
-That's it. Two runs — one PASS, one BLOCK — with signed receipts.
+That's it. Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts.
 
 Want the full show? `python examples/demo.py` runs a 3-act scenario: an agent blocked from pushing to main, a normal PR workflow, and a database wipe rolled back in one command. No credentials needed.
 
@@ -180,7 +180,7 @@ gh.delete_branch(repo="owner/repo", branch="main")
 # -> PermissionError: Action 'delete_branch' not in allowlist
 ```
 
-Enact ships connectors for GitHub, Postgres, and the filesystem. You don't write these — you import and configure them.
+Enact ships connectors for GitHub, Postgres, the filesystem, and Slack. You don't write these — you import and configure them.
 
 ### Prerequisite: The Context
 
@@ -371,6 +371,19 @@ from enact.receipt import verify_signature
 is_valid = verify_signature(receipt, secret="your-secret")
 ```
 
+### Receipt Browser (local UI)
+
+Browse, filter, and verify your receipts locally — no cloud required.
+
+```bash
+enact-ui                           # serves receipts/ on http://localhost:8765
+enact-ui --port 9000               # custom port
+enact-ui --dir /path/to/receipts   # custom directory
+enact-ui --secret YOUR_SECRET      # enables signature verification in the UI
+```
+
+The browser shows every run (PASS / BLOCK / ROLLED_BACK), lets you click into the full JSON, and highlights invalid signatures. Dark mode toggle included. Zero extra dependencies — ships with `enact-sdk`.
+
 ### Step 5: Rollback (if something goes wrong)
 
 **WHY:** Say the `agent_pr_workflow` from Step 1 ran — it created `agent/fix-149`, opened a PR, and merged it straight to `main` by mistake. You need to undo all three steps. One call.
@@ -435,7 +448,7 @@ The rollback receipt looks like this — note the `revert_sha` showing exactly w
 
 ## Built-in Policies
 
-Enact ships 24 built-in policies across 6 categories so you don't have to write them from scratch:
+Enact ships 26 built-in policies across 7 categories so you don't have to write them from scratch:
 
 | Category       | Policies                                                                                                                                                          | What they block                                              |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -445,11 +458,13 @@ Enact ships 24 built-in policies across 6 categories so you don't have to write 
 | **Access**     | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure                            |
 | **CRM**        | `dont_duplicate_contacts`, `limit_tasks_per_contact`                                                                                                              | Duplicate records, rate limiting                             |
 | **Time**       | `within_maintenance_window`, `code_freeze_active`                                                                                                                 | Actions outside allowed hours, during code freezes           |
+| **Slack**      | `require_channel_allowlist`, `block_dms`                                                                                                                          | Off-list channel posts, direct messages to users             |
 
 ```python
 from enact.policies.git import dont_push_to_main, require_branch_prefix
 from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
+from enact.policies.slack import require_channel_allowlist, block_dms
 ```
 
 ---
@@ -502,6 +517,7 @@ Policies handle the scenarios you anticipated. `allowed_actions` caps the blast 
 | **GitHub**     | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr` | Yes — `merge_pr` via `revert_commit`; except `push_commit` | Yes — `already_done` convention |
 | **Postgres**   | `select_rows`, `insert_row`, `update_row`, `delete_row`                   | Yes — pre-SELECT captures state        | Yes                             |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir`                      | Yes — content captured before mutation | Yes                             |
+| **Slack**      | `post_message`, `delete_message`                                          | Yes — `post_message` via `delete_message` (bot token must have `chat:delete` scope) | No — posting the same text twice is two messages, not a duplicate |
 
 ### What Rollback Can and Can't Undo
 
@@ -519,6 +535,8 @@ Policies handle the scenarios you anticipated. `allowed_actions` caps the blast 
 | `postgres.TRUNCATE` | ❌ | Same as above — blocked by `block_ddl` |
 | `filesystem.write_file` | ✅ | Restores previous content (or deletes if file was new) |
 | `filesystem.delete_file` | ✅ | Recreates file with captured content |
+| `slack.post_message` | ✅ | Deletes the posted message via `chat.delete` using the `ts` timestamp captured at post time |
+| `slack.delete_message` | ❌ | You can't un-delete a Slack message |
 
 **One caveat on `merge_pr` rollback:** After reverting a merge, if you fix the issue and try to re-merge the same branch, Git will skip those commits (they look already-merged). Revert the revert commit first (`git revert <revert_sha>`), then re-merge. This is standard Git behavior.
 
@@ -540,22 +558,73 @@ Rollback verifies the receipt signature before executing any reversal — tamper
 
 ---
 
+## Cloud Features
+
+Push receipts to the Enact cloud and use human-in-the-loop gates from any workflow.
+
+```python
+from enact import EnactClient
+
+enact = EnactClient(
+    systems={"github": gh},
+    policies=[dont_push_to_main],
+    workflows=[agent_pr_workflow],
+    secret="your-secret",
+    cloud_api_key="eak_...",   # get at enact.cloud — enables cloud features
+)
+```
+
+**Push receipts to cloud storage:**
+
+```python
+result, receipt = enact.run(...)
+enact.push_receipt_to_cloud(receipt)   # receipt now searchable in cloud UI
+```
+
+**Human-in-the-loop gate** — pause a workflow and email a human to approve before continuing:
+
+```python
+result, receipt = enact.run_with_hitl(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/nuke-main"},
+    notify_email="ops@company.com",    # who gets the approve/deny email
+    timeout_seconds=3600,              # auto-deny after 1 hour of silence
+)
+
+print(result.decision)   # "PASS" if approved, "BLOCK" if denied or timed out
+```
+
+The approval email contains a signed link. Clicking approve or deny fires a callback and writes a HITL receipt. No credentials or login needed for the approver.
+
+**Status badge** — embed in your README to show real-time pass/block rate for a workflow:
+
+```markdown
+![agent_pr_workflow](https://enact.cloud/badge/your-team-id/agent_pr_workflow.svg)
+```
+
+---
+
 ## Run Tests
 
 ```bash
 pytest tests/ -v
-# 317 tests, 0 failures
+# 356+ tests, 0 failures (SDK + cloud)
 ```
 
 ---
 
 ## Environment Variables
 
-| Variable       | Required                | Purpose                                            |
-| -------------- | ----------------------- | -------------------------------------------------- |
-| `ENACT_SECRET` | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
-| `GITHUB_TOKEN` | For GitHubConnector     | GitHub PAT or App token                            |
-| `ENACT_FREEZE` | Optional                | Set to `1` to activate `code_freeze_active` policy |
+| Variable           | Required                | Purpose                                            |
+| ------------------ | ----------------------- | -------------------------------------------------- |
+| `ENACT_SECRET`     | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
+| `GITHUB_TOKEN`     | For GitHubConnector     | GitHub PAT or App token                            |
+| `SLACK_BOT_TOKEN`  | For SlackConnector      | Slack bot token (xoxb-...). Needs `chat:write` scope; add `chat:delete` to enable rollback. |
+| `ENACT_FREEZE`     | Optional                | Set to `1` to activate `code_freeze_active` policy |
+| `CLOUD_API_KEY`    | For cloud features      | API key from enact.cloud — enables receipt push + HITL |
+| `CLOUD_SECRET`     | Cloud backend only      | Server-side signing secret for the cloud backend   |
+| `ENACT_EMAIL_DRY_RUN` | Cloud backend only   | Set to `1` to skip real email sends in dev/test    |
 
 ---
 

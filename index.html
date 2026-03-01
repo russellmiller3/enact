@@ -511,7 +511,7 @@
                 <a href="#roadmap">Roadmap</a>
                 <a href="#pricing">Pricing</a>
                 <a href="https://github.com/russellmiller3/enact">GitHub</a>
-                <a href="mailto:hello@enact.cloud?subject=Cloud Waitlist" class="nav-cta">Join Cloud Waitlist →</a>
+                <a href="mailto:hello@enact.cloud?subject=Early Access" class="nav-cta">Get Early Access →</a>
             </nav>
         </div>
     </div>
@@ -528,9 +528,9 @@
         </p>
         <div class="cta-row">
             <a href="#quickstart" class="btn btn-primary">pip install enact-sdk</a>
-            <a href="mailto:hello@enact.cloud?subject=Cloud Waitlist" class="btn btn-secondary">Join Cloud Waitlist →</a>
+            <a href="mailto:hello@enact.cloud?subject=Early Access" class="btn btn-secondary">Get Early Access →</a>
         </div>
-        <p class="hero-note">Open source · <a class="auto-style-1" href="https://enact.cloud">enact.cloud</a> · Self-host free · Cloud coming soon</p>
+        <p class="hero-note">Open source · <a class="auto-style-1" href="https://enact.cloud">enact.cloud</a> · Self-host free · Cloud in early access</p>
 
         <div class="auto-style-2">
             <p class="auto-style-3">Minimal setup — add to any agent in minutes</p>
@@ -671,7 +671,7 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
             <div class="qs-step">
                 <div class="qs-num">2</div>
                 <h3>Connect your systems</h3>
-                <p>GitHub, Postgres, Filesystem — pass your credentials, get policy-gated, receipt-backed actions back.</p>
+                <p>GitHub, Postgres, Filesystem, Slack — pass your credentials, get policy-gated, receipt-backed actions back.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
@@ -727,7 +727,7 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="qs-step">
                 <div class="qs-num">1</div>
                 <h3>Register your systems</h3>
-                <p>Swap your existing SDK clients for Enact connectors. GitHub, Postgres, Filesystem — same credentials, now policy-gated and receipt-backed.</p>
+                <p>Swap your existing SDK clients for Enact connectors. GitHub, Postgres, Filesystem, Slack — same credentials, now policy-gated and receipt-backed.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">2</div>
@@ -822,7 +822,7 @@ result, receipt = enact.<span class="fn">run</span>(
 <section id="policies" class="alt">
     <div class="container">
         <div class="section-label">Built-in policies</div>
-        <h2>20+ policies, shipped today</h2>
+        <h2>26 policies, shipped today</h2>
         <p class="section-sub">Pure Python functions — no LLMs, versioned in Git, testable with pytest. Register any combination on your <span class="inline-code">EnactClient</span>.</p>
 
         <div class="policy-grid auto-style-37">
@@ -974,6 +974,20 @@ result, receipt = enact.<span class="fn">run</span>(
                         <br><span class="auto-style-45">Rate-limits tasks per contact per rolling time window</span>
                     </div>
                 </div>
+                <div class="auto-style-39">
+                    <i class="auto-style-57" data-lucide="message-square"></i>
+                    <h3 class="auto-style-58">Slack</h3>
+                </div>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">require_channel_allowlist(list)</code>
+                        <br><span class="auto-style-45">Blocks posting to any channel not in your explicit allow-list — no surprise #general blasts</span>
+                    </div>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">block_dms</code>
+                        <br><span class="auto-style-45">Blocks direct messages to users — DM channel IDs (D...) and user IDs (U...) both caught</span>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -1000,12 +1014,12 @@ result, receipt = enact.<span class="fn">run</span>(
 <section class="alt" id="receipt">
     <div class="container centered">
         <div class="section-label">See it in action</div>
-        <h2>Blocked. Approved. Rolled back.</h2>
+        <h2>Blocked. Passed. Rolled back.</h2>
         <p class="section-sub">Three outcomes every production team needs to handle. Enact documents all of them — and gives you the receipt to prove it.</p>
 
         <div class="tab-row auto-style-64">
             <button class="tab-btn active" onclick="showTab('blocked')">✗ Blocked (disaster prevented)</button>
-            <button class="tab-btn" onclick="showTab('approved')">✓ Approved (safe operation)</button>
+            <button class="tab-btn" onclick="showTab('approved')">✓ Passed (safe operation)</button>
             <button class="tab-btn" onclick="showTab('rollback')">↩ Rolled back (damage undone)</button>
         </div>
 
@@ -1013,98 +1027,83 @@ result, receipt = enact.<span class="fn">run</span>(
         <div class="tab-pane active" id="tab-blocked">
             <div class="receipt auto-style-65">
                 <div class="receipt-hdr">
-                    <div class="r-row"><div class="r-label">Request ID</div><div class="r-val">REQ-08472</div></div>
-                    <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 03:57:42 UTC</div></div>
-                    <div class="r-row"><div class="r-label">Decision</div><div class="r-val"><span class="badge-denied">DENIED</span></div></div>
+                    <div class="r-row"><div class="r-label">run_id</div><div class="r-val">a3f7c291-4d8e-4b2a-9c1f-e6d3b5a7f902</div></div>
+                    <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-03-01T03:47:22Z</div></div>
+                    <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-denied">BLOCK</span></div></div>
                 </div>
                 <div class="r-section">
                     <h4>REQUEST DETAILS</h4>
-                    <div class="r-row"><div class="r-label">WHO</div><div class="r-val">infra-agent@company.com</div></div>
-                    <div class="r-row"><div class="r-label">WHAT</div><div class="r-val">rotate_db_credentials on prod-us-east-1</div></div>
-                    <div class="r-row"><div class="r-label">REASON</div><div class="r-val">cleanup old users, reduce attack surface</div></div>
+                    <div class="r-row"><div class="r-label">user_email</div><div class="r-val">cleanup-agent@company.com</div></div>
+                    <div class="r-row"><div class="r-label">workflow</div><div class="r-val">db_cleanup_workflow</div></div>
+                    <div class="r-row"><div class="r-label">payload.table</div><div class="r-val">sessions</div></div>
+                    <div class="r-row"><div class="r-label">payload.action</div><div class="r-val">delete_row</div></div>
                 </div>
                 <div class="r-section">
                     <h4>POLICY EVALUATION</h4>
                     <div class="policy-row">
                         <div class="pbadge fail">✗</div>
                         <div class="policy-detail">
-                            <strong>Protect_Prod_Primary_DB</strong>
-                            <span class="err">BLOCKED: Attempt to modify primary production database outside approved maintenance window (02:00–03:00 UTC) by non-DBA role.</span>
+                            <strong>dont_delete_without_where</strong>
+                            <span class="err">BLOCKED: DELETE on "sessions" has no WHERE clause. Operation would wipe the entire table.</span>
                         </div>
                     </div>
                     <div class="policy-row">
                         <div class="pbadge pass">✓</div>
                         <div class="policy-detail">
-                            <strong>Valid Credentials Format</strong>
-                            <span>Rotation payload format valid</span>
-                        </div>
-                    </div>
-                    <div class="policy-row">
-                        <div class="pbadge pass">✓</div>
-                        <div class="policy-detail">
-                            <strong>Database Target Exists</strong>
-                            <span>Database "prod-us-east-1" found in registry</span>
+                            <strong>protect_tables</strong>
+                            <span>Table "sessions" is not in the protected list</span>
                         </div>
                     </div>
                 </div>
                 <div class="r-section">
                     <h4>ACTIONS EXECUTED</h4>
-                    <div class="r-row"><div class="r-label">Result</div><div class="r-val auto-style-66">No actions executed (policy violation)</div></div>
-                    <div class="r-row"><div class="r-label">Alert sent</div><div class="r-val">PagerDuty #P847291 created · Slack #security-incidents notified</div></div>
+                    <div class="r-row"><div class="r-label">actions_taken</div><div class="r-val auto-style-66">[] — no actions executed (policy blocked run)</div></div>
                 </div>
                 <div class="r-section">
                     <h4>TECHNICAL LOG</h4>
-                    <div class="r-row"><div class="r-label">Execution time</div><div class="r-val">89ms</div></div>
-                    <div class="r-row"><div class="r-label">Policy checks</div><div class="r-val">2 passed, 1 failed</div></div>
-                    <div class="r-row"><div class="r-label">Actions run</div><div class="r-val">0 (blocked by policy)</div></div>
+                    <div class="r-row"><div class="r-label">policy checks</div><div class="r-val">1 passed, 1 failed</div></div>
+                    <div class="r-row"><div class="r-label">actions run</div><div class="r-val">0</div></div>
+                    <div class="r-row"><div class="r-label">signature</div><div class="r-val auto-style-71">hmac-sha256:e3a9f1b47c2d...8a1e (covers all fields)</div></div>
                 </div>
             </div>
         </div>
 
-        <!-- APPROVED -->
+        <!-- PASSED -->
         <div class="tab-pane" id="tab-approved">
             <div class="receipt auto-style-65">
                 <div class="receipt-hdr">
-                    <div class="r-row"><div class="r-label">Request ID</div><div class="r-val">REQ-08471</div></div>
-                    <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 06:22:15 UTC</div></div>
-                    <div class="r-row"><div class="r-label">Decision</div><div class="r-val"><span class="badge-approved">APPROVED</span></div></div>
+                    <div class="r-row"><div class="r-label">run_id</div><div class="r-val">b7d2e849-1a3c-4f6e-8d0b-c4f9a2e7d531</div></div>
+                    <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-03-01T09:14:07Z</div></div>
+                    <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-approved">PASS</span></div></div>
                 </div>
                 <div class="r-section">
                     <h4>REQUEST DETAILS</h4>
-                    <div class="r-row"><div class="r-label">WHO</div><div class="r-val">revops-agent@company.com</div></div>
-                    <div class="r-row"><div class="r-label">WHAT</div><div class="r-val">new_lead_workflow for jane@acme.com</div></div>
-                    <div class="r-row"><div class="r-label">REASON</div><div class="r-val">outbound prospecting — ICP match</div></div>
+                    <div class="r-row"><div class="r-label">user_email</div><div class="r-val">agent@company.com</div></div>
+                    <div class="r-row"><div class="r-label">workflow</div><div class="r-val">agent_pr_workflow</div></div>
+                    <div class="r-row"><div class="r-label">payload.repo</div><div class="r-val">company/api</div></div>
+                    <div class="r-row"><div class="r-label">payload.branch</div><div class="r-val">agent/fix-149</div></div>
                 </div>
                 <div class="r-section">
                     <h4>POLICY EVALUATION</h4>
                     <div class="policy-row">
                         <div class="pbadge pass">✓</div>
-                        <div class="policy-detail"><strong>Duplicate Contact Check</strong><span>No existing contact with email jane@acme.com</span></div>
+                        <div class="policy-detail"><strong>dont_push_to_main</strong><span>Branch "agent/fix-149" is not main/master</span></div>
                     </div>
                     <div class="policy-row">
                         <div class="pbadge pass">✓</div>
-                        <div class="policy-detail"><strong>ICP Company Match</strong><span>Company "Acme Inc" matches ICP criteria (tech, 50–500 employees)</span></div>
-                    </div>
-                    <div class="policy-row">
-                        <div class="pbadge pass">✓</div>
-                        <div class="policy-detail"><strong>Task Limit Check</strong><span>Contact has 0 tasks (limit: 3 per week)</span></div>
-                    </div>
-                    <div class="policy-row">
-                        <div class="pbadge pass">✓</div>
-                        <div class="policy-detail"><strong>Contractor Write Restriction</strong><span>Agent is FTE (contractors cannot create deals)</span></div>
+                        <div class="policy-detail"><strong>require_branch_prefix</strong><span>Branch "agent/fix-149" has required prefix "agent/"</span></div>
                     </div>
                 </div>
                 <div class="r-section">
                     <h4>ACTIONS EXECUTED</h4>
-                    <div class="r-row"><div class="r-label">HubSpot</div><div class="r-val">Created contact (ID: 847291)</div></div>
-                    <div class="r-row"><div class="r-label">HubSpot</div><div class="r-val">Created deal (ID: 938471, value: $25,000)</div></div>
-                    <div class="r-row"><div class="r-label">HubSpot</div><div class="r-val">Created task for AE → sales@company.com</div></div>
+                    <div class="r-row"><div class="r-label">GitHub</div><div class="r-val">create_branch → "agent/fix-149" created in company/api</div></div>
+                    <div class="r-row"><div class="r-label">GitHub</div><div class="r-val">create_pr → PR #42 opened · github.com/company/api/pull/42</div></div>
                 </div>
                 <div class="r-section">
                     <h4>TECHNICAL LOG</h4>
-                    <div class="r-row"><div class="r-label">Execution time</div><div class="r-val">1,247ms</div></div>
-                    <div class="r-row"><div class="r-label">Policy checks</div><div class="r-val">4 passed, 0 failed</div></div>
-                    <div class="r-row"><div class="r-label">Actions run</div><div class="r-val">3 (all succeeded)</div></div>
+                    <div class="r-row"><div class="r-label">policy checks</div><div class="r-val">2 passed, 0 failed</div></div>
+                    <div class="r-row"><div class="r-label">actions run</div><div class="r-val">2 (all succeeded)</div></div>
+                    <div class="r-row"><div class="r-label">signature</div><div class="r-val auto-style-71">hmac-sha256:f8b3c2a74e1d...9c5f (covers all fields)</div></div>
                 </div>
             </div>
         </div>
@@ -1113,17 +1112,17 @@ result, receipt = enact.<span class="fn">run</span>(
         <div class="tab-pane" id="tab-rollback">
             <div class="receipt auto-style-65">
                 <div class="receipt-hdr">
-                    <div class="r-row"><div class="r-label">Rollback ID</div><div class="r-val">REQ-08476</div></div>
-                    <div class="r-row"><div class="r-label">Timestamp</div><div class="r-val">2026-02-22 14:35:12 UTC</div></div>
-                    <div class="r-row"><div class="r-label">Type</div><div class="r-val auto-style-67">ROLLBACK of REQ-08473</div></div>
-                    <div class="r-row"><div class="r-label">Decision</div><div class="r-val"><span class="auto-style-68">PARTIAL ROLLBACK</span></div></div>
+                    <div class="r-row"><div class="r-label">run_id</div><div class="r-val">c9e4f7a1-2b5d-4c8e-a3f0-d7b2e9c4f618</div></div>
+                    <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-03-01T14:22:51Z</div></div>
+                    <div class="r-row"><div class="r-label">original_run_id</div><div class="r-val auto-style-67">d2b8c5e3-9a1f-4d7b-8c2e-f5a3b1d6e492</div></div>
+                    <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-approved">PASS</span></div></div>
                 </div>
                 <div class="r-section">
                     <h4>ORIGINAL RUN</h4>
-                    <div class="r-row"><div class="r-label">Run ID</div><div class="r-val">REQ-08473</div></div>
-                    <div class="r-row"><div class="r-label">Workflow</div><div class="r-val">db_cleanup_workflow</div></div>
-                    <div class="r-row"><div class="r-label">Actor</div><div class="r-val">cleanup-agent@company.com</div></div>
-                    <div class="r-row"><div class="r-label">Executed</div><div class="r-val">2026-02-22 14:31:44 UTC — 3 minutes ago</div></div>
+                    <div class="r-row"><div class="r-label">workflow</div><div class="r-val">db_cleanup_workflow</div></div>
+                    <div class="r-row"><div class="r-label">user_email</div><div class="r-val">cleanup-agent@company.com</div></div>
+                    <div class="r-row"><div class="r-label">executed</div><div class="r-val">2026-03-01T14:19:38Z — 3 minutes ago</div></div>
+                    <div class="r-row"><div class="r-label">what happened</div><div class="r-val auto-style-66">delete_row removed 5 "inactive" customers — status field was wrong, they were live</div></div>
                 </div>
                 <div class="r-section">
                     <h4>ROLLBACK ACTIONS (last → first)</h4>
@@ -1131,29 +1130,19 @@ result, receipt = enact.<span class="fn">run</span>(
                         <div class="pbadge pass">✓</div>
                         <div class="policy-detail">
                             <strong>postgres.delete_row → REVERSED</strong>
-                            <span>Re-inserted 47 rows into table "customers" from pre-action capture. All records restored.</span>
-                        </div>
-                    </div>
-                    <div class="policy-row">
-                        <div class="pbadge fail">✗</div>
-                        <div class="policy-detail">
-                            <strong>github.push_commit → COULD NOT REVERSE</strong>
-                            <span class="err">push_commit is irreversible. Commit abc1234 "chore: cleanup inactive records" remains on remote. Manual action required.</span>
+                            <span>Re-inserted 5 rows into "customers" from pre-action capture. All records restored.</span>
                         </div>
                     </div>
                 </div>
                 <div class="r-section">
                     <h4>RESULT</h4>
-                    <div class="r-row"><div class="r-label">Status</div><div class="r-val auto-style-69">Partial — 1 of 2 actions reversed</div></div>
-                    <div class="r-row"><div class="r-label">Rows restored</div><div class="r-val auto-style-70">47 customer records back in prod</div></div>
-                    <div class="r-row"><div class="r-label">Manual action</div><div class="r-val">Revert or delete commit abc1234 from remote</div></div>
-                    <div class="r-row"><div class="r-label">Alert sent</div><div class="r-val">PagerDuty #P847294 updated · Slack #data-team notified</div></div>
+                    <div class="r-row"><div class="r-label">actions_reversed</div><div class="r-val auto-style-70">1 of 1</div></div>
+                    <div class="r-row"><div class="r-label">rows_restored</div><div class="r-val auto-style-70">5 customer records back in prod</div></div>
                 </div>
                 <div class="r-section">
                     <h4>TECHNICAL LOG</h4>
-                    <div class="r-row"><div class="r-label">Execution time</div><div class="r-val">612ms</div></div>
-                    <div class="r-row"><div class="r-label">Actions reversed</div><div class="r-val">1 of 2 (1 irreversible)</div></div>
-                    <div class="r-row"><div class="r-label">Signature</div><div class="r-val auto-style-71">sha256:d4e8f2a193c7...b3c9 (rollback receipt signed)</div></div>
+                    <div class="r-row"><div class="r-label">signature verified</div><div class="r-val">original receipt signature valid before rollback executed</div></div>
+                    <div class="r-row"><div class="r-label">signature</div><div class="r-val auto-style-71">hmac-sha256:a7d4e9c31f8b...2d6a (rollback receipt signed)</div></div>
                 </div>
             </div>
         </div>
@@ -1266,8 +1255,8 @@ result, receipt = enact.<span class="fn">run</span>(
     <div class="container">
         <div class="section-label">Roadmap</div>
         <div class="capability-section-header">
-            <h2 class="auto-style-79">Coming in v0.3</h2>
-            <span class="badge-soon auto-style-80">v0.3+</span>
+            <h2 class="auto-style-79">v0.4 Cloud — Now in Early Access</h2>
+            <span class="badge-live auto-style-80">v0.4</span>
         </div>
         <p class="section-sub auto-style-81">
             These are the capabilities teams ask for most. Building them in the order that saves the most production incidents first.
@@ -1277,14 +1266,20 @@ result, receipt = enact.<span class="fn">run</span>(
 
             <div class="capability-card">
                 <i data-lucide="hand" class="cap-icon"></i>
-                <h3>Human-in-Loop Gates <span class="badge-soon">coming soon</span></h3>
-                <p>High-risk actions pause and wait for a human to approve before continuing. Slack DM, email, or web UI — your choice. Timeout = auto-abort with receipt. No more "the agent just did it while I was asleep."</p>
+                <h3>Human-in-Loop Gates <span class="badge-live">live</span></h3>
+                <p>High-risk actions pause and wait for a human to approve before continuing. Email approval link — signed, one-time-use. Timeout = auto-abort with receipt. No more "the agent just did it while I was asleep."</p>
+            </div>
+
+            <div class="capability-card">
+                <i data-lucide="layout-list" class="cap-icon"></i>
+                <h3>Receipt Browser <span class="badge-live">live</span></h3>
+                <p>Browse, filter, and verify your agent receipts locally — no cloud account needed. Run <code>enact-ui</code> to open a web UI showing every PASS, BLOCK, and ROLLBACK with full JSON and signature verification. Ships with <code>pip install enact-sdk</code>.</p>
             </div>
 
             <div class="capability-card auto-style-82">
                 <i data-lucide="rotate-ccw" class="cap-icon auto-style-83"></i>
                 <h3>One-Step Rollback <span class="badge-live">live</span></h3>
-                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
+                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs, Slack messages), explicitly records what it can't (pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">
@@ -1363,11 +1358,11 @@ result, receipt = enact.<span class="fn">run</span>(
                     <li><span class="fi fi-check">✓</span> <span><strong>Red-teamed workflow library</strong><span class="feat-desc">Validated, versioned, maintained</span></span></li>
                     <li><span class="fi fi-check">✓</span> 90-day retention (compliance-ready)</li>
                     <li><span class="fi fi-check">✓</span> Up to 50,000 receipts/month</li>
-                    <li><span class="fi fi-soon">◐</span> <span class="auto-style-69">Human-in-loop gates <span class="badge-soon">coming soon</span></span></li>
+                    <li><span class="fi fi-check">✓</span> <span><strong>Human-in-loop gates</strong><span class="feat-desc">Email approve/deny, HMAC-signed, auto-expire</span></span></li>
                     <li><span class="fi fi-check">✓</span> <span>Rollback (<code class="auto-style-91">enact.rollback(run_id)</code>)</span></li>
                     <li><span class="fi fi-check">✓</span> Email support (24hr response)</li>
                 </ul>
-                <a href="mailto:hello@enact.cloud?subject=Cloud Waitlist" class="pricing-btn primary">Join Waitlist →</a>
+                <a href="mailto:hello@enact.cloud?subject=Early Access" class="pricing-btn primary">Get Early Access →</a>
                 <p class="auto-style-92">No credit card required</p>
             </div>
 
@@ -1417,7 +1412,7 @@ result, receipt = enact.<span class="fn">run</span>(
         <p>Try Enact locally in 5 minutes, or start with Cloud for free.</p>
         <div class="cta-row">
             <a href="https://github.com/russellmiller3/enact" class="btn btn-primary">pip install enact-sdk</a>
-            <a href="mailto:hello@enact.cloud?subject=Cloud Waitlist" class="btn btn-secondary">Join Cloud Waitlist →</a>
+            <a href="mailto:hello@enact.cloud?subject=Early Access" class="btn btn-secondary">Get Cloud Early Access →</a>
         </div>
     </div>
 </section>

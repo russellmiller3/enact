@@ -5,9 +5,9 @@
 
 ---
 
-## What's Been Built (as of 2026-02-26)
+## What's Been Built (as of 2026-03-01)
 
-**321 tests, 0 failures. Published on PyPI as `enact-sdk` v0.3.1.**
+**356+ tests, 0 failures. Published on PyPI as `enact-sdk` v0.4.**
 
 ### Core SDK (v0.1)
 - **EnactClient** — `run()` orchestrates policy gate → workflow execution → signed receipt. `rollback(run_id)` reverses a prior run.
@@ -21,8 +21,29 @@
 | **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `close_pr`, `close_issue` | ✅ (except `merge_pr`, `push_commit`) | ✅ `already_done` convention |
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ (pre-SELECT captures state) | ✅ |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | ✅ (content captured before mutation) | ✅ |
+| **Slack** | `post_message`, `delete_message` | ✅ `post_message` → `delete_message` via `ts`; needs `chat:delete` scope | No — duplicate posts are intentional |
 
-### Built-in Policies (24 policies across 6 files)
+### Receipt Browser (v0.4)
+- **`enact/ui.py`** — local receipt browser served via stdlib `http.server`, zero extra deps
+- **`enact-ui` CLI** — `enact-ui [--port N] [--dir PATH] [--secret KEY]`; registered in `pyproject.toml` as entry point
+- **Dark mode toggle** with `localStorage` persistence
+- **Signature verification** — shows `signature_valid` per receipt when `--secret` is passed
+- API endpoints: `GET /` (HTML), `GET /api/receipts` (list), `GET /api/receipts/{run_id}` (detail)
+
+### Cloud Backend (v0.4)
+- **`cloud/main.py`** — FastAPI app, lifespan startup (checks `CLOUD_SECRET` env var exists)
+- **`cloud/routes/receipts.py`** — `POST /receipts` (idempotent upsert), `GET /receipts/{run_id}`
+- **`cloud/routes/hitl.py`** — `POST /hitl/request`, `GET /hitl/{id}`, `GET/POST /hitl/{id}/approve`, `GET/POST /hitl/{id}/deny`, confirm page, callback webhook (fire-and-forget daemon thread), HMAC-signed approval receipt
+- **`cloud/routes/badge.py`** — `GET /badge/{team_id}/{workflow}.svg` — public SVG badge (green/red/grey), `ORDER BY rowid DESC` for correct same-second ordering
+- **`cloud/auth.py`** — `X-Enact-Api-Key` header; SHA-256 hash stored, raw key never persisted
+- **`cloud/token.py`** — HMAC-signed approve/deny tokens; action is bound to the token (deny token can't approve)
+- **`cloud/db.py`** — SQLite, `ENACT_DB_PATH` read fresh per call (test isolation via `monkeypatch.setenv`)
+- **`cloud/email.py`** — `smtplib`; `ENACT_EMAIL_DRY_RUN=1` for local dev
+- **`enact/cloud_client.py`** — thin HTTP client for cloud API (`push_receipt`, `request_hitl`, `get_hitl_status`, `poll_until_decided`)
+- **`enact/client.py`** — added `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
+- **Tests:** `tests/cloud/` (conftest, test_auth, test_receipts, test_hitl, test_badge, test_hitl_receipt) + `tests/test_cloud_client.py`
+
+### Built-in Policies (26 policies across 7 files)
 | File | Policies |
 |------|----------|
 | `git.py` | `dont_push_to_main`, `max_files_per_commit`, `require_branch_prefix`, `dont_delete_branch`, `dont_merge_to_main` |
@@ -31,10 +52,12 @@
 | `access.py` | `contractor_cannot_write_pii`, `require_actor_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path`, `require_user_role` |
 | `crm.py` | `dont_duplicate_contacts`, `limit_tasks_per_contact` |
 | `time.py` | `within_maintenance_window`, `code_freeze_active` |
+| `slack.py` | `require_channel_allowlist`, `block_dms` |
 
 ### Workflows
 - **`agent_pr_workflow`** — create branch → open PR (never to main)
 - **`db_safe_insert`** — duplicate check → insert row
+- **`post_slack_message`** — policy-gated Slack message with rollback via `delete_message`
 
 ### Rollback (v0.2)
 - `EnactClient.rollback(run_id)` — loads receipt, verifies signature, reverses actions in reverse order
@@ -48,7 +71,7 @@
 - Receipt path traversal protection (UUID validation)
 
 ### Shipping
-- `pip install enact-sdk` — [PyPI v0.3.1](https://pypi.org/project/enact-sdk/0.3.1/)
+- `pip install enact-sdk` — [PyPI v0.3.2](https://pypi.org/project/enact-sdk/0.3.2/)
 - `examples/demo.py` — 3-act zero-credential demo (BLOCK → PASS → ROLLBACK) with row-level evidence
 - `examples/quickstart.py` — runnable GitHub + git policies demo
 - `examples/demo.cast` — asciinema recording for landing page
@@ -63,6 +86,8 @@
 | `2026-02-24-demo-evidence-and-gif` | Row-level evidence in demo output, `record_demo.py`, `.cast` file |
 | `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
 | `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
+| `2026-03-01-slack-connector` | `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback wiring |
+| `2026-03-01-cloud-mvp` | Cloud backend (FastAPI), HITL gates, receipt storage, status badge, `cloud_client.py`, `enact/ui.py` receipt browser |
 
 ---
 
@@ -357,7 +382,28 @@ enact/
 29. ✅ `enact/connectors/filesystem.py` — `read_file`, `write_file`, `delete_file`, `list_dir`; base_dir path confinement; rollback_data on mutating actions
 30. ✅ `enact/policies/filesystem.py` — `dont_delete_file()`, `restrict_paths(list)`, `block_extensions(list)`
 31. ✅ Tests: 317 tests total, 0 failures
-32. 🔜 PyPI publish — bump to `enact-sdk 0.2.0`
+32. ✅ PyPI publish — `enact-sdk 0.2.0` live
+
+### Phase 7 — Slack Connector + ABAC Policies (v0.3)
+33. ✅ `enact/connectors/slack.py` — `post_message`, `delete_message`; rollback via `ts`; `already_done` convention
+34. ✅ `enact/policies/slack.py` — `require_channel_allowlist()`, `block_dms()`
+35. ✅ `enact/workflows/post_slack_message.py` — policy-gated Slack message with rollback wiring
+36. ✅ `enact/policies/access.py` — added `dont_read_sensitive_tables()`, `dont_read_sensitive_paths()`, `require_clearance_for_path()`, `require_user_role()`
+37. ✅ `enact/policies/time.py` — added `code_freeze_active()`
+38. ✅ `enact/policies/db.py` — added `block_ddl()`
+39. ✅ Tests: 348 tests total, 0 failures
+40. ✅ PyPI publish — `enact-sdk 0.3.2` live
+
+### Phase 8 — Receipt Browser + Cloud MVP (v0.4)
+41. ✅ `enact/ui.py` — local receipt browser (stdlib only, no extra deps); dark mode; signature verification
+42. ✅ `enact-ui` CLI entry point in `pyproject.toml`
+43. ✅ `cloud/` package — FastAPI backend: receipt storage (SQLite, idempotent upsert), HITL gates (HMAC-signed tokens, email approval, callback webhook), status badge SVG
+44. ✅ `cloud/auth.py` — API key auth (SHA-256 hash, raw key never stored)
+45. ✅ `cloud/token.py` — HMAC-signed approve/deny tokens (action bound to token)
+46. ✅ `enact/cloud_client.py` — thin HTTP client for cloud API (stdlib urllib only)
+47. ✅ `enact/client.py` — `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
+48. ✅ Tests: 356+ tests total (SDK + cloud), 0 failures
+49. ✅ PyPI publish — `enact-sdk 0.4` live
 
 ---
 
