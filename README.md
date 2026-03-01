@@ -371,6 +371,19 @@ from enact.receipt import verify_signature
 is_valid = verify_signature(receipt, secret="your-secret")
 ```
 
+### Receipt Browser (local UI)
+
+Browse, filter, and verify your receipts locally — no cloud required.
+
+```bash
+enact-ui                           # serves receipts/ on http://localhost:8765
+enact-ui --port 9000               # custom port
+enact-ui --dir /path/to/receipts   # custom directory
+enact-ui --secret YOUR_SECRET      # enables signature verification in the UI
+```
+
+The browser shows every run (PASS / BLOCK / ROLLED_BACK), lets you click into the full JSON, and highlights invalid signatures. Dark mode toggle included. Zero extra dependencies — ships with `enact-sdk`.
+
 ### Step 5: Rollback (if something goes wrong)
 
 **WHY:** Say the `agent_pr_workflow` from Step 1 ran — it created `agent/fix-149`, opened a PR, and merged it straight to `main` by mistake. You need to undo all three steps. One call.
@@ -545,23 +558,73 @@ Rollback verifies the receipt signature before executing any reversal — tamper
 
 ---
 
+## Cloud Features
+
+Push receipts to the Enact cloud and use human-in-the-loop gates from any workflow.
+
+```python
+from enact import EnactClient
+
+enact = EnactClient(
+    systems={"github": gh},
+    policies=[dont_push_to_main],
+    workflows=[agent_pr_workflow],
+    secret="your-secret",
+    cloud_api_key="eak_...",   # get at enact.cloud — enables cloud features
+)
+```
+
+**Push receipts to cloud storage:**
+
+```python
+result, receipt = enact.run(...)
+enact.push_receipt_to_cloud(receipt)   # receipt now searchable in cloud UI
+```
+
+**Human-in-the-loop gate** — pause a workflow and email a human to approve before continuing:
+
+```python
+result, receipt = enact.run_with_hitl(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/nuke-main"},
+    notify_email="ops@company.com",    # who gets the approve/deny email
+    timeout_seconds=3600,              # auto-deny after 1 hour of silence
+)
+
+print(result.decision)   # "PASS" if approved, "BLOCK" if denied or timed out
+```
+
+The approval email contains a signed link. Clicking approve or deny fires a callback and writes a HITL receipt. No credentials or login needed for the approver.
+
+**Status badge** — embed in your README to show real-time pass/block rate for a workflow:
+
+```markdown
+![agent_pr_workflow](https://enact.cloud/badge/your-team-id/agent_pr_workflow.svg)
+```
+
+---
+
 ## Run Tests
 
 ```bash
 pytest tests/ -v
-# 348 tests, 0 failures
+# 356+ tests, 0 failures (SDK + cloud)
 ```
 
 ---
 
 ## Environment Variables
 
-| Variable       | Required                | Purpose                                            |
-| -------------- | ----------------------- | -------------------------------------------------- |
-| `ENACT_SECRET`    | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
-| `GITHUB_TOKEN`    | For GitHubConnector     | GitHub PAT or App token                            |
-| `SLACK_BOT_TOKEN` | For SlackConnector      | Slack bot token (xoxb-...). Needs `chat:write` scope; add `chat:delete` to enable rollback. |
-| `ENACT_FREEZE`    | Optional                | Set to `1` to activate `code_freeze_active` policy |
+| Variable           | Required                | Purpose                                            |
+| ------------------ | ----------------------- | -------------------------------------------------- |
+| `ENACT_SECRET`     | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
+| `GITHUB_TOKEN`     | For GitHubConnector     | GitHub PAT or App token                            |
+| `SLACK_BOT_TOKEN`  | For SlackConnector      | Slack bot token (xoxb-...). Needs `chat:write` scope; add `chat:delete` to enable rollback. |
+| `ENACT_FREEZE`     | Optional                | Set to `1` to activate `code_freeze_active` policy |
+| `CLOUD_API_KEY`    | For cloud features      | API key from enact.cloud — enables receipt push + HITL |
+| `CLOUD_SECRET`     | Cloud backend only      | Server-side signing secret for the cloud backend   |
+| `ENACT_EMAIL_DRY_RUN` | Cloud backend only   | Set to `1` to skip real email sends in dev/test    |
 
 ---
 

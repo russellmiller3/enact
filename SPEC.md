@@ -7,7 +7,7 @@
 
 ## What's Been Built (as of 2026-03-01)
 
-**348 tests, 0 failures. Published on PyPI as `enact-sdk` v0.3.2.**
+**356+ tests, 0 failures. Published on PyPI as `enact-sdk` v0.4.**
 
 ### Core SDK (v0.1)
 - **EnactClient** — `run()` orchestrates policy gate → workflow execution → signed receipt. `rollback(run_id)` reverses a prior run.
@@ -22,6 +22,26 @@
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ (pre-SELECT captures state) | ✅ |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | ✅ (content captured before mutation) | ✅ |
 | **Slack** | `post_message`, `delete_message` | ✅ `post_message` → `delete_message` via `ts`; needs `chat:delete` scope | No — duplicate posts are intentional |
+
+### Receipt Browser (v0.4)
+- **`enact/ui.py`** — local receipt browser served via stdlib `http.server`, zero extra deps
+- **`enact-ui` CLI** — `enact-ui [--port N] [--dir PATH] [--secret KEY]`; registered in `pyproject.toml` as entry point
+- **Dark mode toggle** with `localStorage` persistence
+- **Signature verification** — shows `signature_valid` per receipt when `--secret` is passed
+- API endpoints: `GET /` (HTML), `GET /api/receipts` (list), `GET /api/receipts/{run_id}` (detail)
+
+### Cloud Backend (v0.4)
+- **`cloud/main.py`** — FastAPI app, lifespan startup (checks `CLOUD_SECRET` env var exists)
+- **`cloud/routes/receipts.py`** — `POST /receipts` (idempotent upsert), `GET /receipts/{run_id}`
+- **`cloud/routes/hitl.py`** — `POST /hitl/request`, `GET /hitl/{id}`, `GET/POST /hitl/{id}/approve`, `GET/POST /hitl/{id}/deny`, confirm page, callback webhook (fire-and-forget daemon thread), HMAC-signed approval receipt
+- **`cloud/routes/badge.py`** — `GET /badge/{team_id}/{workflow}.svg` — public SVG badge (green/red/grey), `ORDER BY rowid DESC` for correct same-second ordering
+- **`cloud/auth.py`** — `X-Enact-Api-Key` header; SHA-256 hash stored, raw key never persisted
+- **`cloud/token.py`** — HMAC-signed approve/deny tokens; action is bound to the token (deny token can't approve)
+- **`cloud/db.py`** — SQLite, `ENACT_DB_PATH` read fresh per call (test isolation via `monkeypatch.setenv`)
+- **`cloud/email.py`** — `smtplib`; `ENACT_EMAIL_DRY_RUN=1` for local dev
+- **`enact/cloud_client.py`** — thin HTTP client for cloud API (`push_receipt`, `request_hitl`, `get_hitl_status`, `poll_until_decided`)
+- **`enact/client.py`** — added `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
+- **Tests:** `tests/cloud/` (conftest, test_auth, test_receipts, test_hitl, test_badge, test_hitl_receipt) + `tests/test_cloud_client.py`
 
 ### Built-in Policies (26 policies across 7 files)
 | File | Policies |
@@ -67,6 +87,7 @@
 | `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
 | `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
 | `2026-03-01-slack-connector` | `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback wiring |
+| `2026-03-01-cloud-mvp` | Cloud backend (FastAPI), HITL gates, receipt storage, status badge, `cloud_client.py`, `enact/ui.py` receipt browser |
 
 ---
 
@@ -372,6 +393,17 @@ enact/
 38. ✅ `enact/policies/db.py` — added `block_ddl()`
 39. ✅ Tests: 348 tests total, 0 failures
 40. ✅ PyPI publish — `enact-sdk 0.3.2` live
+
+### Phase 8 — Receipt Browser + Cloud MVP (v0.4)
+41. ✅ `enact/ui.py` — local receipt browser (stdlib only, no extra deps); dark mode; signature verification
+42. ✅ `enact-ui` CLI entry point in `pyproject.toml`
+43. ✅ `cloud/` package — FastAPI backend: receipt storage (SQLite, idempotent upsert), HITL gates (HMAC-signed tokens, email approval, callback webhook), status badge SVG
+44. ✅ `cloud/auth.py` — API key auth (SHA-256 hash, raw key never stored)
+45. ✅ `cloud/token.py` — HMAC-signed approve/deny tokens (action bound to token)
+46. ✅ `enact/cloud_client.py` — thin HTTP client for cloud API (stdlib urllib only)
+47. ✅ `enact/client.py` — `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
+48. ✅ Tests: 356+ tests total (SDK + cloud), 0 failures
+49. ✅ PyPI publish — `enact-sdk 0.4` live
 
 ---
 
