@@ -54,6 +54,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - `tests/` — pytest suite
 - `examples/` — usage examples
 - `plans/` — implementation plans
+- `index.html` — the landing page (when Russell says "landing page", he means this file)
 
 ## Stack
 
@@ -102,7 +103,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 
 ## Asking Questions
 
-**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `landing_page.html`, and the relevant connector/workflow code to form an opinion. Then ask like this:
+**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `index.html` (the landing page), and the relevant connector/workflow code to form an opinion. Then ask like this:
 
 > "Should rollback apply at the whole-run level or per-action? My read: whole-run — that's what the receipt already models and what enterprise buyers mean by 'undo.' Per-action is more flexible but doubles the API surface for little gain."
 

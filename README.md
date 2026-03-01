@@ -26,7 +26,7 @@ pip install enact-sdk
 python examples/quickstart.py
 ```
 
-That's it. Two runs — one PASS, one BLOCK — with signed receipts.
+That's it. Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts.
 
 Want the full show? `python examples/demo.py` runs a 3-act scenario: an agent blocked from pushing to main, a normal PR workflow, and a database wipe rolled back in one command. No credentials needed.
 
