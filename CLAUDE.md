@@ -1,5 +1,9 @@
 # enact — Claude Instructions
 
+## File Write Rule (top priority)
+
+**Always write files in small chunks — never more than ~150 lines per Write call.** Large writes fail silently or error out and lose all content. If a file is longer than 150 lines, write it in sequential parts: create the file with the first chunk, then append subsequent chunks via Edit. This applies to plan files, code, HTML, everything.
+
 ## Startup
 
 At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
