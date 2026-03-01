@@ -50,6 +50,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - `tests/` — pytest suite
 - `examples/` — usage examples
 - `plans/` — implementation plans
+- `index.html` — the landing page (when Russell says "landing page", he means this file)
 
 ## Stack
 
@@ -63,7 +64,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - When Russell says **"commit"** or **"git workflow"**: invoke `commit-commands:commit-and-push` skill
 - Main branch: `master`
 - No need for backward compatibility — just change things
-- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `landing_page.html` — remove any "coming soon" badges for shipped features, (5) delete dead code and stale files, (6) push to remote
+- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `index.html` (the landing page) — remove any "coming soon" badges for shipped features, (5) delete dead code and stale files, (6) push to remote
 
 ## File & Code Discipline
 
@@ -98,7 +99,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 
 ## Asking Questions
 
-**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `landing_page.html`, and the relevant connector/workflow code to form an opinion. Then ask like this:
+**Never ask an open question without a recommended answer.** Before asking, read `SPEC.md`, `index.html` (the landing page), and the relevant connector/workflow code to form an opinion. Then ask like this:
 
 > "Should rollback apply at the whole-run level or per-action? My read: whole-run — that's what the receipt already models and what enterprise buyers mean by 'undo.' Per-action is more flexible but doubles the API surface for little gain."
 
