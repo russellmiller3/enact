@@ -18,7 +18,8 @@ dependencies = [
 postgres = ["psycopg2-binary"]
 github = ["PyGithub"]
 hubspot = ["hubspot-api-client"]
-all = ["psycopg2-binary", "PyGithub", "hubspot-api-client"]
+slack = ["slack-sdk"]
+all = ["psycopg2-binary", "PyGithub", "hubspot-api-client", "slack-sdk"]
 dev = [
     "pytest",
     "pytest-asyncio",
