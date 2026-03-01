@@ -27,12 +27,12 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-02-26
+**Date:** 2026-03-01
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 - Branch: `master`
-- Last commit: `e74bf20` — "docs: add migration section to landing page and README; bump to v0.3.1"
+- Last commit: `03d8473` — "chore: update index.html"
 - Remote: `origin` → https://github.com/russellmiller3/enact (up to date)
 - PyPI: `enact-sdk 0.3.1` live at https://pypi.org/project/enact-sdk/0.3.1/
 - License: ELv2 + no-resale clause
@@ -68,17 +68,11 @@ LICENSE, landing_page.html, pyproject.toml
 `enact-sdk 0.3.1` published at https://pypi.org/project/enact-sdk/0.3.1/
 Credentials in `~/.pypirc` (project-scoped token). To release: bump `version` in `pyproject.toml` → `python -m build` → `python -m twine upload dist/enact_sdk-X.Y.Z*`
 
-### What Was Done This Session (2026-02-26)
-- **Migration section added to `landing_page.html`** ✅
-  - New `#migrate` section between Disasters and Quickstart
-  - 3-step migration flow (Register systems → Move guard logic → Replace direct calls)
-  - Side-by-side before/after code (raw SDK calls → `enact.run()`)
-  - Reassurance row: any framework, agent logic unchanged, no infra changes
-  - `Migrate` nav link added to header
-- **Migration section added to `README.md`** ✅ — same before/after for GitHub/PyPI readers
-- **`pyproject.toml`** bumped `0.3.0` → `0.3.1` (PyPI is immutable; docs-only changes still need a bump)
-- **`enact-sdk 0.3.1` pushed to PyPI** ✅
-- **321 tests, 0 failures** — all green before commit
+### What Was Done This Session (2026-03-01)
+- **Pytest environment confirmed working** ✅ — `pytest`/`PyGithub`/`psycopg2-binary` weren't installed in the CI environment; installed them and confirmed **321 tests, 0 failures**
+- **`index.html` updated** ✅ — landing page tweaks (commit `03d8473`)
+- **Rollback added to `examples/quickstart.py`** ✅ — illustrates full PASS → rollback flow for readers
+- **Landing page mobile optimization** ✅ — hamburger nav, inline styles extracted
 
 ### Previously Completed (all plans in `plans/done/`)
 - ABAC policies (`require_user_role`, `require_clearance_for_path`, `contractor_cannot_write_pii`, etc.) ✅
