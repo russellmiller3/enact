@@ -62,6 +62,8 @@ class EnactClient:
         receipt_dir: str = "receipts",
         rollback_enabled: bool = False,
         allow_insecure_secret: bool = False,
+        cloud_api_key: str | None = None,
+        cloud_base_url: str = "https://enact.cloud",
     ):
         """
         Initialise the client.
@@ -103,6 +105,12 @@ class EnactClient:
 
         self._receipt_dir = receipt_dir
         self._rollback_enabled = rollback_enabled
+
+        # Cloud integration (optional) — lazy import keeps cloud deps out of core path
+        self._cloud = None
+        if cloud_api_key:
+            from enact.cloud_client import CloudClient
+            self._cloud = CloudClient(api_key=cloud_api_key, base_url=cloud_base_url)
 
     def run(
         self,
@@ -266,3 +274,71 @@ class EnactClient:
             ),
             receipt,
         )
+
+    def push_receipt_to_cloud(self, receipt: Receipt) -> dict:
+        """
+        Push a signed receipt to Enact Cloud storage.
+        Requires cloud_api_key= at init time.
+        """
+        if not self._cloud:
+            raise PermissionError(
+                "Cloud features require cloud_api_key= to be set on EnactClient."
+            )
+        return self._cloud.push_receipt(receipt)
+
+    def run_with_hitl(
+        self,
+        workflow: str,
+        user_email: str,
+        payload: dict,
+        notify_email: str,
+        expires_in_seconds: int = 3600,
+        poll_interval_seconds: int = 5,
+    ) -> tuple[RunResult, Receipt]:
+        """
+        Like run(), but pauses and sends a human approval email before executing.
+
+        Blocks until the human approves or denies (polls cloud every poll_interval_seconds).
+        On APPROVED: runs the workflow normally and returns (RunResult, Receipt).
+        On DENIED or EXPIRED: returns a blocked RunResult with decision=BLOCK.
+
+        Requires cloud_api_key= at init time.
+        """
+        if not self._cloud:
+            raise PermissionError(
+                "run_with_hitl() requires cloud_api_key= to be set on EnactClient."
+            )
+
+        hitl = self._cloud.request_hitl(
+            workflow=workflow,
+            payload=payload,
+            notify_email=notify_email,
+            expires_in_seconds=expires_in_seconds,
+        )
+
+        status = self._cloud.poll_until_decided(
+            hitl_id=hitl["hitl_id"],
+            poll_interval_seconds=poll_interval_seconds,
+            timeout_seconds=expires_in_seconds,
+        )
+
+        if status != "APPROVED":
+            # Build a BLOCK receipt with HITL denial as the reason
+            from enact.models import PolicyResult
+            policy_results = [PolicyResult(
+                policy="hitl_approval",
+                passed=False,
+                reason=f"Human approval {status} (hitl_id={hitl['hitl_id']})",
+            )]
+            receipt = build_receipt(
+                workflow=workflow,
+                user_email=user_email,
+                payload=payload,
+                policy_results=policy_results,
+                decision="BLOCK",
+            )
+            receipt = sign_receipt(receipt, self._secret)
+            write_receipt(receipt, self._receipt_dir)
+            return RunResult(success=False, workflow=workflow), receipt
+
+        return self.run(workflow=workflow, user_email=user_email, payload=payload)

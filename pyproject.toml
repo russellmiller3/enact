@@ -24,6 +24,8 @@ dev = [
     "pytest-asyncio",
     "responses",
     "psycopg2-binary",
+    "fastapi",
+    "httpx",
 ]
 
 [tool.setuptools.packages.find]
