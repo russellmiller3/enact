@@ -58,6 +58,20 @@ _HTML = """<!DOCTYPE html>
       --accent: #4f46e5;
       --radius: 6px;
     }
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #263548;
+      --border: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --pass: #22c55e;
+      --pass-bg: rgba(34,197,94,.12);
+      --block: #ef4444;
+      --block-bg: rgba(239,68,68,.12);
+      --partial: #f59e0b;
+      --partial-bg: rgba(245,158,11,.12);
+    }
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
@@ -65,6 +79,7 @@ _HTML = """<!DOCTYPE html>
       min-height: 100vh;
       font-size: 14px;
       line-height: 1.5;
+      transition: background-color .2s, color .2s;
     }
     header {
       background: var(--surface);
@@ -85,6 +100,19 @@ _HTML = """<!DOCTYPE html>
     }
     .logo svg { color: var(--accent); flex-shrink: 0; }
     .header-sub { color: var(--text-muted); font-size: 13px; }
+    .header-right { margin-left: auto; display: flex; align-items: center; }
+    .theme-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 5px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      transition: border-color .15s, color .15s;
+    }
+    .theme-btn:hover { border-color: var(--accent); color: var(--text); }
     main { padding: 24px; max-width: 1280px; margin: 0 auto; }
     .toolbar {
       display: flex;
@@ -251,6 +279,19 @@ _HTML = """<!DOCTYPE html>
     Enact
   </div>
   <span class="header-sub">/ Receipt Browser</span>
+  <div class="header-right">
+    <button class="theme-btn" id="theme-toggle" title="Toggle dark / light theme">
+      <!-- Sun icon (shown in dark mode) -->
+      <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+        <circle cx="12" cy="12" r="4"/>
+        <path stroke-linecap="round" d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+      </svg>
+      <!-- Moon icon (shown in light mode) -->
+      <svg id="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+      </svg>
+    </button>
+  </div>
 </header>
 
 <main>
@@ -480,6 +521,26 @@ _HTML = """<!DOCTYPE html>
     document.getElementById('detail').classList.remove('show');
     selected = null;
     render();
+  });
+
+  // ---- theme toggle ----
+
+  function applyTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('icon-sun').style.display  = dark ? 'block' : 'none';
+    document.getElementById('icon-moon').style.display = dark ? 'none'  : 'block';
+  }
+
+  (function initTheme() {
+    const saved = localStorage.getItem('enact-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved === 'dark' || (!saved && prefersDark));
+  })();
+
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    applyTheme(!isDark);
+    localStorage.setItem('enact-theme', isDark ? 'light' : 'dark');
   });
 
   // Initial load + auto-refresh every 5 s
