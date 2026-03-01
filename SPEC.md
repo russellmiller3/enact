@@ -21,8 +21,9 @@
 | **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `close_pr`, `close_issue` | ✅ (except `merge_pr`, `push_commit`) | ✅ `already_done` convention |
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ (pre-SELECT captures state) | ✅ |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | ✅ (content captured before mutation) | ✅ |
+| **Slack** | `post_message`, `delete_message` | ✅ `post_message` → `delete_message` via `ts`; needs `chat:delete` scope | No — duplicate posts are intentional |
 
-### Built-in Policies (24 policies across 6 files)
+### Built-in Policies (26 policies across 7 files)
 | File | Policies |
 |------|----------|
 | `git.py` | `dont_push_to_main`, `max_files_per_commit`, `require_branch_prefix`, `dont_delete_branch`, `dont_merge_to_main` |
@@ -31,10 +32,12 @@
 | `access.py` | `contractor_cannot_write_pii`, `require_actor_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path`, `require_user_role` |
 | `crm.py` | `dont_duplicate_contacts`, `limit_tasks_per_contact` |
 | `time.py` | `within_maintenance_window`, `code_freeze_active` |
+| `slack.py` | `require_channel_allowlist`, `block_dms` |
 
 ### Workflows
 - **`agent_pr_workflow`** — create branch → open PR (never to main)
 - **`db_safe_insert`** — duplicate check → insert row
+- **`post_slack_message`** — policy-gated Slack message with rollback via `delete_message`
 
 ### Rollback (v0.2)
 - `EnactClient.rollback(run_id)` — loads receipt, verifies signature, reverses actions in reverse order
@@ -63,6 +66,7 @@
 | `2026-02-24-demo-evidence-and-gif` | Row-level evidence in demo output, `record_demo.py`, `.cast` file |
 | `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
 | `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
+| `2026-03-01-slack-connector` | `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback wiring |
 
 ---
 

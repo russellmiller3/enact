@@ -27,71 +27,60 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-02-26
+**Date:** 2026-03-01
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
-- Branch: `master`
-- Last commit: `e74bf20` — "docs: add migration section to landing page and README; bump to v0.3.1"
+- Branch: `claude/red-team-slack-exercise-FYxKD` (feature branch — push to master when ready)
+- Last commit: `f0045bc` — "docs: update README for Slack connector"
 - Remote: `origin` → https://github.com/russellmiller3/enact (up to date)
-- PyPI: `enact-sdk 0.3.1` live at https://pypi.org/project/enact-sdk/0.3.1/
+- PyPI: `enact-sdk 0.3.1` live — needs bump to `0.3.2` for Slack connector
 - License: ELv2 + no-resale clause
 
 ### What Exists (fully built + tested)
-321 tests, all passing. Published to PyPI as `enact-sdk 0.3.1`.
+348 tests, all passing. PyPI at `enact-sdk 0.3.1`.
 
 ```
 enact/
   models.py, policy.py, receipt.py, client.py
-  rollback.py                   # execute_rollback_action() dispatch for GitHub + Postgres + Filesystem
-  connectors/github.py          # rollback_data populated; close_pr, close_issue, create_branch_from_sha added
-  connectors/postgres.py        # pre-SELECT in update_row/delete_row; rollback_data populated
-  connectors/filesystem.py      # NEW — read_file, write_file, delete_file, list_dir; base_dir path confinement
-  policies/git.py               # dont_push_to_main, max_files_per_commit, require_branch_prefix, dont_delete_branch, dont_merge_to_main
-  policies/db.py                # dont_delete_row, dont_delete_without_where, dont_update_without_where, protect_tables
-  policies/filesystem.py        # NEW — dont_delete_file, restrict_paths, block_extensions
-  policies/crm.py, access.py, time.py
+  rollback.py                       # dispatch for GitHub + Postgres + Filesystem + Slack
+  connectors/github.py, postgres.py, filesystem.py
+  connectors/slack.py               # NEW — post_message, delete_message; rollback via ts
+  policies/git.py, db.py, filesystem.py, crm.py, access.py, time.py
+  policies/slack.py                 # NEW — require_channel_allowlist, block_dms
   workflows/agent_pr_workflow.py, db_safe_insert.py
-CLAUDE.md, README.md, SPEC.md, PLAN-TEMPLATE.md
-plans/2026-02-24-rollback.md
-plans/2026-02-25-filesystem-connector.md
-plans/guides/RED-TEAM-MODE-GUIDE.md
-LICENSE, landing_page.html, pyproject.toml
+  workflows/post_slack_message.py   # NEW
+plans/2026-03-01-slack-connector.md
 ```
 
 ### Conventions Established
-- **`already_done` flag**: Every mutating connector action includes `output["already_done"]` — `False` for fresh actions, descriptive string for noops. All future connectors must follow this.
-- **`rollback_data` field**: Every mutating `ActionResult` includes `rollback_data` dict with pre-action state. See `plans/done/2026-02-24-rollback.md` Appendix for the checklist.
-- **Plan template**: `PLAN-TEMPLATE.md` — Template A (Full TDD), B (Small), C (Refactoring). Plans go in `plans/`.
+- **`already_done` flag**: Every mutating action has `output["already_done"]` — `False` for fresh, descriptive string for noops. Exception: `post_message` is always `False` (duplicate posts are intentional).
+- **`rollback_data` field**: Every mutating `ActionResult` includes `rollback_data`. Slack: uses `response["channel"]` (resolved ID), not input channel — critical for DM posts.
+- **Plan template**: `PLAN-TEMPLATE.md` — Template A (Full TDD), B (Small), C (Refactoring).
 
-### PyPI — LIVE ✅
-`enact-sdk 0.3.1` published at https://pypi.org/project/enact-sdk/0.3.1/
-Credentials in `~/.pypirc` (project-scoped token). To release: bump `version` in `pyproject.toml` → `python -m build` → `python -m twine upload dist/enact_sdk-X.Y.Z*`
+### PyPI — NEEDS BUMP
+Credentials in `~/.pypirc`. To release: bump `version` in `pyproject.toml` → `python -m build` → `python -m twine upload dist/enact_sdk-0.3.2*`
 
-### What Was Done This Session (2026-02-26)
-- **Migration section added to `landing_page.html`** ✅
-  - New `#migrate` section between Disasters and Quickstart
-  - 3-step migration flow (Register systems → Move guard logic → Replace direct calls)
-  - Side-by-side before/after code (raw SDK calls → `enact.run()`)
-  - Reassurance row: any framework, agent logic unchanged, no infra changes
-  - `Migrate` nav link added to header
-- **Migration section added to `README.md`** ✅ — same before/after for GitHub/PyPI readers
-- **`pyproject.toml`** bumped `0.3.0` → `0.3.1` (PyPI is immutable; docs-only changes still need a bump)
-- **`enact-sdk 0.3.1` pushed to PyPI** ✅
-- **321 tests, 0 failures** — all green before commit
+### What Was Done This Session (2026-03-01)
+- **`SlackConnector`** ✅ — `post_message` + `delete_message`; rollback_data uses resolved channel ID
+- **Slack policies** ✅ — `require_channel_allowlist(channels)`, `block_dms` (blocks `D...` + `U...`)
+- **`post_slack_message` workflow** ✅ — single-step, receipt-backed, rollback-able
+- **Rollback wiring** ✅ — `_rollback_slack()` in `rollback.py`
+- **`pyproject.toml`** ✅ — `slack = ["slack-sdk"]`, `all` group updated
+- **README, SPEC, Handoff, index.html** ✅ — all updated
+- **348 tests, 0 failures**
 
-### Previously Completed (all plans in `plans/done/`)
-- ABAC policies (`require_user_role`, `require_clearance_for_path`, `contractor_cannot_write_pii`, etc.) ✅
-- `block_ddl`, `code_freeze_active`, `user_email` rename ✅
+### Previously Completed
+- ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename ✅
 - `FilesystemConnector` + filesystem policies + rollback ✅
-- Rollback engine (`enact.rollback(run_id)`) ✅
-- Idempotency (`already_done` convention) ✅
+- Rollback engine, idempotency, migration section in landing page + README ✅
+- `enact-sdk 0.3.1` on PyPI ✅
 
 ### Next Steps (priority order)
-1. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. Use HubSpot free sandbox. (Template A)
-2. **Demo evidence + terminal GIF** — plan at `docs/plans/done/2026-02-24-demo-evidence-and-gif.md`.
-3. **AWS connector** — EC2 + S3 (defer until HubSpot + GIF done).
-4. **Show HN post** — when demo GIF is ready. Lead with rollback story (Replit incident).
+1. **PyPI bump to `0.3.2`** — bump `pyproject.toml`, build, upload
+2. **`HubSpotConnector`** — `create_contact`, `update_deal`, `create_task`, `get_contact`. HubSpot free sandbox. (Template A)
+3. **Show HN post** — demo GIF is ready. Lead with rollback story (Replit incident).
+4. **AWS connector** — defer until HubSpot done.
 
 ### Files to Reference
 - `SPEC.md` — full build plan, strategic thesis, competitive analysis

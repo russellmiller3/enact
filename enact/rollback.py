@@ -20,6 +20,7 @@ Inverse map:
     filesystem.delete_file      -> filesystem.write_file (recreate with stored content)
     filesystem.read_file        -> (read-only, skipped)
     filesystem.list_dir         -> (read-only, skipped)
+    slack.post_message          -> slack.delete_message (using channel + ts from rollback_data)
 """
 from enact.models import ActionResult
 
@@ -28,7 +29,7 @@ from enact.models import ActionResult
 # records success=False for each so the caller knows what needs manual cleanup.
 _IRREVERSIBLE = {
     ("github", "push_commit"),  # Can't un-push without destructive force-push
-    # NOTE: Add future irreversible actions here (email sends, Slack messages, etc.)
+    # NOTE: Add future irreversible actions here (email sends, etc.)
     # Pattern: ("system_name", "action_name")
     # merge_pr is handled via revert_commit — removed from irreversible
 }
@@ -90,6 +91,8 @@ def execute_rollback_action(action_result: ActionResult, systems: dict) -> Actio
         return _rollback_postgres(action_result.action, rd, connector)
     elif action_result.system == "filesystem":
         return _rollback_filesystem(action_result.action, rd, connector)
+    elif action_result.system == "slack":
+        return _rollback_slack(action_result.action, rd, connector)
     else:
         return ActionResult(
             action=f"rollback_{action_result.action}",
@@ -223,4 +226,24 @@ def _rollback_filesystem(action: str, rd: dict, connector) -> ActionResult:
             system="filesystem",
             success=False,
             output={"error": f"Rollback failed for filesystem.{action}: {str(e)}"},
+        )
+
+
+def _rollback_slack(action: str, rd: dict, connector) -> ActionResult:
+    try:
+        if action == "post_message":
+            return connector.delete_message(channel=rd["channel"], ts=rd["ts"])
+        else:
+            return ActionResult(
+                action=f"rollback_{action}",
+                system="slack",
+                success=False,
+                output={"error": f"No rollback handler for slack.{action}"},
+            )
+    except Exception as e:
+        return ActionResult(
+            action=f"rollback_{action}",
+            system="slack",
+            success=False,
+            output={"error": f"Rollback failed for slack.{action}: {str(e)}"},
         )

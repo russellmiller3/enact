@@ -180,7 +180,7 @@ gh.delete_branch(repo="owner/repo", branch="main")
 # -> PermissionError: Action 'delete_branch' not in allowlist
 ```
 
-Enact ships connectors for GitHub, Postgres, and the filesystem. You don't write these — you import and configure them.
+Enact ships connectors for GitHub, Postgres, the filesystem, and Slack. You don't write these — you import and configure them.
 
 ### Prerequisite: The Context
 
@@ -435,7 +435,7 @@ The rollback receipt looks like this — note the `revert_sha` showing exactly w
 
 ## Built-in Policies
 
-Enact ships 24 built-in policies across 6 categories so you don't have to write them from scratch:
+Enact ships 26 built-in policies across 7 categories so you don't have to write them from scratch:
 
 | Category       | Policies                                                                                                                                                          | What they block                                              |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -445,11 +445,13 @@ Enact ships 24 built-in policies across 6 categories so you don't have to write 
 | **Access**     | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure                            |
 | **CRM**        | `dont_duplicate_contacts`, `limit_tasks_per_contact`                                                                                                              | Duplicate records, rate limiting                             |
 | **Time**       | `within_maintenance_window`, `code_freeze_active`                                                                                                                 | Actions outside allowed hours, during code freezes           |
+| **Slack**      | `require_channel_allowlist`, `block_dms`                                                                                                                          | Off-list channel posts, direct messages to users             |
 
 ```python
 from enact.policies.git import dont_push_to_main, require_branch_prefix
 from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
+from enact.policies.slack import require_channel_allowlist, block_dms
 ```
 
 ---
@@ -502,6 +504,7 @@ Policies handle the scenarios you anticipated. `allowed_actions` caps the blast 
 | **GitHub**     | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr` | Yes — `merge_pr` via `revert_commit`; except `push_commit` | Yes — `already_done` convention |
 | **Postgres**   | `select_rows`, `insert_row`, `update_row`, `delete_row`                   | Yes — pre-SELECT captures state        | Yes                             |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir`                      | Yes — content captured before mutation | Yes                             |
+| **Slack**      | `post_message`, `delete_message`                                          | Yes — `post_message` via `delete_message` (bot token must have `chat:delete` scope) | No — posting the same text twice is two messages, not a duplicate |
 
 ### What Rollback Can and Can't Undo
 
@@ -519,6 +522,8 @@ Policies handle the scenarios you anticipated. `allowed_actions` caps the blast 
 | `postgres.TRUNCATE` | ❌ | Same as above — blocked by `block_ddl` |
 | `filesystem.write_file` | ✅ | Restores previous content (or deletes if file was new) |
 | `filesystem.delete_file` | ✅ | Recreates file with captured content |
+| `slack.post_message` | ✅ | Deletes the posted message via `chat.delete` using the `ts` timestamp captured at post time |
+| `slack.delete_message` | ❌ | You can't un-delete a Slack message |
 
 **One caveat on `merge_pr` rollback:** After reverting a merge, if you fix the issue and try to re-merge the same branch, Git will skip those commits (they look already-merged). Revert the revert commit first (`git revert <revert_sha>`), then re-merge. This is standard Git behavior.
 
@@ -544,7 +549,7 @@ Rollback verifies the receipt signature before executing any reversal — tamper
 
 ```bash
 pytest tests/ -v
-# 317 tests, 0 failures
+# 348 tests, 0 failures
 ```
 
 ---
@@ -553,9 +558,10 @@ pytest tests/ -v
 
 | Variable       | Required                | Purpose                                            |
 | -------------- | ----------------------- | -------------------------------------------------- |
-| `ENACT_SECRET` | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
-| `GITHUB_TOKEN` | For GitHubConnector     | GitHub PAT or App token                            |
-| `ENACT_FREEZE` | Optional                | Set to `1` to activate `code_freeze_active` policy |
+| `ENACT_SECRET`    | Yes (or pass `secret=`) | HMAC signing key. 32+ characters.                  |
+| `GITHUB_TOKEN`    | For GitHubConnector     | GitHub PAT or App token                            |
+| `SLACK_BOT_TOKEN` | For SlackConnector      | Slack bot token (xoxb-...). Needs `chat:write` scope; add `chat:delete` to enable rollback. |
+| `ENACT_FREEZE`    | Optional                | Set to `1` to activate `code_freeze_active` policy |
 
 ---
 
