@@ -1,36 +1,42 @@
-# Plan 7: Slack Connector
+# Plan: Slack Connector + Policies + Workflow
 
-**Template:** A (Full TDD — new connector, policies, workflow, rollback wiring)
+**Template:** A (Full TDD — new connector, multiple files)
+**Date:** 2026-03-01
 
 ---
 
 ## A.1 What We're Building
 
-`SlackConnector` — lets AI agents post Slack messages, governed by Enact policies and backed by a receipt. Agents can send to channels or DM a user by email. Rollback deletes the message.
+A `SlackConnector` that lets AI agents safely post and delete Slack messages under policy control, with full rollback support.
 
 ```
-BEFORE: agent.post_slack("#general", "Deploy complete")  # ungoverned, no receipt
-AFTER:  enact.run("post_slack_message_workflow", payload={"channel": "#alerts", "text": "..."})
-        # → policy gate → send_message → signed receipt with ts for rollback
+Agent calls enact.run()
+  → policies check: is this channel allowed? is it a DM?
+  → post_message fires via SlackConnector
+  → receipt records channel + ts (for rollback)
+  → enact.rollback(run_id) calls delete_message(channel, ts)
 ```
+
+**Actions:**
+- `post_message(channel, text)` — post to a channel or DM. `already_done` is always `False` (messages are not idempotent by design; same text twice is intentional duplication).
+- `delete_message(channel, ts)` — delete a posted message. Used as rollback inverse. `already_done = "deleted"` if message not found.
+
+**Policies:**
+- `require_channel_allowlist(channels)` — factory; block if `context.payload["channel"]` not in the list
+- `block_dms` — block any post to a DM channel (Slack DM channel IDs start with `"D"`)
+
+**Workflow:**
+- `post_slack_message` — single step: post one message, return receipt
+
+**Rollback:** `post_message` → `delete_message(channel=rd["channel"], ts=rd["ts"])`
+- Rollback uses `response["channel"]` (the resolved Slack channel ID), NOT the input `channel`. This matters for DM posts: you pass `U123` (user ID) but Slack returns `D456` (DM channel ID). `chat.delete` requires the DM channel ID.
+- Rollback only works if the bot token has `chat:delete` scope AND the bot is deleting its own message (Slack API constraint). Document this.
 
 **Key Decisions:**
-
-- **Auth**: Slack bot token (`xoxb-...`) via `slack_sdk.WebClient`. No OAuth flow — bot tokens are standard.
-- **Idempotency**: Scan channel history for exact text match within 60s. If found → `already_done="sent"`. Same check-before-act pattern as every other connector.
-- **Rollback**: `chat.delete` using the `ts` stored in `rollback_data`. Bots can delete their own messages.
-- **Policies**: `no_bulk_channel_blast(protected_channels)` — block posting to #general/#everyone. `no_dm_external_users(allowed_domains)` — block DMing outside your org.
-- **Optional dep**: `slack-sdk` under `[slack]` extras; added to `[dev]` so tests run without extra steps.
-
-**Slack app scopes required (README will document):**
-```
-chat:write        — post + delete bot messages
-channels:history  — read public channel history (dedup check)
-groups:history    — read private channel history
-im:history        — read DM history
-im:write          — open DM conversations
-users:read.email  — look up users by email for send_dm
-```
+- Follow the exact `github.py` design: allowlist-first, `_check_allowed()` on every method, broad Exception catch returning `ActionResult(success=False)`, `already_done` convention
+- `delete_message` is NOT in the default allowlist (same pattern as `close_pr` in GitHub) — must be explicitly added to enable rollback
+- Use `slack_sdk` (`pip install slack-sdk`); import at module top-level (same as `github.py` uses PyGithub)
+- `SlackApiError` caught specifically for `message_not_found` idempotency; other Slack errors fall through to generic except
 
 ---
 
@@ -38,30 +44,38 @@ users:read.email  — look up users by email for send_dm
 
 | File | Why |
 |---|---|
-| `enact/connectors/filesystem.py` | Pattern to follow exactly |
-| `enact/rollback.py` | Where to add `_rollback_slack()` |
-| `enact/workflows/agent_pr_workflow.py` | Thin workflow pattern |
-| `pyproject.toml` | Add `slack-sdk` to optional deps |
+| `enact/connectors/github.py` | Reference for allowlist pattern, `already_done`, `rollback_data`, error handling |
+| `enact/rollback.py` | Where to add `_rollback_slack()` and the `"slack"` dispatch branch |
+| `enact/policies/crm.py` | Factory pattern for parameterized policies |
+| `tests/test_github.py` | Mock pattern: `patch("enact.connectors.github.Github")` at fixture level |
+| `pyproject.toml` | Where to add `slack = ["slack-sdk"]` optional dep |
 
 ---
 
 ## A.3 Data Flow
 
 ```
-enact.run("post_slack_message_workflow", payload={"channel": "#alerts", "text": "..."})
-  ├─ policy gate
-  │   ├─ no_bulk_channel_blast(["#general"]) → PASS
-  │   └─ no_dm_external_users([...])         → PASS
-  ├─ post_slack_message_workflow(context)
-  │   └─ slack.send_message(channel, text)
-  │       ├─ _find_recent_message() → None
-  │       └─ chat.postMessage() → {ts: "1234567890.123456"}
-  │           rollback_data = {"channel": "C123", "ts": "1234567890.123456"}
-  └─ signed receipt → RunResult
+enact.run(workflow="post_slack_message", payload={"channel": "C123", "text": "hello"})
+  ↓
+[require_channel_allowlist(["C123"])]  → passed
+[block_dms]                            → passed (not a D... channel)
+  ↓
+post_slack_message workflow
+  → SlackConnector.post_message("C123", "hello")
+     → client.chat_postMessage(channel="C123", text="hello")
+     → response: {"ok": True, "channel": "C123", "ts": "1234.5678"}
+     → ActionResult(success=True, output={"channel": "C123", "ts": "1234.5678", "already_done": False},
+                    rollback_data={"channel": "C123", "ts": "1234.5678"})
+  ↓
+Receipt signed. run_id stored.
 
 enact.rollback(run_id)
-  └─ _rollback_slack("send_message", rd, connector)
-      └─ connector.delete_message(channel, ts) → chat.delete()
+  → loads receipt, verifies signature
+  → execute_rollback_action(post_message result, systems)
+  → _rollback_slack("post_message", {"channel": "C123", "ts": "1234.5678"}, connector)
+  → connector.delete_message("C123", "1234.5678")
+     → client.chat_delete(channel="C123", ts="1234.5678")
+     → ActionResult(success=True, output={"ts": "1234.5678", "already_done": False})
 ```
 
 ---
@@ -70,400 +84,601 @@ enact.rollback(run_id)
 
 ### `enact/connectors/slack.py`
 
+**Path:** `enact/connectors/slack.py`
+
 ```python
 """
-Slack connector — policy-gated message sending for AI agents.
+Slack connector — wraps slack-sdk WebClient for safe, allowlist-gated messaging.
 
-Idempotency: send_message and send_dm scan channel history (last 60s) for an
-exact text match from this bot. If found → already_done="sent".
+Design: allowlist-first
+------------------------
+Every public method calls _check_allowed() before touching the Slack API.
 
-Rollback data:
-  send_message: {"channel": channel_id, "ts": message_ts}
-  send_dm:      {"channel": dm_channel_id, "ts": message_ts}
-  delete_message: rollback_data={} (not reversible)
+Error handling pattern
+-----------------------
+All methods catch SlackApiError (and generic Exception as a fallback) and
+return ActionResult(success=False, output={"error": ...}).
+SlackApiError.response["error"] gives the Slack error code string.
+_check_allowed() raises PermissionError — programming error, blow up loudly.
 
-Required Slack app scopes:
-  chat:write, channels:history, groups:history, im:history, im:write, users:read.email
+Idempotency (already_done convention)
+--------------------------------------
+post_message: always already_done=False. Messages are intentionally not
+idempotent — posting the same text twice is two messages, not a duplicate.
+delete_message: already_done="deleted" if Slack returns "message_not_found"
+(message was already deleted or never existed).
+
+Rollback
+---------
+post_message is reversible via delete_message.
+rollback_data uses response["channel"] (the resolved Slack channel ID) not
+the input channel. This matters for DM posts: input may be a user ID (U123)
+but Slack responds with the DM channel ID (D456). chat.delete requires D456.
+
+Rollback constraint: the bot token must have chat:delete scope, and can only
+delete messages it posted. Human messages cannot be deleted by the bot.
+
+delete_message is NOT in the default allowlist. Add it explicitly to enable
+rollback: SlackConnector(token=..., allowed_actions=["post_message", "delete_message"])
+
+Usage:
+    slack = SlackConnector(
+        token=os.environ["SLACK_BOT_TOKEN"],
+        allowed_actions=["post_message"],
+    )
+    result = slack.post_message(channel="C1234567890", text="Hello from the agent")
 """
-import time
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 from enact.models import ActionResult
-
-try:
-    from slack_sdk import WebClient
-    from slack_sdk.errors import SlackApiError
-except ImportError as e:
-    raise ImportError(
-        "slack-sdk is required for SlackConnector. "
-        "Install it with: pip install 'enact-sdk[slack]'"
-    ) from e
 
 
 class SlackConnector:
-    ALLOWED_ACTIONS = ["send_message", "send_dm", "delete_message"]
-    DEDUP_WINDOW_SECONDS = 60
+    """
+    Thin wrapper around slack-sdk WebClient with per-instance action allowlisting.
+    """
 
     def __init__(self, token: str, allowed_actions: list[str] | None = None):
+        """
+        Initialise the connector.
+
+        Args:
+            token           — Slack bot token (xoxb-...). Needs chat:write scope
+                              for post_message, chat:delete for delete_message.
+            allowed_actions — explicit list of action names this connector instance
+                              is permitted to execute. Defaults to ["post_message"].
+                              Add "delete_message" to enable rollback support.
+        """
         self._client = WebClient(token=token)
-        self._allowed = set(
-            allowed_actions if allowed_actions is not None else self.ALLOWED_ACTIONS
+        self._allowed_actions = set(
+            allowed_actions if allowed_actions is not None else ["post_message"]
+            # delete_message is a rollback operation — not included by default.
+            # Must be explicitly added if rollback is needed.
         )
 
-    def _check_allowed(self, action: str) -> None:
-        if action not in self._allowed:
+    def _check_allowed(self, action: str):
+        """Raise PermissionError if action not in this connector's allowlist."""
+        if action not in self._allowed_actions:
             raise PermissionError(
-                f"Action '{action}' is not in the allowed_actions list for this SlackConnector. "
-                f"Allowed: {sorted(self._allowed)}"
+                f"Action '{action}' not in allowlist: {self._allowed_actions}"
             )
 
-    def _find_recent_message(self, channel: str, text: str) -> str | None:
-        """Scan channel history for exact bot message match within DEDUP_WINDOW_SECONDS."""
-        oldest = str(time.time() - self.DEDUP_WINDOW_SECONDS)
-        try:
-            resp = self._client.conversations_history(
-                channel=channel, oldest=oldest, limit=100
-            )
-            for msg in resp.get("messages", []):
-                if msg.get("text") == text and msg.get("bot_id"):
-                    return msg["ts"]
-        except SlackApiError:
-            pass  # Missing history scope — proceed with the send
-        return None
+    def post_message(self, channel: str, text: str) -> ActionResult:
+        """
+        Post a text message to a Slack channel or DM.
 
-    def send_message(self, channel: str, text: str) -> ActionResult:
-        self._check_allowed("send_message")
+        Args:
+            channel — Slack channel ID (C...) or user ID (U...) for DMs.
+                      Channel names like "#general" also work but IDs are preferred.
+            text    — message content (plain text; Slack markdown supported)
+
+        Returns:
+            ActionResult — success=True with {"channel": str, "ts": str, "already_done": False}
+                           success=False with {"error": str} on API failure
+
+        Note: already_done is always False. Slack messages are not idempotent —
+        posting the same text twice creates two messages. This is intentional.
+
+        rollback_data stores response["channel"] (the resolved channel ID),
+        not the input channel, so delete_message can target the correct channel.
+        """
+        self._check_allowed("post_message")
         try:
-            existing_ts = self._find_recent_message(channel, text)
-            if existing_ts:
-                return ActionResult(
-                    action="send_message", system="slack", success=True,
-                    output={"channel": channel, "ts": existing_ts, "already_done": "sent"},
-                    rollback_data={},
-                )
-            resp = self._client.chat_postMessage(channel=channel, text=text)
+            response = self._client.chat_postMessage(channel=channel, text=text)
+            resolved_channel = response["channel"]
+            ts = response["ts"]
             return ActionResult(
-                action="send_message", system="slack", success=True,
-                output={"channel": channel, "ts": resp["ts"], "already_done": False},
-                rollback_data={"channel": resp["channel"], "ts": resp["ts"]},
+                action="post_message",
+                system="slack",
+                success=True,
+                output={"channel": resolved_channel, "ts": ts, "already_done": False},
+                rollback_data={"channel": resolved_channel, "ts": ts},
             )
         except SlackApiError as e:
             return ActionResult(
-                action="send_message", system="slack", success=False,
-                output={"error": str(e)},
+                action="post_message",
+                system="slack",
+                success=False,
+                output={"error": e.response["error"]},
             )
-
-    def send_dm(self, user_email: str, text: str) -> ActionResult:
-        self._check_allowed("send_dm")
-        try:
-            user_resp = self._client.users_lookupByEmail(email=user_email)
-            user_id = user_resp["user"]["id"]
-            dm_resp = self._client.conversations_open(users=[user_id])
-            channel = dm_resp["channel"]["id"]
-            existing_ts = self._find_recent_message(channel, text)
-            if existing_ts:
-                return ActionResult(
-                    action="send_dm", system="slack", success=True,
-                    output={"channel": channel, "ts": existing_ts, "already_done": "sent"},
-                    rollback_data={},
-                )
-            resp = self._client.chat_postMessage(channel=channel, text=text)
+        except Exception as e:
             return ActionResult(
-                action="send_dm", system="slack", success=True,
-                output={"channel": channel, "ts": resp["ts"], "already_done": False},
-                rollback_data={"channel": channel, "ts": resp["ts"]},
-            )
-        except SlackApiError as e:
-            return ActionResult(
-                action="send_dm", system="slack", success=False,
+                action="post_message",
+                system="slack",
+                success=False,
                 output={"error": str(e)},
             )
 
     def delete_message(self, channel: str, ts: str) -> ActionResult:
+        """
+        Delete a previously posted message. Used as rollback inverse of post_message.
+
+        Args:
+            channel — Slack channel ID where the message lives (use response["channel"]
+                      from post_message, not the original input channel)
+            ts      — message timestamp from post_message output["ts"]
+
+        Returns:
+            ActionResult — success=True with {"ts": str, "already_done": False}
+                           success=True with {"ts": str, "already_done": "deleted"} if already gone
+                           success=False with {"error": str} on other API failures
+
+        Constraint: bot token must have chat:delete scope and can only delete
+        messages the bot posted (not human messages).
+        """
         self._check_allowed("delete_message")
         try:
             self._client.chat_delete(channel=channel, ts=ts)
             return ActionResult(
-                action="delete_message", system="slack", success=True,
-                output={"channel": channel, "ts": ts, "already_done": False},
-                rollback_data={},
+                action="delete_message",
+                system="slack",
+                success=True,
+                output={"ts": ts, "already_done": False},
             )
         except SlackApiError as e:
-            if "message_not_found" in str(e):
+            if e.response["error"] == "message_not_found":
+                # Already deleted or never existed — idempotent success
                 return ActionResult(
-                    action="delete_message", system="slack", success=True,
-                    output={"channel": channel, "ts": ts, "already_done": "deleted"},
-                    rollback_data={},
+                    action="delete_message",
+                    system="slack",
+                    success=True,
+                    output={"ts": ts, "already_done": "deleted"},
                 )
             return ActionResult(
-                action="delete_message", system="slack", success=False,
+                action="delete_message",
+                system="slack",
+                success=False,
+                output={"error": e.response["error"]},
+            )
+        except Exception as e:
+            return ActionResult(
+                action="delete_message",
+                system="slack",
+                success=False,
                 output={"error": str(e)},
             )
 ```
 
----
-
 ### `enact/policies/slack.py`
 
-```python
-"""Built-in Slack policies."""
-from enact.models import WorkflowContext, PolicyResult
-
-
-def no_bulk_channel_blast(protected_channels: list[str]):
-    """Block posting to protected channels like #general or #everyone."""
-    def _policy(context: WorkflowContext) -> PolicyResult:
-        channel = context.payload.get("channel", "")
-        channel_is_not_protected = channel not in protected_channels
-        return PolicyResult(
-            policy="no_bulk_channel_blast",
-            passed=channel_is_not_protected,
-            reason=(
-                f"Channel '{channel}' is not in the protected list"
-                if channel_is_not_protected
-                else f"Posting to '{channel}' is blocked — it is a protected channel"
-            ),
-        )
-    return _policy
-
-
-def no_dm_external_users(allowed_domains: list[str]):
-    """Block DMing users outside approved email domains."""
-    def _policy(context: WorkflowContext) -> PolicyResult:
-        user_email = context.payload.get("user_email", "")
-        domain = user_email.split("@")[-1] if "@" in user_email else ""
-        domain_is_allowed = domain in allowed_domains
-        return PolicyResult(
-            policy="no_dm_external_users",
-            passed=domain_is_allowed,
-            reason=(
-                f"User '{user_email}' is in an approved domain"
-                if domain_is_allowed
-                else f"DM to '{user_email}' blocked — domain '{domain}' is not in the allowed list"
-            ),
-        )
-    return _policy
-```
-
----
-
-### `enact/workflows/post_slack_message.py`
+**Path:** `enact/policies/slack.py`
 
 ```python
 """
-Reference workflow: post a message to a Slack channel.
+Slack policies — prevent bad Slack operations before they reach the connector.
 
-Expected payload: {"channel": str, "text": str}
-Expected systems: context.systems["slack"] — SlackConnector
+Payload keys used by this module:
+  "channel" — Slack channel ID or name (both policies)
+
+Slack channel ID conventions:
+  C... = public/private channel
+  D... = direct message channel
+  U... = user ID (converted to DM channel by Slack API)
+  G... = legacy group DM
+"""
+from enact.models import WorkflowContext, PolicyResult
+
+
+def require_channel_allowlist(channels: list[str]):
+    """
+    Factory: return a policy that blocks posting to unlisted channels.
+
+    Use this to restrict agents to a specific set of Slack channels.
+    Channel values in the allowlist should match whatever the agent puts
+    in context.payload["channel"] — IDs (C123) or names (#general) are both
+    supported, as long as they match consistently.
+
+    Passes through if no "channel" key is in the payload (nothing to check).
+
+    Args:
+        channels — list of permitted channel IDs or names
+
+    Returns:
+        callable — (WorkflowContext) -> PolicyResult
+    """
+    def _policy(context: WorkflowContext) -> PolicyResult:
+        channel = context.payload.get("channel")
+        if not channel:
+            return PolicyResult(
+                policy="require_channel_allowlist",
+                passed=True,
+                reason="No channel in payload to check",
+            )
+        channel_is_permitted = channel in channels
+        return PolicyResult(
+            policy="require_channel_allowlist",
+            passed=channel_is_permitted,
+            reason=(
+                f"Channel '{channel}' is permitted"
+                if channel_is_permitted
+                else f"Channel '{channel}' not in allowlist: {channels}"
+            ),
+        )
+
+    return _policy
+
+
+def block_dms(context: WorkflowContext) -> PolicyResult:
+    """
+    Block posting to Slack direct message channels.
+
+    Slack DM channel IDs start with "D". User IDs start with "U" (Slack
+    converts them to DM channels). This policy blocks both conventions.
+
+    Passes through if no "channel" key is in the payload.
+
+    Args:
+        context — WorkflowContext; reads context.payload.get("channel")
+
+    Returns:
+        PolicyResult — passed=False if channel is a DM (starts with D or U)
+    """
+    channel = context.payload.get("channel", "")
+    channel_is_dm = channel.startswith("D") or channel.startswith("U")
+    return PolicyResult(
+        policy="block_dms",
+        passed=not channel_is_dm,
+        reason=(
+            f"DM channels are blocked (channel='{channel}')"
+            if channel_is_dm
+            else f"Channel '{channel}' is not a DM"
+        ),
+    )
+```
+
+### `enact/workflows/post_slack_message.py`
+
+**Path:** `enact/workflows/post_slack_message.py`
+
+```python
+"""
+Reference workflow: Post a single Slack message.
+
+Expected payload shape:
+    {
+        "channel": str,  # required — Slack channel ID or name
+        "text":    str,  # required — message text
+    }
+
+Expected systems:
+    context.systems["slack"] — a SlackConnector instance (or any object
+    with .post_message(channel, text) returning an ActionResult).
+    In tests this is a MagicMock.
 """
 from enact.models import WorkflowContext, ActionResult
 
 
-def post_slack_message_workflow(context: WorkflowContext) -> list[ActionResult]:
-    slack = context.systems["slack"]
-    return [
-        slack.send_message(
-            channel=context.payload["channel"],
-            text=context.payload["text"],
-        )
-    ]
-```
+def post_slack_message(context: WorkflowContext) -> list[ActionResult]:
+    """
+    Post a single message to a Slack channel.
 
----
+    Returns a single-element list containing the ActionResult from post_message.
+    The receipt captures channel and ts, enabling rollback via delete_message.
+
+    Args:
+        context — WorkflowContext with systems["slack"] and payload keys above
+
+    Returns:
+        list[ActionResult] — [post_message result]
+    """
+    slack = context.systems["slack"]
+    channel = context.payload["channel"]
+    text = context.payload["text"]
+    result = slack.post_message(channel=channel, text=text)
+    return [result]
+```
 
 ### `tests/test_slack.py`
 
+**Path:** `tests/test_slack.py`
+
 ```python
-"""Tests for SlackConnector."""
-import sys
-from unittest.mock import MagicMock, patch
+"""
+Tests for SlackConnector, Slack policies, and post_slack_message workflow.
+slack-sdk calls are fully mocked — no real API calls made.
+"""
 import pytest
+from unittest.mock import patch, MagicMock
+from slack_sdk.errors import SlackApiError
 
-# Mock slack_sdk before importing the connector (it's an optional dep)
-_slack_sdk_mock = MagicMock()
-_slack_errors_mock = MagicMock()
+from enact.connectors.slack import SlackConnector
+from enact.policies.slack import require_channel_allowlist, block_dms
+from enact.workflows.post_slack_message import post_slack_message
+from enact.models import WorkflowContext
 
-class _FakeSlackApiError(Exception):
-    def __init__(self, message="", response=None):
-        super().__init__(message)
-        self.response = response or {}
 
-_slack_errors_mock.SlackApiError = _FakeSlackApiError
-sys.modules.setdefault("slack_sdk", _slack_sdk_mock)
-sys.modules.setdefault("slack_sdk.errors", _slack_errors_mock)
-_slack_sdk_mock.WebClient = MagicMock
-
-from enact.connectors.slack import SlackConnector  # noqa: E402
-
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 @pytest.fixture
 def connector():
     with patch("enact.connectors.slack.WebClient"):
-        conn = SlackConnector(token="xoxb-fake")
-    conn._client = MagicMock()
-    conn._client.conversations_history.return_value = {"ok": True, "messages": []}
-    return conn
+        return SlackConnector(token="xoxb-fake-token")
 
 
-class TestSendMessage:
-    def test_happy_path(self, connector):
+@pytest.fixture
+def connector_with_delete():
+    with patch("enact.connectors.slack.WebClient"):
+        return SlackConnector(
+            token="xoxb-fake-token",
+            allowed_actions=["post_message", "delete_message"],
+        )
+
+
+def make_slack_api_error(error_code: str) -> SlackApiError:
+    """Build a SlackApiError with the given Slack error code string.
+    slack-sdk accepts a plain dict for response — simpler and more reliable than MagicMock.
+    """
+    return SlackApiError(message=error_code, response={"ok": False, "error": error_code})
+
+
+def make_context(payload: dict, slack_connector=None) -> WorkflowContext:
+    systems = {}
+    if slack_connector is not None:
+        systems["slack"] = slack_connector
+    return WorkflowContext(
+        workflow="post_slack_message",
+        actor_email="agent@company.com",
+        payload=payload,
+        systems=systems,
+    )
+
+
+# ---------------------------------------------------------------------------
+# TestAllowlist
+# ---------------------------------------------------------------------------
+
+class TestAllowlist:
+    def test_default_allowlist_includes_post_message(self):
+        with patch("enact.connectors.slack.WebClient"):
+            conn = SlackConnector(token="xoxb-fake")
+        assert "post_message" in conn._allowed_actions
+
+    def test_default_allowlist_excludes_delete_message(self):
+        with patch("enact.connectors.slack.WebClient"):
+            conn = SlackConnector(token="xoxb-fake")
+        assert "delete_message" not in conn._allowed_actions
+
+    def test_custom_allowlist_restricts_actions(self):
+        with patch("enact.connectors.slack.WebClient"):
+            conn = SlackConnector(token="xoxb-fake", allowed_actions=["delete_message"])
+        assert "delete_message" in conn._allowed_actions
+        assert "post_message" not in conn._allowed_actions
+
+    def test_blocked_action_raises_permission_error(self):
+        with patch("enact.connectors.slack.WebClient"):
+            conn = SlackConnector(token="xoxb-fake", allowed_actions=["post_message"])
+        with pytest.raises(PermissionError, match="not in allowlist"):
+            conn.delete_message(channel="C123", ts="1234.5678")
+
+
+# ---------------------------------------------------------------------------
+# TestPostMessage
+# ---------------------------------------------------------------------------
+
+class TestPostMessage:
+    def test_post_message_success(self, connector):
         connector._client.chat_postMessage.return_value = {
-            "ok": True, "ts": "111.222", "channel": "C123"
-        }
-        result = connector.send_message(channel="C123", text="hello")
-        assert result.success is True
-        assert result.action == "send_message"
-        assert result.output["ts"] == "111.222"
-        assert result.output["already_done"] is False
-        assert result.rollback_data == {"channel": "C123", "ts": "111.222"}
-
-    def test_already_done_when_duplicate_found(self, connector):
-        connector._client.conversations_history.return_value = {
             "ok": True,
-            "messages": [{"text": "hello", "bot_id": "B123", "ts": "999.000"}],
+            "channel": "C1234567890",
+            "ts": "1609459200.000100",
         }
-        result = connector.send_message(channel="C123", text="hello")
-        assert result.output["already_done"] == "sent"
-        assert result.output["ts"] == "999.000"
-        connector._client.chat_postMessage.assert_not_called()
 
-    def test_not_deduplicated_when_text_differs(self, connector):
-        connector._client.conversations_history.return_value = {
+        result = connector.post_message(channel="C1234567890", text="hello")
+
+        assert result.success is True
+        assert result.action == "post_message"
+        assert result.system == "slack"
+        assert result.output["channel"] == "C1234567890"
+        assert result.output["ts"] == "1609459200.000100"
+        assert result.output["already_done"] is False
+        connector._client.chat_postMessage.assert_called_once_with(
+            channel="C1234567890", text="hello"
+        )
+
+    def test_post_message_rollback_data_uses_response_channel(self, connector):
+        """rollback_data must use response["channel"] (resolved ID), not the input."""
+        connector._client.chat_postMessage.return_value = {
             "ok": True,
-            "messages": [{"text": "other", "bot_id": "B123", "ts": "999.000"}],
+            "channel": "D9876543210",  # DM channel ID resolved by Slack
+            "ts": "1609459200.000200",
         }
-        connector._client.chat_postMessage.return_value = {"ok": True, "ts": "111.222", "channel": "C123"}
-        result = connector.send_message(channel="C123", text="hello")
+
+        result = connector.post_message(channel="U1111111111", text="hi")  # input: user ID
+
+        # rollback_data must have the resolved DM channel ID, not the user ID
+        assert result.rollback_data["channel"] == "D9876543210"
+        assert result.rollback_data["ts"] == "1609459200.000200"
+
+    def test_post_message_already_done_is_always_false(self, connector):
+        connector._client.chat_postMessage.return_value = {
+            "ok": True, "channel": "C123", "ts": "1234.5678"
+        }
+        result = connector.post_message(channel="C123", text="same text")
         assert result.output["already_done"] is False
 
-    def test_not_deduplicated_when_not_from_bot(self, connector):
-        connector._client.conversations_history.return_value = {
-            "ok": True, "messages": [{"text": "hello", "ts": "999.000"}],  # no bot_id
-        }
-        connector._client.chat_postMessage.return_value = {"ok": True, "ts": "111.222", "channel": "C123"}
-        result = connector.send_message(channel="C123", text="hello")
-        assert result.output["already_done"] is False
+    def test_post_message_slack_api_error(self, connector):
+        connector._client.chat_postMessage.side_effect = make_slack_api_error("channel_not_found")
 
-    def test_slack_api_error(self, connector):
-        connector._client.chat_postMessage.side_effect = _FakeSlackApiError("channel_not_found")
-        result = connector.send_message(channel="CBAD", text="hello")
+        result = connector.post_message(channel="C_INVALID", text="hello")
+
         assert result.success is False
-        assert "channel_not_found" in result.output["error"]
+        assert result.output["error"] == "channel_not_found"
 
-    def test_history_failure_does_not_block_send(self, connector):
-        connector._client.conversations_history.side_effect = _FakeSlackApiError("missing_scope")
-        connector._client.chat_postMessage.return_value = {"ok": True, "ts": "111.222", "channel": "C123"}
-        result = connector.send_message(channel="C123", text="hello")
-        assert result.success is True
+    def test_post_message_generic_exception(self, connector):
+        connector._client.chat_postMessage.side_effect = Exception("network timeout")
 
-    def test_action_not_allowed(self, connector):
-        connector._allowed = {"send_dm"}
-        with pytest.raises(PermissionError, match="send_message"):
-            connector.send_message(channel="C123", text="hello")
+        result = connector.post_message(channel="C123", text="hello")
 
-
-class TestSendDm:
-    def _setup(self, connector, user_id="U456", dm_channel="D789"):
-        connector._client.users_lookupByEmail.return_value = {"ok": True, "user": {"id": user_id}}
-        connector._client.conversations_open.return_value = {"ok": True, "channel": {"id": dm_channel}}
-
-    def test_happy_path(self, connector):
-        self._setup(connector)
-        connector._client.chat_postMessage.return_value = {"ok": True, "ts": "111.222", "channel": "D789"}
-        result = connector.send_dm(user_email="alice@acme.com", text="hi")
-        assert result.success is True
-        assert result.output["already_done"] is False
-        assert result.rollback_data == {"channel": "D789", "ts": "111.222"}
-
-    def test_already_done_when_duplicate(self, connector):
-        self._setup(connector, dm_channel="D789")
-        connector._client.conversations_history.return_value = {
-            "ok": True, "messages": [{"text": "hi", "bot_id": "B123", "ts": "888.000"}],
-        }
-        result = connector.send_dm(user_email="alice@acme.com", text="hi")
-        assert result.output["already_done"] == "sent"
-        connector._client.chat_postMessage.assert_not_called()
-
-    def test_user_not_found(self, connector):
-        connector._client.users_lookupByEmail.side_effect = _FakeSlackApiError("users_not_found")
-        result = connector.send_dm(user_email="ghost@acme.com", text="hi")
         assert result.success is False
-        assert "users_not_found" in result.output["error"]
+        assert "network timeout" in result.output["error"]
 
+
+# ---------------------------------------------------------------------------
+# TestDeleteMessage
+# ---------------------------------------------------------------------------
 
 class TestDeleteMessage:
-    def test_happy_path(self, connector):
-        connector._client.chat_delete.return_value = {"ok": True}
-        result = connector.delete_message(channel="C123", ts="111.222")
-        assert result.success is True
-        assert result.output["already_done"] is False
+    def test_delete_message_success(self, connector_with_delete):
+        connector_with_delete._client.chat_delete.return_value = {"ok": True}
 
-    def test_already_deleted(self, connector):
-        connector._client.chat_delete.side_effect = _FakeSlackApiError("message_not_found")
-        result = connector.delete_message(channel="C123", ts="111.222")
+        result = connector_with_delete.delete_message(channel="C123", ts="1234.5678")
+
+        assert result.success is True
+        assert result.action == "delete_message"
+        assert result.output["ts"] == "1234.5678"
+        assert result.output["already_done"] is False
+        connector_with_delete._client.chat_delete.assert_called_once_with(
+            channel="C123", ts="1234.5678"
+        )
+
+    def test_delete_message_already_deleted_returns_idempotent_success(self, connector_with_delete):
+        connector_with_delete._client.chat_delete.side_effect = make_slack_api_error("message_not_found")
+
+        result = connector_with_delete.delete_message(channel="C123", ts="1234.5678")
+
         assert result.success is True
         assert result.output["already_done"] == "deleted"
+        assert result.output["ts"] == "1234.5678"
 
-    def test_api_error(self, connector):
-        connector._client.chat_delete.side_effect = _FakeSlackApiError("cant_delete_message")
-        result = connector.delete_message(channel="C123", ts="111.222")
+    def test_delete_message_other_slack_error_returns_failure(self, connector_with_delete):
+        connector_with_delete._client.chat_delete.side_effect = make_slack_api_error("cant_delete_message")
+
+        result = connector_with_delete.delete_message(channel="C123", ts="1234.5678")
+
         assert result.success is False
-```
+        assert result.output["error"] == "cant_delete_message"
 
----
+    def test_delete_message_generic_exception(self, connector_with_delete):
+        connector_with_delete._client.chat_delete.side_effect = Exception("connection error")
 
-### `tests/test_slack_policies.py`
+        result = connector_with_delete.delete_message(channel="C123", ts="1234.5678")
 
-```python
-"""Tests for Slack policies."""
-import pytest
-from enact.models import WorkflowContext
-from enact.policies.slack import no_bulk_channel_blast, no_dm_external_users
+        assert result.success is False
+        assert "connection error" in result.output["error"]
 
 
-def ctx(payload):
-    return WorkflowContext(workflow="test", actor_email="a@b.com", payload=payload, systems={})
+# ---------------------------------------------------------------------------
+# TestRequireChannelAllowlist
+# ---------------------------------------------------------------------------
 
-
-class TestNoBulkChannelBlast:
-    def test_allowed_channel_passes(self):
-        result = no_bulk_channel_blast(["#general"])(ctx({"channel": "#alerts"}))
+class TestRequireChannelAllowlist:
+    def test_permitted_channel_passes(self):
+        policy = require_channel_allowlist(["C111", "C222"])
+        ctx = make_context({"channel": "C111", "text": "hi"})
+        result = policy(ctx)
         assert result.passed is True
-        assert result.policy == "no_bulk_channel_blast"
+        assert result.policy == "require_channel_allowlist"
 
-    def test_protected_channel_blocked(self):
-        result = no_bulk_channel_blast(["#general"])(ctx({"channel": "#general"}))
+    def test_unpermitted_channel_blocks(self):
+        policy = require_channel_allowlist(["C111"])
+        ctx = make_context({"channel": "C999", "text": "hi"})
+        result = policy(ctx)
         assert result.passed is False
-        assert "protected" in result.reason
+        assert "C999" in result.reason
+        assert "C111" in result.reason
 
-    def test_missing_channel_passes(self):
-        # Empty string doesn't match any protected channel
-        result = no_bulk_channel_blast(["#general"])(ctx({}))
+    def test_no_channel_in_payload_passes_through(self):
+        policy = require_channel_allowlist(["C111"])
+        ctx = make_context({"text": "hi"})
+        result = policy(ctx)
         assert result.passed is True
+        assert "No channel" in result.reason
 
-
-class TestNoDmExternalUsers:
-    def test_internal_user_passes(self):
-        result = no_dm_external_users(["acme.com"])(ctx({"user_email": "alice@acme.com"}))
-        assert result.passed is True
-        assert result.policy == "no_dm_external_users"
-
-    def test_external_user_blocked(self):
-        result = no_dm_external_users(["acme.com"])(ctx({"user_email": "vendor@external.com"}))
+    def test_empty_allowlist_blocks_all_channels(self):
+        policy = require_channel_allowlist([])
+        ctx = make_context({"channel": "C111", "text": "hi"})
+        result = policy(ctx)
         assert result.passed is False
-        assert "external.com" in result.reason
 
-    def test_multiple_allowed_domains(self):
-        result = no_dm_external_users(["acme.com", "acme-contractors.com"])(
-            ctx({"user_email": "bob@acme-contractors.com"})
+
+# ---------------------------------------------------------------------------
+# TestBlockDms
+# ---------------------------------------------------------------------------
+
+class TestBlockDms:
+    def test_regular_channel_passes(self):
+        ctx = make_context({"channel": "C1234567890", "text": "hi"})
+        result = block_dms(ctx)
+        assert result.passed is True
+        assert result.policy == "block_dms"
+
+    def test_dm_channel_id_blocked(self):
+        ctx = make_context({"channel": "D1234567890", "text": "hi"})
+        result = block_dms(ctx)
+        assert result.passed is False
+        assert "D1234567890" in result.reason
+
+    def test_user_id_input_blocked(self):
+        """U... user IDs become DM channels — must be blocked."""
+        ctx = make_context({"channel": "U1234567890", "text": "hi"})
+        result = block_dms(ctx)
+        assert result.passed is False
+
+    def test_no_channel_in_payload_passes_through(self):
+        ctx = make_context({"text": "hi"})
+        result = block_dms(ctx)
+        assert result.passed is True
+
+    def test_group_dm_channel_not_blocked(self):
+        """G... are legacy group DM channel IDs. block_dms only checks D and U prefixes.
+        G... channels are an undocumented gap — acceptable for v1; note in policy docstring."""
+        ctx = make_context({"channel": "G1234567890", "text": "hi"})
+        result = block_dms(ctx)
+        assert result.passed is True
+
+
+# ---------------------------------------------------------------------------
+# TestPostSlackMessageWorkflow
+# ---------------------------------------------------------------------------
+
+class TestPostSlackMessageWorkflow:
+    def test_workflow_calls_post_message_with_payload_values(self, connector):
+        connector._client.chat_postMessage.return_value = {
+            "ok": True, "channel": "C123", "ts": "1234.5678"
+        }
+        ctx = make_context({"channel": "C123", "text": "deploy complete"}, slack_connector=connector)
+
+        results = post_slack_message(ctx)
+
+        assert len(results) == 1
+        assert results[0].success is True
+        assert results[0].output["channel"] == "C123"
+        assert results[0].output["ts"] == "1234.5678"
+        connector._client.chat_postMessage.assert_called_once_with(
+            channel="C123", text="deploy complete"
         )
-        assert result.passed is True
 
-    def test_no_at_sign_blocked(self):
-        result = no_dm_external_users(["acme.com"])(ctx({"user_email": "notanemail"}))
-        assert result.passed is False
+    def test_workflow_returns_failure_on_api_error(self, connector):
+        connector._client.chat_postMessage.side_effect = make_slack_api_error("not_in_channel")
+        ctx = make_context({"channel": "C123", "text": "hello"}, slack_connector=connector)
 
-    def test_missing_user_email_blocked(self):
-        result = no_dm_external_users(["acme.com"])(ctx({}))
-        assert result.passed is False
+        results = post_slack_message(ctx)
+
+        assert len(results) == 1
+        assert results[0].success is False
+        assert results[0].output["error"] == "not_in_channel"
 ```
 
 ---
@@ -472,53 +687,52 @@ class TestNoDmExternalUsers:
 
 ### `enact/rollback.py`
 
-**1. Update module docstring** — add to the inverse map block:
-```
-slack.send_message   -> slack.delete_message  (chat.delete by ts)
-slack.send_dm        -> slack.delete_message  (chat.delete by ts)
+**Path:** `enact/rollback.py`
+
+**Line ~33** (in `_IRREVERSIBLE` comment — remove "Slack messages" from the note):
+
+```python
+# NOTE: Add future irreversible actions here (email sends, etc.)
 ```
 
-**2. In `execute_rollback_action()`, after the `filesystem` elif, add:**
+**Line ~92** (in `execute_rollback_action`, after the `elif action_result.system == "filesystem":` block):
+
 ```python
     elif action_result.system == "slack":
         return _rollback_slack(action_result.action, rd, connector)
 ```
 
-**3. After `_rollback_filesystem()`, add:**
+**After `_rollback_filesystem` function, add:**
+
 ```python
 def _rollback_slack(action: str, rd: dict, connector) -> ActionResult:
     try:
-        if action in ("send_message", "send_dm"):
-            if not rd.get("channel") or not rd.get("ts"):
-                return ActionResult(
-                    action=f"rollback_{action}", system="slack", success=True,
-                    output={"already_done": "skipped", "reason": "message was already a noop"},
-                )
+        if action == "post_message":
             return connector.delete_message(channel=rd["channel"], ts=rd["ts"])
         else:
             return ActionResult(
-                action=f"rollback_{action}", system="slack", success=False,
+                action=f"rollback_{action}",
+                system="slack",
+                success=False,
                 output={"error": f"No rollback handler for slack.{action}"},
             )
     except Exception as e:
         return ActionResult(
-            action=f"rollback_{action}", system="slack", success=False,
+            action=f"rollback_{action}",
+            system="slack",
+            success=False,
             output={"error": f"Rollback failed for slack.{action}: {str(e)}"},
         )
 ```
 
 ### `pyproject.toml`
 
-Add to `[project.optional-dependencies]`:
+Add `slack` optional dep and update `all`:
+
 ```toml
-slack = ["slack-sdk>=3.0"]
+slack = ["slack-sdk"]
+all = ["psycopg2-binary", "PyGithub", "hubspot-api-client", "slack-sdk"]
 ```
-
-Add `"slack-sdk>=3.0"` to the `dev` list so `pip install -e ".[dev]"` installs it.
-
-### `index.html`
-
-Remove `<span class="badge-soon">coming soon</span>` from `post_slack_message_workflow` line.
 
 ---
 
@@ -526,72 +740,269 @@ Remove `<span class="badge-soon">coming soon</span>` from `post_slack_message_wo
 
 | Scenario | Handling | Test? |
 |---|---|---|
-| History API missing scope | `_find_recent_message` catches `SlackApiError`, returns None | yes |
-| Channel not found | `ActionResult(success=False, output={"error": ...})` | yes |
-| User email not in workspace | `SlackApiError("users_not_found")` → `success=False` | yes |
-| Message already deleted on rollback | `message_not_found` → `already_done="deleted"`, `success=True` | yes |
-| Human message same text (no dedup) | Only dedup if `msg.get("bot_id")` truthy | yes |
-| Action not in allowlist | `PermissionError` | yes |
-| `rollback_data={}` (already_done path) | Rollback returns `already_done="skipped"` | yes (rollback tests) |
-| `no_dm_external_users` with no payload key | `domain=""` → not in allowed → BLOCK | yes |
+| `post_message` to valid channel | `ActionResult(success=True, already_done=False)` | yes |
+| `post_message` to nonexistent channel | `SlackApiError("channel_not_found")` → `success=False` | yes |
+| `post_message` network failure | generic `Exception` → `success=False, error=str(e)` | yes |
+| `delete_message` success | `ActionResult(success=True, already_done=False)` | yes |
+| `delete_message` already gone | `SlackApiError("message_not_found")` → `success=True, already_done="deleted"` | yes |
+| `delete_message` permission denied | `SlackApiError("cant_delete_message")` → `success=False` | yes |
+| `delete_message` without allowlist | `PermissionError` raised immediately | yes |
+| DM channel (`D...`) with `block_dms` | `passed=False` | yes |
+| User ID (`U...`) with `block_dms` | `passed=False` | yes |
+| No `channel` in payload (both policies) | pass through, `passed=True` | yes |
+| Unlisted channel with `require_channel_allowlist` | `passed=False` with reason | yes |
+| rollback_data uses wrong channel (input not response) | use `response["channel"]` | yes |
+
+### ActionResult Data Contracts
+
+**`post_message` — SUCCESS:**
+```python
+ActionResult(
+    action="post_message",
+    system="slack",
+    success=True,
+    output={"channel": "C1234567890", "ts": "1609459200.000100", "already_done": False},
+    rollback_data={"channel": "C1234567890", "ts": "1609459200.000100"},
+)
+```
+
+**`post_message` — FAILURE:**
+```python
+ActionResult(
+    action="post_message",
+    system="slack",
+    success=False,
+    output={"error": "channel_not_found"},  # Slack error code string
+)
+```
+
+**`delete_message` — SUCCESS (fresh delete):**
+```python
+ActionResult(
+    action="delete_message",
+    system="slack",
+    success=True,
+    output={"ts": "1609459200.000100", "already_done": False},
+)
+```
+
+**`delete_message` — IDEMPOTENT (already deleted):**
+```python
+ActionResult(
+    action="delete_message",
+    system="slack",
+    success=True,
+    output={"ts": "1609459200.000100", "already_done": "deleted"},
+)
+```
+
+**`delete_message` — FAILURE (other error):**
+```python
+ActionResult(
+    action="delete_message",
+    system="slack",
+    success=False,
+    output={"error": "cant_delete_message"},
+)
+```
+
+### Exact Error Strings
+
+```python
+# _check_allowed — PermissionError
+PermissionError("Action 'delete_message' not in allowlist: {'post_message'}")
+
+# post_message — SlackApiError
+{"error": "channel_not_found"}   # channel ID not valid
+{"error": "not_in_channel"}      # bot not in channel
+{"error": "invalid_auth"}        # bad token
+
+# delete_message — idempotent
+{"ts": "...", "already_done": "deleted"}   # message_not_found from Slack
+
+# delete_message — non-recoverable
+{"error": "cant_delete_message"}   # message posted by another user
+{"error": "token_revoked"}
+```
 
 ---
 
-## A.7 Implementation Cycles
+## A.7 Implementation Order (TDD)
 
-### Cycle 1 — `send_message` happy path + allowlist
-RED: `test_happy_path`, `test_action_not_allowed`
-GREEN: Create `enact/connectors/slack.py` — `__init__`, `_check_allowed`, `send_message` (no dedup)
-VERIFY: `pytest tests/test_slack.py::TestSendMessage::test_happy_path tests/test_slack.py::TestSendMessage::test_action_not_allowed -v`
-COMMIT: `"feat: add SlackConnector with send_message"`
+### PRE-IMPLEMENTATION CHECKPOINT
+1. Can this be simpler? No — connector pattern is already minimal
+2. Do I understand the task? Yes
+3. Scope: NOT touching any existing connector, NOT modifying policy engine
 
-### Cycle 2 — `send_message` idempotency
-RED: `test_already_done_when_duplicate_found`, `test_not_deduplicated_*`, `test_history_failure_*`
-GREEN: Add `_find_recent_message()`, plug into `send_message`
-VERIFY: `pytest tests/test_slack.py::TestSendMessage -v`
-COMMIT: `"feat: add send_message idempotency via history scan"`
+### Setup
+```bash
+pip install slack-sdk
+pip install -e ".[dev]"
+pytest tests/ -v  # baseline: all existing tests pass
+```
 
-### Cycle 3 — `send_dm`
-RED: `TestSendDm` tests
-GREEN: Add `send_dm()` to connector
-VERIFY: `pytest tests/test_slack.py::TestSendDm -v`
-COMMIT: `"feat: add send_dm to SlackConnector"`
+### Cycle 1: SlackConnector skeleton + allowlist 🔴🟢🔄
 
-### Cycle 4 — `delete_message` + rollback wiring
-RED: `TestDeleteMessage` tests + rollback tests in `tests/test_rollback.py`
-GREEN: Add `delete_message()` to connector; add `_rollback_slack()` to `rollback.py`
-VERIFY: `pytest tests/test_slack.py::TestDeleteMessage tests/test_rollback.py -v`
-COMMIT: `"feat: add Slack rollback via delete_message"`
+**Goal:** Connector initialises, allowlist works, `_check_allowed` raises correctly
 
-### Cycle 5 — Slack policies
-RED: All `tests/test_slack_policies.py` tests
-GREEN: Create `enact/policies/slack.py`
-VERIFY: `pytest tests/test_slack_policies.py -v`
-COMMIT: `"feat: add no_bulk_channel_blast and no_dm_external_users policies"`
+**Files:** `enact/connectors/slack.py`, `tests/test_slack.py` (TestAllowlist)
 
-### Cycle 6 — `post_slack_message_workflow`
-RED: Workflow tests in `tests/test_workflows.py`
-GREEN: Create `enact/workflows/post_slack_message.py`
-VERIFY: `pytest tests/test_workflows.py -v`
-COMMIT: `"feat: add post_slack_message_workflow"`
+**Run:** `pytest tests/test_slack.py::TestAllowlist -v`
 
-### Cycle 7 — Wiring + cleanup
-- Add `slack-sdk>=3.0` to `[slack]` and `[dev]` in `pyproject.toml`
-- Remove `coming soon` badge from `index.html`
-- `pytest -v` — full suite
-- Update `Handoff.md`
-COMMIT: `"docs: remove coming-soon badge; add slack-sdk dep"`
+**Commit:** `"feat: add SlackConnector skeleton with allowlist"`
 
 ---
 
-## A.8 Success Criteria
+### Cycle 2: `post_message` 🔴🟢🔄
 
-- [ ] `pytest -v` — all tests pass (target: ~351 total)
-- [ ] `already_done` convention on all mutating methods
-- [ ] `rollback_data` populated on `send_message` and `send_dm`
-- [ ] Rollback dispatches to `delete_message`
-- [ ] Both policies use verbose boolean names
-- [ ] `post_slack_message_workflow` badge removed from `index.html`
-- [ ] `slack-sdk` in `[slack]` and `[dev]` optional deps
-- [ ] `Handoff.md` updated
+**Goal:** `post_message` calls `chat_postMessage`, returns correct ActionResult, uses `response["channel"]` for rollback_data
+
+**Files:** `enact/connectors/slack.py`, `tests/test_slack.py` (TestPostMessage)
+
+**Run:** `pytest tests/test_slack.py::TestPostMessage -v`
+
+**Commit:** `"feat: implement SlackConnector.post_message with rollback_data"`
+
+---
+
+### Cycle 3: `delete_message` 🔴🟢🔄
+
+**Goal:** `delete_message` calls `chat_delete`, idempotency on `message_not_found`, other errors → failure
+
+**Files:** `enact/connectors/slack.py`, `tests/test_slack.py` (TestDeleteMessage)
+
+**Run:** `pytest tests/test_slack.py::TestDeleteMessage -v`
+
+**Commit:** `"feat: implement SlackConnector.delete_message with idempotency"`
+
+---
+
+### Cycle 4: Policies 🔴🟢🔄
+
+**Goal:** `require_channel_allowlist` and `block_dms` pass/fail correctly
+
+**Files:** `enact/policies/slack.py`, `tests/test_slack.py` (TestRequireChannelAllowlist, TestBlockDms)
+
+**Run:** `pytest tests/test_slack.py::TestRequireChannelAllowlist tests/test_slack.py::TestBlockDms -v`
+
+**Commit:** `"feat: add Slack policies (require_channel_allowlist, block_dms)"`
+
+---
+
+### Cycle 5: Workflow 🔴🟢🔄
+
+**Goal:** `post_slack_message` workflow calls connector, returns ActionResult list
+
+**Files:** `enact/workflows/post_slack_message.py`, `tests/test_slack.py` (TestPostSlackMessageWorkflow)
+
+**Run:** `pytest tests/test_slack.py::TestPostSlackMessageWorkflow -v`
+
+**Commit:** `"feat: add post_slack_message workflow"`
+
+---
+
+### Cycle 6: Rollback wiring 🔴🟢🔄
+
+**Goal:** `_rollback_slack` in rollback.py dispatches `post_message` → `delete_message`
+
+**Files:** `enact/rollback.py`, `tests/test_slack.py` (TestRollback — add after Cycle 5)
+
+Add to `tests/test_slack.py`:
+```python
+# TestRollback — add after the workflow tests
+
+from enact.rollback import execute_rollback_action
+from enact.models import ActionResult as AR
+
+class TestRollback:
+    def test_rollback_post_message_calls_delete_message(self, connector_with_delete):
+        connector_with_delete._client.chat_delete.return_value = {"ok": True}
+        original = AR(
+            action="post_message",
+            system="slack",
+            success=True,
+            output={"channel": "C123", "ts": "1234.5678", "already_done": False},
+            rollback_data={"channel": "C123", "ts": "1234.5678"},
+        )
+
+        result = execute_rollback_action(original, systems={"slack": connector_with_delete})
+
+        assert result.success is True
+        connector_with_delete._client.chat_delete.assert_called_once_with(
+            channel="C123", ts="1234.5678"
+        )
+
+    def test_rollback_unknown_slack_action_returns_error(self, connector_with_delete):
+        original = AR(
+            action="unknown_action",
+            system="slack",
+            success=True,
+            output={},
+            rollback_data={},
+        )
+
+        result = execute_rollback_action(original, systems={"slack": connector_with_delete})
+
+        assert result.success is False
+        assert "No rollback handler" in result.output["error"]
+
+    def test_rollback_missing_slack_system_returns_error(self):
+        original = AR(
+            action="post_message",
+            system="slack",
+            success=True,
+            output={"channel": "C123", "ts": "1234.5678", "already_done": False},
+            rollback_data={"channel": "C123", "ts": "1234.5678"},
+        )
+
+        result = execute_rollback_action(original, systems={})  # no slack connector
+
+        assert result.success is False
+        assert "not available" in result.output["error"]
+```
+
+**Run:** `pytest tests/test_slack.py::TestRollback -v`
+
+**Commit:** `"feat: wire Slack rollback in rollback.py"`
+
+---
+
+### Cycle 7: pyproject.toml + full suite 🔴🟢🔄
+
+**Goal:** `slack` optional dep added, all existing tests still pass
+
+**Files:** `pyproject.toml`
+
+**Run:** `pytest -v`
+
+**Commit:** `"chore: add slack-sdk optional dep, update pyproject.toml"`
+
+---
+
+## A.8 Test Strategy
+
+```bash
+# Run all Slack tests
+pytest tests/test_slack.py -v
+
+# Run full suite
+pytest -v
+```
+
+**Success Criteria:**
+- [ ] All new Slack tests pass
+- [ ] All 321 existing tests still pass
+- [ ] `pytest -v` clean
+
+---
+
+## A.9 Success Criteria & Cleanup
+
+- [ ] `enact/connectors/slack.py` — `SlackConnector` with `post_message` + `delete_message`
+- [ ] `enact/policies/slack.py` — `require_channel_allowlist`, `block_dms`
+- [ ] `enact/workflows/post_slack_message.py` — `post_slack_message`
+- [ ] `tests/test_slack.py` — full test suite (connector + policies + workflow + rollback)
+- [ ] `enact/rollback.py` — `_rollback_slack()` added, `execute_rollback_action` dispatches Slack
+- [ ] `pyproject.toml` — `slack = ["slack-sdk"]`, `all` updated
+- [ ] `pytest -v` — all tests pass
 - [ ] Committed and pushed

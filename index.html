@@ -671,7 +671,7 @@ result, receipt = enact.<span class="fn">run</span>(workflow=<span class="str">"
             <div class="qs-step">
                 <div class="qs-num">2</div>
                 <h3>Connect your systems</h3>
-                <p>GitHub, Postgres, Filesystem — pass your credentials, get policy-gated, receipt-backed actions back.</p>
+                <p>GitHub, Postgres, Filesystem, Slack — pass your credentials, get policy-gated, receipt-backed actions back.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
@@ -727,7 +727,7 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="qs-step">
                 <div class="qs-num">1</div>
                 <h3>Register your systems</h3>
-                <p>Swap your existing SDK clients for Enact connectors. GitHub, Postgres, Filesystem — same credentials, now policy-gated and receipt-backed.</p>
+                <p>Swap your existing SDK clients for Enact connectors. GitHub, Postgres, Filesystem, Slack — same credentials, now policy-gated and receipt-backed.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">2</div>
@@ -822,7 +822,7 @@ result, receipt = enact.<span class="fn">run</span>(
 <section id="policies" class="alt">
     <div class="container">
         <div class="section-label">Built-in policies</div>
-        <h2>20+ policies, shipped today</h2>
+        <h2>26 policies, shipped today</h2>
         <p class="section-sub">Pure Python functions — no LLMs, versioned in Git, testable with pytest. Register any combination on your <span class="inline-code">EnactClient</span>.</p>
 
         <div class="policy-grid auto-style-37">
@@ -972,6 +972,20 @@ result, receipt = enact.<span class="fn">run</span>(
                     <div class="auto-style-44">
                         <code class="auto-style-25">limit_tasks_per_contact</code>
                         <br><span class="auto-style-45">Rate-limits tasks per contact per rolling time window</span>
+                    </div>
+                </div>
+                <div class="auto-style-39">
+                    <i class="auto-style-57" data-lucide="message-square"></i>
+                    <h3 class="auto-style-58">Slack</h3>
+                </div>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">require_channel_allowlist(list)</code>
+                        <br><span class="auto-style-45">Blocks posting to any channel not in your explicit allow-list — no surprise #general blasts</span>
+                    </div>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">block_dms</code>
+                        <br><span class="auto-style-45">Blocks direct messages to users — DM channel IDs (D...) and user IDs (U...) both caught</span>
                     </div>
                 </div>
             </div>
@@ -1259,7 +1273,7 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="capability-card auto-style-82">
                 <i data-lucide="rotate-ccw" class="cap-icon auto-style-83"></i>
                 <h3>One-Step Rollback <span class="badge-live">live</span></h3>
-                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs), explicitly records what it can't (merged PRs, pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
+                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs, Slack messages), explicitly records what it can't (pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">

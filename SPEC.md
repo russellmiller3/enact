@@ -5,9 +5,9 @@
 
 ---
 
-## What's Been Built (as of 2026-02-26)
+## What's Been Built (as of 2026-03-01)
 
-**321 tests, 0 failures. Published on PyPI as `enact-sdk` v0.3.1.**
+**348 tests, 0 failures. Published on PyPI as `enact-sdk` v0.3.2.**
 
 ### Core SDK (v0.1)
 - **EnactClient** — `run()` orchestrates policy gate → workflow execution → signed receipt. `rollback(run_id)` reverses a prior run.
@@ -21,8 +21,9 @@
 | **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `close_pr`, `close_issue` | ✅ (except `merge_pr`, `push_commit`) | ✅ `already_done` convention |
 | **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | ✅ (pre-SELECT captures state) | ✅ |
 | **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | ✅ (content captured before mutation) | ✅ |
+| **Slack** | `post_message`, `delete_message` | ✅ `post_message` → `delete_message` via `ts`; needs `chat:delete` scope | No — duplicate posts are intentional |
 
-### Built-in Policies (24 policies across 6 files)
+### Built-in Policies (26 policies across 7 files)
 | File | Policies |
 |------|----------|
 | `git.py` | `dont_push_to_main`, `max_files_per_commit`, `require_branch_prefix`, `dont_delete_branch`, `dont_merge_to_main` |
@@ -31,10 +32,12 @@
 | `access.py` | `contractor_cannot_write_pii`, `require_actor_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path`, `require_user_role` |
 | `crm.py` | `dont_duplicate_contacts`, `limit_tasks_per_contact` |
 | `time.py` | `within_maintenance_window`, `code_freeze_active` |
+| `slack.py` | `require_channel_allowlist`, `block_dms` |
 
 ### Workflows
 - **`agent_pr_workflow`** — create branch → open PR (never to main)
 - **`db_safe_insert`** — duplicate check → insert row
+- **`post_slack_message`** — policy-gated Slack message with rollback via `delete_message`
 
 ### Rollback (v0.2)
 - `EnactClient.rollback(run_id)` — loads receipt, verifies signature, reverses actions in reverse order
@@ -48,7 +51,7 @@
 - Receipt path traversal protection (UUID validation)
 
 ### Shipping
-- `pip install enact-sdk` — [PyPI v0.3.1](https://pypi.org/project/enact-sdk/0.3.1/)
+- `pip install enact-sdk` — [PyPI v0.3.2](https://pypi.org/project/enact-sdk/0.3.2/)
 - `examples/demo.py` — 3-act zero-credential demo (BLOCK → PASS → ROLLBACK) with row-level evidence
 - `examples/quickstart.py` — runnable GitHub + git policies demo
 - `examples/demo.cast` — asciinema recording for landing page
@@ -63,6 +66,7 @@
 | `2026-02-24-demo-evidence-and-gif` | Row-level evidence in demo output, `record_demo.py`, `.cast` file |
 | `2026-02-25-filesystem-connector` | `FilesystemConnector`, filesystem policies, rollback wiring |
 | `2026-02-26-policies-abac-ddl-freeze` | ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename |
+| `2026-03-01-slack-connector` | `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback wiring |
 
 ---
 
@@ -357,7 +361,17 @@ enact/
 29. ✅ `enact/connectors/filesystem.py` — `read_file`, `write_file`, `delete_file`, `list_dir`; base_dir path confinement; rollback_data on mutating actions
 30. ✅ `enact/policies/filesystem.py` — `dont_delete_file()`, `restrict_paths(list)`, `block_extensions(list)`
 31. ✅ Tests: 317 tests total, 0 failures
-32. 🔜 PyPI publish — bump to `enact-sdk 0.2.0`
+32. ✅ PyPI publish — `enact-sdk 0.2.0` live
+
+### Phase 7 — Slack Connector + ABAC Policies (v0.3)
+33. ✅ `enact/connectors/slack.py` — `post_message`, `delete_message`; rollback via `ts`; `already_done` convention
+34. ✅ `enact/policies/slack.py` — `require_channel_allowlist()`, `block_dms()`
+35. ✅ `enact/workflows/post_slack_message.py` — policy-gated Slack message with rollback wiring
+36. ✅ `enact/policies/access.py` — added `dont_read_sensitive_tables()`, `dont_read_sensitive_paths()`, `require_clearance_for_path()`, `require_user_role()`
+37. ✅ `enact/policies/time.py` — added `code_freeze_active()`
+38. ✅ `enact/policies/db.py` — added `block_ddl()`
+39. ✅ Tests: 348 tests total, 0 failures
+40. ✅ PyPI publish — `enact-sdk 0.3.2` live
 
 ---
 
