@@ -28,8 +28,6 @@ dev = [
     "httpx",
 ]
 
-[project.scripts]
-enact-ui = "enact.ui:main"
 
 [tool.setuptools]
 license-files = []
