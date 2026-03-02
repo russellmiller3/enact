@@ -876,7 +876,7 @@ result, receipt = enact.<span class="fn">run</span>(
 <section id="policies" class="alt">
     <div class="container">
         <div class="section-label">Built-in policies</div>
-        <h2>28 policies, shipped today</h2>
+        <h2>30 policies, shipped today</h2>
         <p class="section-sub">Pure Python functions — no LLMs, versioned in Git, testable with pytest. Register any combination on your <span class="inline-code">EnactClient</span>.</p>
 
         <div class="policy-grid auto-style-37">
@@ -1055,9 +1055,23 @@ result, receipt = enact.<span class="fn">run</span>(
                         <code class="auto-style-25">no_repeat_emails</code>
                         <br><span class="auto-style-45">Blocks repeat emails to the same recipient within a time window — prevents agent spam</span>
                     </div>
+                    <div class="auto-style-39">
+                        <i class="auto-style-57" data-lucide="cloud"></i>
+                        <h3 class="auto-style-58">Cloud Storage</h3>
+                    </div>
+                    <div class="auto-style-51">
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">dont_delete_without_human_ok("gdrive")</code>
+                            <br><span class="auto-style-45">Blocks GDrive deletions unless a human approval hint is present — prevents accidental data loss</span>
+                        </div>
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">dont_delete_without_human_ok("s3")</code>
+                            <br><span class="auto-style-45">Blocks S3 object deletions without human sign-off — protects your production buckets</span>
+                        </div>
+                    </div>
                 </div>
+    
             </div>
-
         </div>
 
         <div class="auto-style-60">
