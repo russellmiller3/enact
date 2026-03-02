@@ -965,12 +965,13 @@ result, receipt = enact.<span class="fn">run</span>(
             </div>
 
             <!-- GIT SAFETY -->
-            <div class="auto-style-52">
-                <div class="auto-style-39">
+            <details class="auto-style-52" style="cursor: pointer; background: var(--surface); border-radius: 10px; padding: 20px; border: 1px solid var(--border);">
+                <summary class="auto-style-39" style="outline: none; list-style: none; display: flex; align-items: center;">
                     <i class="auto-style-55" data-lucide="git-branch"></i>
-                    <h3 class="auto-style-56">Git Safety</h3>
-                </div>
-                <div class="auto-style-51">
+                    <h3 class="auto-style-56" style="margin-bottom: 0;">Git Safety</h3>
+                    <span style="margin-left: auto; color: var(--muted); font-size: 12px;">Click to expand</span>
+                </summary>
+                <div class="auto-style-51" style="margin-top: 20px;">
                     <div class="auto-style-44">
                         <code class="auto-style-25">dont_push_to_main</code>
                         <br><span class="auto-style-45">Blocks direct pushes to main or master — the Kiro pattern</span>
@@ -992,85 +993,91 @@ result, receipt = enact.<span class="fn">run</span>(
                         <br><span class="auto-style-45">Enforces branch naming — blocks branches not starting with required prefix</span>
                     </div>
                 </div>
-            </div>
+            </details>
 
             <!-- FILESYSTEM + CRM in 2 columns -->
-            <div class="auto-style-52">
-                <div class="auto-style-39">
+            <details class="auto-style-52" style="cursor: pointer; background: var(--surface); border-radius: 10px; padding: 20px; border: 1px solid var(--border);">
+                <summary class="auto-style-39" style="outline: none; list-style: none; display: flex; align-items: center;">
                     <i class="auto-style-57" data-lucide="folder-lock"></i>
-                    <h3 class="auto-style-58">Filesystem Safety</h3>
-                </div>
-                <div class="auto-style-59">
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">dont_delete_file</code>
-                        <br><span class="auto-style-45">Sentinel — unconditionally blocks all file deletions</span>
+                    <h3 class="auto-style-58" style="margin-bottom: 0;">Filesystem, CRM, Slack & Email</h3>
+                    <span style="margin-left: auto; color: var(--muted); font-size: 12px;">Click to expand</span>
+                </summary>
+                <div style="margin-top: 20px;">
+                    <div class="auto-style-59">
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">dont_delete_file</code>
+                            <br><span class="auto-style-45">Sentinel — unconditionally blocks all file deletions</span>
+                        </div>
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">restrict_paths(list)</code>
+                            <br><span class="auto-style-45">Confines operations to allowed directories — traversal-safe prefix matching</span>
+                        </div>
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">block_extensions(list)</code>
+                            <br><span class="auto-style-45">Blocks operations on .env, .key, .pem and other sensitive file types</span>
+                        </div>
                     </div>
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">restrict_paths(list)</code>
-                        <br><span class="auto-style-45">Confines operations to allowed directories — traversal-safe prefix matching</span>
-                    </div>
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">block_extensions(list)</code>
-                        <br><span class="auto-style-45">Blocks operations on .env, .key, .pem and other sensitive file types</span>
-                    </div>
-                </div>
-                <div class="auto-style-39">
-                    <i class="auto-style-57" data-lucide="users"></i>
-                    <h3 class="auto-style-58">CRM</h3>
-                </div>
-                <div class="auto-style-51">
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">dont_duplicate_contacts</code>
-                        <br><span class="auto-style-45">Live lookup before workflow runs — blocks creating a contact that already exists</span>
-                    </div>
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">limit_tasks_per_contact</code>
-                        <br><span class="auto-style-45">Rate-limits tasks per contact per rolling time window</span>
-                    </div>
-                </div>
-                <div class="auto-style-39">
-                    <i class="auto-style-57" data-lucide="message-square"></i>
-                    <h3 class="auto-style-58">Slack</h3>
-                </div>
-                <div class="auto-style-51">
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">require_channel_allowlist(list)</code>
-                        <br><span class="auto-style-45">Blocks posting to any channel not in your explicit allow-list — no surprise #general blasts</span>
-                    </div>
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">block_dms</code>
-                        <br><span class="auto-style-45">Blocks direct messages to users — DM channel IDs (D...) and user IDs (U...) both caught</span>
-                    </div>
-                </div>
-                <div class="auto-style-39">
-                    <i class="auto-style-57" data-lucide="mail"></i>
-                    <h3 class="auto-style-58">Email</h3>
-                </div>
-                <div class="auto-style-51">
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">no_mass_emails</code>
-                        <br><span class="auto-style-45">Blocks emails with >1 recipient — prevents agents from accidentally (or intentionally) mass-emailing your list</span>
-                    </div>
-                    <div class="auto-style-44">
-                        <code class="auto-style-25">no_repeat_emails</code>
-                        <br><span class="auto-style-45">Blocks repeat emails to the same recipient within a time window — prevents agent spam</span>
-                    </div>
-                    <div class="auto-style-39">
-                        <i class="auto-style-57" data-lucide="cloud"></i>
-                        <h3 class="auto-style-58">Cloud Storage</h3>
+                    <div class="auto-style-39" style="margin-top: 20px;">
+                        <i class="auto-style-57" data-lucide="users"></i>
+                        <h3 class="auto-style-58">CRM</h3>
                     </div>
                     <div class="auto-style-51">
                         <div class="auto-style-44">
-                            <code class="auto-style-25">dont_delete_without_human_ok("gdrive")</code>
-                            <br><span class="auto-style-45">Blocks GDrive deletions unless a human approval hint is present — prevents accidental data loss</span>
+                            <code class="auto-style-25">dont_duplicate_contacts</code>
+                            <br><span class="auto-style-45">Live lookup before workflow runs — blocks creating a contact that already exists</span>
                         </div>
                         <div class="auto-style-44">
-                            <code class="auto-style-25">dont_delete_without_human_ok("s3")</code>
-                            <br><span class="auto-style-45">Blocks S3 object deletions without human sign-off — protects your production buckets</span>
+                            <code class="auto-style-25">limit_tasks_per_contact</code>
+                            <br><span class="auto-style-45">Rate-limits tasks per contact per rolling time window</span>
+                        </div>
+                    </div>
+                    <div class="auto-style-39" style="margin-top: 20px;">
+                        <i class="auto-style-57" data-lucide="message-square"></i>
+                        <h3 class="auto-style-58">Slack</h3>
+                    </div>
+                    <div class="auto-style-51">
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">require_channel_allowlist(list)</code>
+                            <br><span class="auto-style-45">Blocks posting to any channel not in your explicit allow-list — no surprise #general blasts</span>
+                        </div>
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">block_dms</code>
+                            <br><span class="auto-style-45">Blocks direct messages to users — DM channel IDs (D...) and user IDs (U...) both caught</span>
+                        </div>
+                    </div>
+                    <div class="auto-style-39" style="margin-top: 20px;">
+                        <i class="auto-style-57" data-lucide="mail"></i>
+                        <h3 class="auto-style-58">Email</h3>
+                    </div>
+                    <div class="auto-style-51">
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">no_mass_emails</code>
+                            <br><span class="auto-style-45">Blocks emails with >1 recipient — prevents agents from accidentally (or intentionally) mass-emailing your list</span>
+                        </div>
+                        <div class="auto-style-44">
+                            <code class="auto-style-25">no_repeat_emails</code> <span class="badge-soon" style="background: var(--accent); color: var(--bg);">Requires Cloud</span>
+                            <br><span class="auto-style-45">Queries the DB to block repeat emails to the same recipient within a time window — prevents agent spam</span>
                         </div>
                     </div>
                 </div>
-    
+            </details>
+
+            <!-- CLOUD STORAGE -->
+            <div class="auto-style-52">
+                <div class="auto-style-39">
+                    <i class="auto-style-57" data-lucide="cloud"></i>
+                    <h3 class="auto-style-58">Cloud Storage</h3>
+                </div>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_delete_without_human_ok("gdrive")</code> <span class="badge-soon" style="background: var(--accent); color: var(--bg);">Requires Cloud</span>
+                        <br><span class="auto-style-45">Blocks GDrive deletions unless a cryptographically verified HITL receipt exists in the DB</span>
+                    </div>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">dont_delete_without_human_ok("s3")</code> <span class="badge-soon" style="background: var(--accent); color: var(--bg);">Requires Cloud</span>
+                        <br><span class="auto-style-45">Blocks S3 object deletions without a verified human sign-off receipt — protects your production buckets</span>
+                    </div>
+                </div>
             </div>
         </div>
 
