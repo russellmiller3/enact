@@ -18,6 +18,9 @@ venv/
 # Generated receipts
 receipts/
 
+# Local dev database
+cloud.db
+
 # Test cache
 .pytest_cache/
 

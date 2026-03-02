@@ -24,8 +24,8 @@ dev = [
     "pytest-asyncio",
     "responses",
     "psycopg2-binary",
-    "fastapi",
-    "httpx",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
 ]
 
 

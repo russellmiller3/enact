@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from cloud.auth import resolve_api_key
 from cloud.db import db
 from cloud.token import verify_token
-from cloud.email import send_approval_email
+from cloud.approval_email import send_approval_email
 
 router = APIRouter()
 
