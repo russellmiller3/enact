@@ -489,7 +489,7 @@ Policies handle the scenarios you anticipated. `allowed_actions` caps the blast 
 
 ## Built-in Policies
 
-Enact ships 26 built-in policies across 7 categories so you don't have to write them from scratch:
+Enact ships 30 built-in policies across 9 categories so you don't have to write them from scratch:
 
 | Category       | Policies                                                                                                                                                          | What they block                                              |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
@@ -500,12 +500,16 @@ Enact ships 26 built-in policies across 7 categories so you don't have to write 
 | **CRM**        | `dont_duplicate_contacts`, `limit_tasks_per_contact`                                                                                                              | Duplicate records, rate limiting                             |
 | **Time**       | `within_maintenance_window`, `code_freeze_active`                                                                                                                 | Actions outside allowed hours, during code freezes           |
 | **Slack**      | `require_channel_allowlist`, `block_dms`                                                                                                                          | Off-list channel posts, direct messages to users             |
+| **Email**      | `no_mass_emails`, `no_repeat_emails`                                                                                                                              | Mass email blasts, spamming the same recipient               |
+| **Cloud**      | `dont_delete_without_human_ok`                                                                                                                                    | S3/GDrive deletions without cryptographic HITL approval      |
 
 ```python
 from enact.policies.git import dont_push_to_main, require_branch_prefix
 from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
 from enact.policies.slack import require_channel_allowlist, block_dms
+from enact.policies.email import no_mass_emails
+from enact.policies.cloud_storage import dont_delete_without_human_ok
 ```
 
 ---

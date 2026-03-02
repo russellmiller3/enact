@@ -86,7 +86,7 @@ result, receipt = enact.run(
 - **`enact/client.py`** — added `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
 - **Tests:** `tests/cloud/` (conftest, test_auth, test_receipts, test_hitl, test_badge, test_hitl_receipt) + `tests/test_cloud_client.py`
 
-### Built-in Policies (26 policies across 7 files)
+### Built-in Policies (30 policies across 9 files)
 | File | Policies |
 |------|----------|
 | `git.py` | `dont_push_to_main`, `max_files_per_commit`, `require_branch_prefix`, `dont_delete_branch`, `dont_merge_to_main` |
@@ -96,6 +96,8 @@ result, receipt = enact.run(
 | `crm.py` | `dont_duplicate_contacts`, `limit_tasks_per_contact` |
 | `time.py` | `within_maintenance_window`, `code_freeze_active` |
 | `slack.py` | `require_channel_allowlist`, `block_dms` |
+| `email.py` | `no_mass_emails`, `no_repeat_emails` |
+| `cloud_storage.py` | `dont_delete_without_human_ok` |
 
 ### Workflows
 - **`agent_pr_workflow`** — create branch → open PR (never to main)
