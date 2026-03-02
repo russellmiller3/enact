@@ -8,6 +8,9 @@ dist/
 build/
 .venv/
 venv/
+.venv-pypi-smoke/
+.venv-pypi-smoke*/
+.tmp-pypi-smoke/
 
 # Env
 .env
@@ -38,3 +41,5 @@ SECURITY-REPORT-COMPLETE.md
 # Private planning docs — keep local only
 SPEC.md
 Handoff.md
+
+.vercel
