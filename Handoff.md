@@ -27,13 +27,13 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-01
+**Date:** 2026-03-02
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
-- Branch: `claude/merge-branches-update-docs-dOg68` (merged all feature branches → push to master)
+- Branch: `master`
 - Remote: `origin` → https://github.com/russellmiller3/enact
-- PyPI: `enact-sdk 0.4` — bump when ready to publish
+- PyPI: `enact-sdk 0.5` — published
 - License: ELv2 + no-resale clause
 
 ### What Exists (fully built + tested)
@@ -86,26 +86,25 @@ CLOUD_SECRET=changeme ENACT_EMAIL_DRY_RUN=1 uvicorn cloud.main:app --reload
 - **`rollback_data` field**: Every mutating `ActionResult` captures pre-action state
 - **Plan template**: `PLAN-TEMPLATE.md` → red-team with `plans/guides/RED-TEAM-MODE-GUIDE.md` before coding
 
-### What Was Done This Session (2026-03-01)
-- **Merged all feature branches** into `claude/merge-branches-update-docs-dOg68`:
-  - `receipt-ui-build` — `enact/ui.py`, local receipt browser with dark mode, `enact-ui` CLI ✅
-  - `red-team-slack-exercise` — `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback ✅
-  - `cloud-service-architecture` — Cloud MVP: HITL, receipt storage, status badge, approval receipts ✅
-  - `review-demo-index-page` — landing page receipt section fix ✅
-  - `handoff-pytedt-fix`, `complete-handoff-tasks` — docs/plan updates ✅
-- **README, SPEC, index.html** — updated for all merged features ✅
+### What Was Done This Session (2026-03-02)
+- **Email Policies** — `no_mass_emails` (max 1 recipient) and `no_repeat_emails` (DB-backed check for recent emails) ✅
+- **Cloud Storage Policies** — `dont_delete_without_human_ok` (DB-backed check for HITL approval) ✅
+- **Landing Page Updates** — Added Email and Cloud Storage sections, implemented accordion UI for long policy lists ✅
+- **PyPI Release** — Published `enact-sdk 0.5` ✅
 
 ### Previously Completed
+- Cloud MVP: HITL, receipt storage, status badge, approval receipts ✅
+- `enact/ui.py`, local receipt browser with dark mode, `enact-ui` CLI ✅
+- `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback ✅
 - ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename ✅
 - `FilesystemConnector` + filesystem policies + rollback ✅
-- Rollback engine, idempotency, migration section in landing page + README ✅
-- `enact-sdk 0.3.1` on PyPI ✅
 
 ### Next Steps (priority order)
-1. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
-2. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
-3. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact` (Template A)
-4. **Show HN post** — after receipt UI ships
+1. **Linear/Jira Policies** — Create similar DB-backed or strict policies for issue trackers (e.g., `no_duplicate_tickets`, `limit_tickets_per_hour`).
+2. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
+3. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
+4. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact` (Template A)
+5. **Show HN post** — after receipt UI ships
 
 ### Files to Reference
 - `SPEC.md` — full build plan, strategic thesis, workflow roadmap
