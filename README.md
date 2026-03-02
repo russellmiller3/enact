@@ -216,7 +216,7 @@ context = WorkflowContext(
 
 **WHY:** Instead of your agent running arbitrary code against GitHub, you give it a script to follow — a plain Python function. Enact runs that function. This way, every action is recorded, every failure is caught, and you can roll back the whole thing.
 
-A workflow is a Python function that takes a `context` (the bag from above) and returns a list of `ActionResult` objects — one per action taken.
+A workflow is a Python function that takes a `context` (the bag from above) and returns a list of `ActionResult` objects — one per action taken. If you're coming from Semantic Kernel, LangChain tools, or MCP — a workflow is your skill, hardened: same callable interface, plus policy enforcement, a signed receipt, and rollback.
 
 ```python
 from enact.models import WorkflowContext, ActionResult
