@@ -21,10 +21,10 @@ pip install enact-sdk
 
 Think of Enact like a **foreman supervising an AI carpenter**. When the carpenter says "I want to tear down this wall":
 
-1. **Permit check** — Before any tool is picked up, the foreman checks the plans. Load-bearing? Approved? If not: work stops, written reason recorded.
-2. **Blueprint** — If approved, the carpenter follows exact step-by-step instructions — not just "tear down the wall" but each specific action in order. No improvising.
-3. **Work log** — A signed record of every nail pulled, every stud removed, before-and-after state. Cryptographically sealed so it can't be altered later.
-4. **Change order** — If the carpenter tore down the WRONG wall, the foreman issues a change order. Enact uses the work log to reverse every step and put it back.
+1. **Permit check _(Policies)_** — Before any tool is picked up, the foreman checks the plans. Load-bearing? Approved? If not: work stops, written reason recorded.
+2. **Blueprint _(Workflow)_** — If approved, the carpenter follows exact step-by-step instructions — not just "tear down the wall" but each specific action in order. No improvising.
+3. **Work log _(Receipt)_** — A signed record of every nail pulled, every stud removed, before-and-after state. Cryptographically sealed so it can't be altered later.
+4. **Change order _(Rollback)_** — If the carpenter tore down the WRONG wall, the foreman issues a change order. Enact uses the work log to reverse every step and put it back.
 
 ---
 
