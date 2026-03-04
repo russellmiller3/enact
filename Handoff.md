@@ -35,45 +35,40 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 ### Git State
 
 - Branch: `master`
+- Last commit: `9b244a3` feat(docs+landing): new landing page live + Mintlify docs scaffold + short README
 - Remote: `origin` → https://github.com/russellmiller3/enact
 - PyPI: `enact-sdk 0.5` — published
 - License: ELv2 + no-resale clause
-- Uncommitted: `new-landing.html`, `test-player.html`, `build_landing.py`, `new_landing_page.md`, `download_player.py`, `static/`
+- All clean — nothing uncommitted
 
 ### What Was Done This Session (2026-03-04)
 
-**Demo player CDN blocker — FIXED:**
+**Landing page swapped:**
+- `new-landing.html` is now `index.html` (live on Vercel)
+- Old `index.html` → `landing_pages/index-v1-backup.html`
+- "Install the open-source SDK →" CTA → PyPI
+- "Get Audit-Ready →" nav button stays → mailto (enterprise sale)
 
-- Both `jsdelivr` and `unpkg` are blocked on Russell's network
-- Fixed by downloading bundles from npm registry via Python tarball extraction (`download_player.py`)
-- Files saved to `static/asciinema-player.min.js`, `static/asciinema-player.css`, `static/lucide.min.js`
-- All CDN references in `new-landing.html` now point to `static/`
+**Docs shipped (Mintlify — live):**
+- `docs/mint.json` — nav, colors, topbar CTA ("pip install enact-sdk")
+- 11 MDX pages across: getting-started, migration, integrations, concepts/*, cloud/*, reference/*
+- Foreman analogy in `docs/concepts/overview.mdx`
+- `docs/integrations.mdx` — maps Enact workflows to Anthropic skills, MCP, LangChain, CrewAI
+- Mintlify connected: russellmiller3/enact, branch=master, monorepo path=/docs
+- Docs auto-deploy on every push to master
 
-**Demo player sizing fixed:**
-
-- Root cause: `fit: 'width'` expands font to fill full 1100px container
-- Fix: `#demo-player { max-width: 720px; margin: 0 auto; }` in CSS — constrains + centers player
-- Speed changed from `1.5` → `1.0` (normal playback)
-
-**`.gitignore` updated:**
-
-- Added `node_modules/` and `package-lock.json`
-- `static/` is committed (vendored) so Vercel deploy works without build step
-
-### Decisions Made
-
-- **"Get Audit Ready" CTA** → should point to **PyPI** (`https://pypi.org/project/enact-sdk/`) — action verb needs actionable destination
+**README:**
+- Cut from 609 lines → 57 lines
+- Foreman analogy kept
+- Everything else links to docs.enact.cloud
 
 ### Next Steps (priority order)
 
-1. **Make `new-landing.html` the live page:**
-   - Move `index.html` → `landing_pages/index-v1-backup.html`
-   - Copy `new-landing.html` → `index.html`
-2. **Update CTA buttons** in `new-landing.html` — "Get Audit Ready" → PyPI link
-3. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
-4. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
-5. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact`
-6. **Show HN post** — after receipt UI ships
+1. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
+2. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
+3. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact`
+4. **Show HN post** — after receipt UI ships
+5. **Custom domain for docs** — point `docs.enact.cloud` at Mintlify (DNS in Porkbun)
 
 ### What Exists (fully built + tested)
 
