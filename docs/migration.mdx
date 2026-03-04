@@ -1,0 +1,68 @@
+---
+title: "Migrate in 10 Minutes"
+description: "Already have an agent? Add Enact without changing your reasoning logic."
+---
+
+Your agent's prompting and planning stay exactly as-is. You're adding a safety layer between it and your systems. Same calls, same results — now with policy enforcement, a signed audit trail, and rollback.
+
+**Three steps:**
+
+1. **Register your systems** — swap your SDK clients for Enact connectors (same credentials, now policy-gated)
+2. **Move your guard logic** — any `if/else` checks you already write become Python policy functions, or use one of the 30 built-in ones
+3. **Replace direct calls** — `tool.do_thing()` becomes `enact.run()`
+
+## Before (your agent today)
+
+```python
+import github_sdk, psycopg2
+
+# direct call — no policy check, no audit trail
+github_sdk.create_pr(repo="myorg/app", branch="agent/fix-123", title="Fix bug")
+
+# no WHERE protection — deletes every row
+db.execute("DELETE FROM sessions")
+```
+
+## After (wrapped with Enact)
+
+```python
+from enact import EnactClient
+from enact.connectors.github import GitHubConnector
+from enact.connectors.postgres import PostgresConnector
+from enact.policies.git import dont_push_to_main
+from enact.policies.db import dont_delete_without_where
+
+# one-time setup — replaces your SDK clients
+enact = EnactClient(
+    secret="...",
+    systems={
+        "github":   GitHubConnector(token="..."),
+        "postgres": PostgresConnector(dsn="postgresql://..."),
+    },
+    policies=[dont_push_to_main, dont_delete_without_where],
+)
+
+# same intent — now policy-gated, receipt-backed, rollback-able
+result, receipt = enact.run(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/fix-123"},
+)
+```
+
+Works with LangChain, CrewAI, OpenAI, Claude tool\_use — any framework that can call a Python function.
+
+## Compatibility
+
+| Framework | Works? | Notes |
+|-----------|--------|-------|
+| LangChain | ✅ | Wrap `enact.run()` as a LangChain tool |
+| CrewAI | ✅ | Use as a CrewAI tool |
+| OpenAI tool_use | ✅ | Register `enact.run` in your tool definitions |
+| Claude tool_use | ✅ | Same as OpenAI |
+| MCP | ✅ | Enact run = one MCP tool call |
+| Semantic Kernel | ✅ | Workflow = SK skill, hardened |
+
+## Next: Define Your First Workflow
+
+See [Concepts → Connectors](/concepts/connectors) to learn how to configure connectors, then [Concepts → Policies](/concepts/policies) to set your guardrails.

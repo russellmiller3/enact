@@ -1,3 +1,7 @@
+# Node
+node_modules/
+package-lock.json
+
 # Python
 __pycache__/
 *.pyc
@@ -41,8 +45,6 @@ landing_pages/
 bandit-report.json
 SECURITY-REPORT-COMPLETE.md
 
-# Private planning docs — keep local only
-SPEC.md
-Handoff.md
+
 
 .vercel

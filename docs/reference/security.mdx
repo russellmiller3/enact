@@ -1,0 +1,58 @@
+---
+title: "Security"
+description: "HMAC-SHA256 signing, secret management, and tamper detection."
+---
+
+## Receipt Signing
+
+Every receipt is signed with HMAC-SHA256. The signature covers **every field** — tampering with any value, even whitespace, invalidates it.
+
+```bash
+export ENACT_SECRET="$(openssl rand -hex 32)"
+```
+
+Or pass directly to `EnactClient`:
+
+```python
+enact = EnactClient(
+    systems={...},
+    policies=[...],
+    workflows=[...],
+    secret="your-32-char-minimum-secret-here",
+)
+```
+
+Minimum: **32 characters**. No default. `EnactClient` raises on startup if missing.
+
+## Verifying a Receipt
+
+```python
+from enact.receipt import verify_signature
+
+is_valid = verify_signature(receipt, secret="your-secret")
+# True = untampered. False = tampered or wrong secret.
+```
+
+Rollback also verifies before executing — tampered receipts can't trigger unintended reversals.
+
+## Dev/Test Mode
+
+For local development, you can bypass the length requirement:
+
+```python
+EnactClient(..., secret="short", allow_insecure_secret=True)
+```
+
+Never use this in production.
+
+## HITL Token Security
+
+Human-in-the-loop approval tokens are:
+- HMAC-signed and bound to a specific run ID
+- One-time-use (clicking approve cannot be replayed)
+- Auto-expiring after `timeout_seconds`
+- Action-bound: approving run A cannot approve run B
+
+## Signature Contract
+
+Receipts are signed over canonical JSON: `sort_keys=True, separators=(",", ":")`. This ensures the same payload always produces the same signature regardless of key ordering or whitespace variations.

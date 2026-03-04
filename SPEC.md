@@ -81,7 +81,7 @@ result, receipt = enact.run(
 - **`cloud/auth.py`** — `X-Enact-Api-Key` header; SHA-256 hash stored, raw key never persisted
 - **`cloud/token.py`** — HMAC-signed approve/deny tokens; action is bound to the token (deny token can't approve)
 - **`cloud/db.py`** — SQLite, `ENACT_DB_PATH` read fresh per call (test isolation via `monkeypatch.setenv`)
-- **`cloud/email.py`** — `smtplib`; `ENACT_EMAIL_DRY_RUN=1` for local dev
+- **`cloud/approval_email.py`** — `smtplib`; `ENACT_EMAIL_DRY_RUN=1` for local dev (renamed from `email.py` — was shadowing stdlib `email` package)
 - **`enact/cloud_client.py`** — thin HTTP client for cloud API (`push_receipt`, `request_hitl`, `get_hitl_status`, `poll_until_decided`)
 - **`enact/client.py`** — added `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
 - **Tests:** `tests/cloud/` (conftest, test_auth, test_receipts, test_hitl, test_badge, test_hitl_receipt) + `tests/test_cloud_client.py`

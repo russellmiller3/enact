@@ -1,0 +1,77 @@
+---
+title: "Human-in-the-Loop"
+description: "Pause a workflow and email a human to approve before continuing."
+---
+
+## What is HITL?
+
+Some actions are too risky to run without a human sign-off. HITL lets you pause a workflow mid-execution, send an email with a signed approve/deny link, and only continue if a human clicks approve.
+
+No login required for the approver. The link is signed, one-time-use, and auto-expires.
+
+## Usage
+
+```python
+result, receipt = enact.run_with_hitl(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/nuke-main"},
+    notify_email="ops@company.com",    # who gets the approve/deny email
+    timeout_seconds=3600,              # auto-deny after 1 hour of silence
+)
+
+print(result.decision)   # "PASS" if approved, "BLOCK" if denied or timed out
+```
+
+## How It Works
+
+```
+Agent calls run_with_hitl()
+         |
+         v
+    Policy check runs
+    (same as normal run)
+         |
+    PASS |
+         v
+    HITL request created
+    Email sent to ops@company.com
+         |
+    Waiting...
+         |
+    Human clicks "Approve" or "Deny"
+         |
+    PASS → workflow executes, receipt written
+    BLOCK → receipt written, workflow skipped
+```
+
+The approval email contains:
+- What the agent wants to do (workflow + payload summary)
+- A signed **Approve** link (one-time-use)
+- A signed **Deny** link (one-time-use)
+- Expiry time
+
+## Approval Token Security
+
+- Tokens are HMAC-signed and bound to the specific action
+- Clicking approve for run `A` cannot approve run `B`
+- Tokens expire after `timeout_seconds`
+- After use, tokens cannot be reused
+
+## Check HITL Status Programmatically
+
+```python
+from enact.cloud_client import EnactCloudClient
+
+client = EnactCloudClient(api_key="eak_...")
+status = client.get_hitl(hitl_id)
+
+print(status["status"])   # "pending", "approved", "denied", "expired"
+```
+
+## Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `ENACT_EMAIL_DRY_RUN=1` | Skip real email sends — prints approve link to stdout. Use in dev/test. |
+| `CLOUD_SECRET` | Server-side signing secret for HITL tokens |

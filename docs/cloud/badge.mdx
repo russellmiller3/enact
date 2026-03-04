@@ -1,0 +1,37 @@
+---
+title: "Status Badge"
+description: "Embed a live pass/block rate badge in your README."
+---
+
+## Usage
+
+Paste this into your `README.md`:
+
+```markdown
+![agent_pr_workflow](https://enact.cloud/badge/your-team-id/agent_pr_workflow.svg)
+```
+
+The badge shows the real-time pass/block rate for a specific workflow. It goes green when the last run passed, red when blocked, grey when no data.
+
+## Badge URL Format
+
+```
+https://enact.cloud/badge/{team_id}/{workflow_name}.svg
+```
+
+- `team_id` — your team identifier from enact.cloud
+- `workflow_name` — must match the workflow name registered in `EnactClient`
+
+## Badge States
+
+| Color | Meaning |
+|-------|---------|
+| 🟢 Green | Last run: PASS |
+| 🔴 Red | Last run: BLOCK |
+| ⚫ Grey | No receipts yet |
+
+## Notes
+
+- The badge endpoint is **public** — no API key required (it only reveals pass/block state, not receipt contents)
+- Ordering uses `rowid DESC` — handles same-second inserts correctly
+- Safe to embed in public READMEs

@@ -1,0 +1,57 @@
+---
+title: "Cloud Overview"
+description: "Push receipts to the cloud for searchable storage, a web UI, and human-in-the-loop gates."
+---
+
+## Setup
+
+Get an API key at [enact.cloud](https://enact.cloud), then pass it to `EnactClient`:
+
+```python
+from enact import EnactClient
+
+enact = EnactClient(
+    systems={"github": gh},
+    policies=[dont_push_to_main],
+    workflows=[agent_pr_workflow],
+    secret="your-secret",
+    cloud_api_key="eak_...",   # enables cloud features
+)
+```
+
+## Push Receipts to Cloud
+
+After any run, push the receipt to cloud storage:
+
+```python
+result, receipt = enact.run(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/fix-123"},
+)
+
+enact.push_receipt_to_cloud(receipt)   # now searchable in the cloud UI
+```
+
+Receipts pushed to the cloud are:
+- Searchable by workflow, user, decision, time range
+- Verifiable (signature check in the UI)
+- Exportable for compliance (SOC2, ISO 27001)
+
+## Cloud API Endpoints
+
+| Endpoint | What it does |
+|----------|-------------|
+| `POST /receipts` | Push a receipt (idempotent — safe to push twice) |
+| `GET /receipts/{run_id}` | Fetch a receipt by run ID |
+| `POST /hitl/request` | Create a human-in-the-loop approval request |
+| `GET /hitl/{id}` | Check HITL status |
+| `GET /badge/{team_id}/{workflow}.svg` | Live pass/block rate badge |
+
+## Run the Cloud Backend Locally
+
+```bash
+CLOUD_SECRET=changeme ENACT_EMAIL_DRY_RUN=1 uvicorn cloud.main:app --reload
+```
+
+`ENACT_EMAIL_DRY_RUN=1` skips real email sends — prints the approval link to stdout instead.

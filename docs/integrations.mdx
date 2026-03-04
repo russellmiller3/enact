@@ -1,0 +1,155 @@
+---
+title: "Framework Integrations"
+description: "How Enact workflows map to Anthropic skills, MCP tools, LangChain, CrewAI, and more."
+---
+
+## Anthropic Skills / Claude tool_use
+
+Enact workflows are the **governed implementation** of Anthropic skills. The mapping is 1:1:
+
+| Anthropic Skill | Enact Equivalent |
+|----------------|-----------------|
+| Named, callable Python function | Enact Workflow |
+| Input parameters | `payload` dict |
+| Output | `ActionResult` list |
+| _(no governance)_ | Policy check + signed receipt + rollback |
+
+Instead of Claude calling your skill directly:
+
+```python
+# Without Enact — Claude calls skill directly
+tools = [{"name": "create_pr", "description": "..."}]
+```
+
+Register `enact.run` as the tool:
+
+```python
+# With Enact — Claude calls enact.run, governance happens automatically
+tools = [
+    {
+        "name": "enact_run",
+        "description": "Run a governed agent workflow",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "workflow": {"type": "string"},
+                "payload": {"type": "object"},
+            },
+            "required": ["workflow", "payload"],
+        },
+    }
+]
+
+# When Claude calls the tool:
+def handle_tool_call(tool_input):
+    result, receipt = enact.run(
+        workflow=tool_input["workflow"],
+        user_email="agent@company.com",
+        payload=tool_input["payload"],
+    )
+    return result
+```
+
+Claude can't tell the difference. You added a governance layer without changing Claude's behavior.
+
+## MCP (Model Context Protocol)
+
+Anthropic's [Model Context Protocol](https://modelcontextprotocol.io) is the open standard for connecting AI models to tools and data sources. Each Enact workflow maps to one MCP tool.
+
+```python
+# In your MCP server — register enact.run as an MCP tool
+@mcp_server.tool()
+def run_workflow(workflow: str, payload: dict) -> dict:
+    """Run a governed Enact workflow with policy enforcement and audit trail."""
+    result, receipt = enact.run(
+        workflow=workflow,
+        user_email="agent@company.com",
+        payload=payload,
+    )
+    return {"decision": result.decision, "run_id": receipt.run_id}
+```
+
+Every MCP tool call now gets a signed receipt. Every block gets logged. Every run is rollback-able.
+
+## LangChain
+
+```python
+from langchain.tools import tool
+
+@tool
+def run_enact_workflow(workflow: str, payload: str) -> str:
+    """Run a governed workflow. payload is a JSON string."""
+    import json
+    result, receipt = enact.run(
+        workflow=workflow,
+        user_email="agent@company.com",
+        payload=json.loads(payload),
+    )
+    return f"Decision: {result.decision}. Run ID: {receipt.run_id}"
+```
+
+## CrewAI
+
+```python
+from crewai import Tool
+
+enact_tool = Tool(
+    name="run_workflow",
+    description="Run a governed Enact workflow",
+    func=lambda workflow, payload: enact.run(workflow=workflow, user_email="agent@company.com", payload=payload),
+)
+```
+
+## OpenAI function_calling
+
+```python
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "run_workflow",
+            "description": "Run a governed workflow with policy enforcement",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "workflow": {"type": "string"},
+                    "payload": {"type": "object"},
+                },
+                "required": ["workflow", "payload"],
+            },
+        },
+    }
+]
+```
+
+## Semantic Kernel
+
+An Enact workflow is a Semantic Kernel skill, hardened:
+
+```python
+from semantic_kernel.skill_definition import sk_function
+
+class EnactSkills:
+    @sk_function(description="Run a governed Enact workflow")
+    def run_workflow(self, workflow: str, payload: str) -> str:
+        import json
+        result, receipt = enact.run(
+            workflow=workflow,
+            user_email="agent@company.com",
+            payload=json.loads(payload),
+        )
+        return result.decision
+```
+
+## Summary
+
+| Framework | How to integrate |
+|-----------|----------------|
+| **Anthropic tool_use** | Register `enact.run` as a tool in your tools list |
+| **MCP** | Define `run_workflow` as an MCP tool in your server |
+| **LangChain** | Wrap with `@tool` decorator |
+| **CrewAI** | Pass as a `Tool` object |
+| **OpenAI function_calling** | Define in `tools` array |
+| **Semantic Kernel** | Wrap in a skill class with `@sk_function` |
+
+In every case: your agent's prompting and reasoning stay exactly as-is. You're adding a governance layer between intent and execution.

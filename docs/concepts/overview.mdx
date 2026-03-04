@@ -1,0 +1,77 @@
+---
+title: "How Enact Works"
+description: "The foreman analogy — policies, workflows, receipts, and rollback explained."
+---
+
+## The Foreman Analogy
+
+Think of Enact like a **foreman supervising an AI carpenter**. The carpenter is capable and fast, but needs oversight. When the carpenter says "I want to tear down this wall":
+
+1. **Permit check** — Before any tool is picked up, the foreman checks the plans. Load-bearing? Utilities inside? Approved? If not: work stops, written reason recorded.
+2. **Blueprint** — If approved, the carpenter follows exact step-by-step instructions — not just "tear down the wall" but each specific action in order. No improvising.
+3. **Work log** — A signed record of every nail pulled, every stud removed, exact before-and-after state. Cryptographically sealed so it can't be altered later.
+4. **Change order** — If the carpenter tore down the WRONG wall, the foreman issues a change order. Enact uses the work log to reverse every step and put it back.
+
+## The Four Pieces
+
+| Piece | What it is | Analogy |
+|-------|-----------|---------|
+| **Policy** | A Python function that returns pass/fail | The permit check |
+| **Workflow** | A Python function that does the actual work | The blueprint the carpenter follows |
+| **Receipt** | A signed JSON record of what happened | The signed work log |
+| **Rollback** | One call that reverses an entire run | The change order + teardown |
+
+## How They Fit Together
+
+```
+Agent wants to do something
+         |
+         v
+    +----------+
+    | POLICIES |  <-- "Is this approved?" (permit check)
+    +----------+
+         |
+    PASS |  BLOCK --> Receipt (denied + reason)
+         v
+    +-----------+
+    | WORKFLOW  |  <-- "Follow the blueprint, step by step"
+    +-----------+
+         |
+         v
+    +----------+
+    | RECEIPT  |  <-- "Signed work log — what happened, what changed"
+    +----------+
+         |
+    if needed:
+         v
+    +----------+
+    | ROLLBACK |  <-- "Change order — reverse every step using the work log"
+    +----------+
+```
+
+## Why This Matters
+
+These weren't bugs — the agents did exactly what they were told. The problem was no permit check, no work log, no way to undo it:
+
+| Incident | What Happened | Source |
+|----------|--------------|--------|
+| **Replit** | Agent deleted a production database containing data for 2,400+ executives | [Fortune, Jul 2025](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/) |
+| **Amazon Kiro** | Agent deleted an EC2 environment → 13-hour AWS outage | [Awesome Agents, Feb 2026](https://awesomeagents.ai/news/amazon-kiro-ai-aws-outages/) |
+| **Claude Code** | Agent ran `rm -rf ~/` — wiped developer's entire home directory | [ByteIota, Dec 2025](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/) |
+
+## Dive Deeper
+
+<CardGroup cols={2}>
+  <Card title="Connectors" icon="plug" href="/concepts/connectors">
+    Wrap external systems. Limit what the agent can call.
+  </Card>
+  <Card title="Policies" icon="shield-check" href="/concepts/policies">
+    Python functions that decide whether a run should proceed.
+  </Card>
+  <Card title="Receipts" icon="receipt" href="/concepts/receipts">
+    Signed JSON records of every run — PASS or BLOCK.
+  </Card>
+  <Card title="Rollback" icon="rotate-left" href="/concepts/rollback">
+    One call that reverses everything in the correct order.
+  </Card>
+</CardGroup>

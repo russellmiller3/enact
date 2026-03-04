@@ -1,0 +1,51 @@
+---
+title: "Getting Started"
+description: "Install Enact and run your first policy-checked workflow in 30 seconds."
+---
+
+## What is Enact?
+
+**You just gave an LLM access to real APIs. What happens when it does something stupid?**
+
+It already has. [Replit's agent deleted a production database](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/). [Amazon Kiro caused a 13-hour AWS outage](https://awesomeagents.ai/news/amazon-kiro-ai-aws-outages/). [Claude Code ran `rm -rf` on a home directory](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/). These weren't bugs — the agents did exactly what they were told. The problem: nothing was checking _whether they should_.
+
+Enact is the missing layer between your agent and the real world:
+
+1. **Block dangerous actions before they fire** — Python policies run before anything executes. Agent tries to push to `main`? Blocked. Tries to `DELETE` without a `WHERE` clause? Blocked.
+2. **Execute deterministically** — Policies and workflows are plain Python: unit-testable, `git diff`'able, reviewable in a PR. LLM-generated actions are not.
+3. **Prove what happened** — Every run (PASS or BLOCK) writes a cryptographically-signed receipt: who ran what, which policies passed, what changed.
+4. **Roll back in one call** — `enact.rollback(run_id)` reverses the damage. Deleted rows restored. Wrong branches recreated.
+
+## Install
+
+```bash
+pip install enact-sdk
+```
+
+## Quickstart (30 seconds)
+
+```bash
+pip install enact-sdk
+python examples/quickstart.py
+```
+
+Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts printed to stdout. No credentials, no cloud account, no setup needed.
+
+Want the full show? `python examples/demo.py` runs a 3-act scenario: an agent blocked from pushing to `main`, a normal PR workflow, and a database wipe rolled back in one command.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="How It Works" icon="brain" href="/concepts/overview">
+    The foreman analogy — policies, workflows, receipts, rollback explained.
+  </Card>
+  <Card title="Migrate in 10 Minutes" icon="arrow-right-arrow-left" href="/migration">
+    Already have an agent? Wrap it with Enact without changing your logic.
+  </Card>
+  <Card title="Connectors" icon="plug" href="/concepts/connectors">
+    GitHub, Postgres, Filesystem, Slack — pre-built with rollback support.
+  </Card>
+  <Card title="Built-in Policies" icon="shield-check" href="/concepts/policies">
+    30 policies across 9 categories. Import and use — no writing required.
+  </Card>
+</CardGroup>

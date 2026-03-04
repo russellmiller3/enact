@@ -1,0 +1,113 @@
+---
+title: "Policies"
+description: "Python functions that decide whether a run should proceed. Run before anything executes."
+---
+
+## What is a Policy?
+
+The workflow does whatever you tell it to. Policies decide _whether it should run at all_. They run first, before any action fires. If any policy fails, the whole run is blocked and you get a receipt explaining why.
+
+A policy is a plain Python function — no LLMs, no magic. It reads the `context` and returns pass or fail with a reason.
+
+## Writing a Policy
+
+Here's a concrete example. The standard engineering rule: no one pushes directly to `main`. Agents break this constantly because no one told them not to. The Amazon Kiro incident was exactly this pattern — a direct infrastructure change with no review step caused a 13-hour AWS outage.
+
+```python
+from enact.models import WorkflowContext, PolicyResult
+
+def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
+    branch = context.payload.get("branch", "")
+    branch_is_not_main = branch.lower() not in ("main", "master")
+    return PolicyResult(
+        policy="dont_push_to_main",
+        passed=branch_is_not_main,
+        reason="Branch is not main/master" if branch_is_not_main else f"Direct push to '{branch}' is blocked",
+    )
+```
+
+How the check works:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  STEP 1: Read the branch name from the agent's request  │
+│    context.payload.get("branch", "")  -->  "main"       │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  STEP 2: Is this branch safe to push to?                │
+│    branch_is_not_main = branch not in ("main","master") │
+│                                                         │
+│    "agent/fix-149" -->  branch_is_not_main = True   ✅  │
+│    "main"          -->  branch_is_not_main = False  🚫  │
+└────────────────────────┬────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  STEP 3: passed = branch_is_not_main                    │
+│                                                         │
+│    True   -->  PASS ✅                                  │
+│    False  -->  BLOCK 🚫                                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Registering Policies
+
+Pass them to `EnactClient`. Multiple policies = all must pass:
+
+```python
+from enact import EnactClient
+from enact.policies.git import dont_push_to_main, require_branch_prefix
+
+enact = EnactClient(
+    systems={...},
+    policies=[
+        dont_push_to_main,                # plain policy function
+        require_branch_prefix("agent/"),  # policy factory — returns a configured function
+    ],
+    workflows=[...],
+    secret="your-secret",
+)
+```
+
+## Built-in Policies
+
+Enact ships 30 built-in policies across 9 categories:
+
+| Category | Policies | What they block |
+|----------|---------|----------------|
+| **Git** | `dont_push_to_main`, `require_branch_prefix`, `max_files_per_commit`, `dont_delete_branch`, `dont_merge_to_main` | Direct pushes to main, wrong branch names, blast radius |
+| **Database** | `dont_delete_row`, `dont_delete_without_where`, `dont_update_without_where`, `protect_tables`, `block_ddl` | Dangerous deletes, unscoped updates, DDL like `DROP TABLE` |
+| **Filesystem** | `dont_delete_file`, `restrict_paths`, `block_extensions` | File deletions, path traversal, sensitive files (.env, .key) |
+| **Access** | `contractor_cannot_write_pii`, `require_actor_role`, `require_user_role`, `dont_read_sensitive_tables`, `dont_read_sensitive_paths`, `require_clearance_for_path` | Unauthorized access, PII exposure |
+| **CRM** | `dont_duplicate_contacts`, `limit_tasks_per_contact` | Duplicate records, rate limiting |
+| **Time** | `within_maintenance_window`, `code_freeze_active` | Actions outside allowed hours, during code freezes |
+| **Slack** | `require_channel_allowlist`, `block_dms` | Off-list channel posts, direct messages to users |
+| **Email** | `no_mass_emails`, `no_repeat_emails` | Mass email blasts, spamming the same recipient |
+| **Cloud Storage** | `dont_delete_without_human_ok` | S3/GDrive deletions without cryptographic HITL approval |
+
+## Import Paths
+
+```python
+from enact.policies.git import dont_push_to_main, require_branch_prefix
+from enact.policies.db import protect_tables, block_ddl
+from enact.policies.time import code_freeze_active
+from enact.policies.slack import require_channel_allowlist, block_dms
+from enact.policies.email import no_mass_emails
+from enact.policies.cloud_storage import dont_delete_without_human_ok
+```
+
+## Naming Convention
+
+Name booleans after what you *want* to be true — not what you're guarding against:
+
+```python
+# Bad — forces a mental flip to understand
+blocked = branch.lower() in ("main", "master")
+passed = not blocked
+
+# Good — reads like a sentence
+branch_is_not_main = branch.lower() not in ("main", "master")
+passed = branch_is_not_main
+```

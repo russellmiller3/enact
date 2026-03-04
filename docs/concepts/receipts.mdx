@@ -1,0 +1,100 @@
+---
+title: "Receipts"
+description: "Every run writes a cryptographically-signed JSON receipt. PASS or BLOCK — always."
+---
+
+## What is a Receipt?
+
+Every run — whether it passes or gets blocked — writes a signed JSON receipt to `receipts/`. It records:
+
+- Who ran the workflow (`user_email`)
+- Which workflow ran
+- Which policies passed or failed, and why
+- Which actions were taken and whether they succeeded
+- Timestamp
+- HMAC-SHA256 signature (tamper-proof)
+
+## Receipt Format
+
+```json
+{
+  "run_id": "a1b2c3d4-...",
+  "workflow": "agent_pr_workflow",
+  "user_email": "agent@company.com",
+  "decision": "PASS",
+  "policy_results": [
+    {
+      "policy": "dont_push_to_main",
+      "passed": true,
+      "reason": "Branch is not main/master"
+    },
+    {
+      "policy": "require_branch_prefix",
+      "passed": true,
+      "reason": "Branch 'agent/fix-149' has required prefix"
+    }
+  ],
+  "actions_taken": [
+    { "action": "create_branch", "system": "github", "success": true },
+    { "action": "create_pr",     "system": "github", "success": true }
+  ],
+  "timestamp": "2026-02-26T03:30:00Z",
+  "signature": "hmac-sha256-hex..."
+}
+```
+
+A blocked run looks the same, but `"decision": "BLOCK"` and `actions_taken` is empty.
+
+## Verify a Receipt
+
+```python
+from enact.receipt import verify_signature
+
+is_valid = verify_signature(receipt, secret="your-secret")
+```
+
+The signature covers **every field**. Tampering with any value — even whitespace — invalidates it.
+
+## Receipt Browser (local UI)
+
+Browse, filter, and verify your receipts locally — no cloud account needed.
+
+```bash
+enact-ui                           # serves receipts/ on http://localhost:8765
+enact-ui --port 9000               # custom port
+enact-ui --dir /path/to/receipts   # custom directory
+enact-ui --secret YOUR_SECRET      # enables signature verification in the UI
+```
+
+Features:
+- Every run listed (PASS / BLOCK / ROLLED_BACK)
+- Click into the full signed JSON
+- Invalid signatures highlighted in red
+- Dark mode toggle
+- Ships with `pip install enact-sdk` — zero extra dependencies
+
+## The `run_id`
+
+When you call `enact.run()`, you get back a receipt with a `run_id`:
+
+```python
+result, receipt = enact.run(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "owner/repo", "branch": "agent/fix-149"},
+)
+
+print(receipt.run_id)   # "a1b2c3d4-..." — save this for rollback
+```
+
+The `run_id` is the handle you pass to `enact.rollback()`. Save it.
+
+## Push to Cloud
+
+If you have a cloud account, push receipts so they're searchable in the cloud UI:
+
+```python
+enact.push_receipt_to_cloud(receipt)
+```
+
+See [Cloud → Overview](/cloud/overview) for setup.

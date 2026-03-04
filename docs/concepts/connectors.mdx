@@ -1,0 +1,107 @@
+---
+title: "Connectors"
+description: "Wrap external systems. Limit what the agent can call. Enable rollback."
+---
+
+## What is a Connector?
+
+Your agent shouldn't call GitHub directly. You want a middleman that (a) limits what the agent can do and (b) records what actually happened. That's the Connector.
+
+A **Connector** is a pre-built class that wraps an external system. You create one, hand it to Enact, and Enact passes it to your workflow. You never call GitHub (or Postgres, or the filesystem) directly anymore — you call the connector.
+
+Think of it like handing a contractor a **limited toolbox** before you leave for work. The toolbox only contains the tools you specifically put in it. If the contractor hallucinates and decides to demolish a load-bearing wall — too bad, there's no sledgehammer in the box.
+
+## Basic Usage
+
+```python
+from enact.connectors.github import GitHubConnector
+
+# Create the connector — only allow the two actions you actually need
+gh = GitHubConnector(
+    token="ghp_...",
+    allowed_actions=["create_branch", "create_pr"]  # ONLY these methods can be called
+)
+
+# Call an action
+result = gh.create_branch(repo="owner/repo", branch="agent/fix-149")
+
+# Every action returns an ActionResult
+print(result.success)  # True or False
+print(result.output)   # {"branch": "agent/fix-149"}
+```
+
+If the agent tries anything outside the allowlist:
+
+```python
+gh.delete_branch(repo="owner/repo", branch="main")
+# -> PermissionError: Action 'delete_branch' not in allowlist
+```
+
+## Policies vs. `allowed_actions`
+
+You might be thinking: _"Don't we already have Policies?"_ Yes — but they work differently.
+
+- **Policies** are your business rules: "You can push code, but not to the `master` branch."
+- **`allowed_actions`** is your hardcoded floor: "This connector can only ever call these two methods. Full stop."
+
+Policies handle the scenarios you anticipated. `allowed_actions` caps the blast radius for everything else — even actions you never thought to write a policy for.
+
+## Available Connectors
+
+| System | Actions | Rollback | Notes |
+|--------|---------|---------|-------|
+| **GitHub** | `create_branch`, `create_pr`, `create_issue`, `delete_branch`, `merge_pr`, `push_commit` | Yes — except `push_commit` | `merge_pr` via `revert_commit` |
+| **Postgres** | `select_rows`, `insert_row`, `update_row`, `delete_row` | Yes — pre-SELECT captures state | |
+| **Filesystem** | `read_file`, `write_file`, `delete_file`, `list_dir` | Yes — content captured before mutation | |
+| **Slack** | `post_message`, `delete_message` | `post_message` yes, `delete_message` no | Bot token needs `chat:delete` scope for rollback |
+
+## Import Paths
+
+```python
+from enact.connectors.github import GitHubConnector
+from enact.connectors.postgres import PostgresConnector
+from enact.connectors.filesystem import FilesystemConnector
+from enact.connectors.slack import SlackConnector
+```
+
+## WorkflowContext
+
+The `WorkflowContext` is the "bag" that travels through the system — passed to every policy check and every workflow action.
+
+```python
+# Enact builds this automatically — you never create it manually.
+# Shown here so you understand what your workflow receives.
+context = WorkflowContext(
+    user_email="agent@company.com",        # Who is making the request
+    payload={"repo": "owner/repo", ...},   # Data the agent wants to act on
+    systems={                              # Your connectors, keyed by name
+        "github": GitHubConnector(token="ghp_...", allowed_actions=["create_branch", "create_pr"]),
+    },
+)
+```
+
+Inside your workflow, you access connectors by key:
+
+```python
+def my_workflow(context: WorkflowContext) -> list[ActionResult]:
+    gh = context.systems["github"]
+    repo = context.payload["repo"]
+    ...
+```
+
+## What Rollback Can and Can't Undo
+
+| Action | Rollback? | How |
+|--------|-----------|-----|
+| `github.create_branch` | ✅ | Deletes the branch |
+| `github.create_pr` | ✅ | Closes the PR |
+| `github.merge_pr` | ✅ | `git revert -m 1 <sha>` — new commit that restores pre-merge state |
+| `github.delete_branch` | ✅ | Recreates branch at captured SHA |
+| `github.push_commit` | ❌ | Force-push required; blocked on protected branches |
+| `postgres.insert_row` | ✅ | Deletes the inserted row |
+| `postgres.update_row` | ✅ | Restores pre-update values |
+| `postgres.delete_row` | ✅ | Re-inserts every deleted row |
+| `filesystem.write_file` | ✅ | Restores previous content |
+| `filesystem.delete_file` | ✅ | Recreates file with captured content |
+| `slack.post_message` | ✅ | Deletes via `chat.delete` using captured `ts` |
+| `slack.delete_message` | ❌ | Can't un-delete a Slack message |

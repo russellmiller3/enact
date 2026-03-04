@@ -10,6 +10,7 @@ At the end of every session, update the Handoff section below to reflect current
 Keep it tight — the goal is to get the next Claude session oriented in under 60 seconds.
 
 **What to include:**
+
 - Current git state (branch, last commit, remotes)
 - What was just completed this session
 - Exact next step (be specific — file name, function name, what it should do)
@@ -17,6 +18,7 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - Links/paths to key files
 
 **What to cut:**
+
 - History that's already done and not relevant to next steps
 - Anything already captured in SPEC.md
 - Long explanations — just the facts
@@ -27,18 +29,56 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-02
+**Date:** 2026-03-04
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
+
 - Branch: `master`
 - Remote: `origin` → https://github.com/russellmiller3/enact
 - PyPI: `enact-sdk 0.5` — published
 - License: ELv2 + no-resale clause
+- Uncommitted: `new-landing.html`, `test-player.html`, `build_landing.py`, `new_landing_page.md`, `download_player.py`, `static/`
+
+### What Was Done This Session (2026-03-04)
+
+**Demo player CDN blocker — FIXED:**
+
+- Both `jsdelivr` and `unpkg` are blocked on Russell's network
+- Fixed by downloading bundles from npm registry via Python tarball extraction (`download_player.py`)
+- Files saved to `static/asciinema-player.min.js`, `static/asciinema-player.css`, `static/lucide.min.js`
+- All CDN references in `new-landing.html` now point to `static/`
+
+**Demo player sizing fixed:**
+
+- Root cause: `fit: 'width'` expands font to fill full 1100px container
+- Fix: `#demo-player { max-width: 720px; margin: 0 auto; }` in CSS — constrains + centers player
+- Speed changed from `1.5` → `1.0` (normal playback)
+
+**`.gitignore` updated:**
+
+- Added `node_modules/` and `package-lock.json`
+- `static/` is committed (vendored) so Vercel deploy works without build step
+
+### Decisions Made
+
+- **"Get Audit Ready" CTA** → should point to **PyPI** (`https://pypi.org/project/enact-sdk/`) — action verb needs actionable destination
+
+### Next Steps (priority order)
+
+1. **Make `new-landing.html` the live page:**
+   - Move `index.html` → `landing_pages/index-v1-backup.html`
+   - Copy `new-landing.html` → `index.html`
+2. **Update CTA buttons** in `new-landing.html` — "Get Audit Ready" → PyPI link
+3. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
+4. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
+5. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact`
+6. **Show HN post** — after receipt UI ships
 
 ### What Exists (fully built + tested)
 
 **SDK:**
+
 ```
 enact/
   models.py, policy.py, receipt.py, client.py
@@ -47,20 +87,21 @@ enact/
   ui.py                             # local receipt browser, dark mode, enact-ui CLI
   connectors/github.py, postgres.py, filesystem.py
   connectors/slack.py               # post_message, delete_message; rollback via ts
-  policies/git.py, db.py, filesystem.py, crm.py, access.py, time.py
+  policies/git.py, db.py, filesystem.py, crm.py, access.py, time.py, email.py
   policies/slack.py                 # require_channel_allowlist, block_dms
+  policies/cloud_storage.py         # dont_delete_without_human_ok
   workflows/agent_pr_workflow.py, db_safe_insert.py
   workflows/post_slack_message.py
 ```
 
 **Cloud backend (`cloud/` package):**
+
 ```
 cloud/
-  __init__.py
   db.py           # SQLite, ENACT_DB_PATH read fresh per call (test isolation)
   auth.py         # X-Enact-Api-Key header; SHA-256 hash stored, raw key never persisted
   token.py        # HMAC-signed approve/deny tokens; action bound to token
-  email.py        # smtplib; ENACT_EMAIL_DRY_RUN=1 for local dev
+  approval_email.py  # smtplib; ENACT_EMAIL_DRY_RUN=1 for local dev
   main.py         # FastAPI app with lifespan startup
   routes/
     receipts.py   # POST /receipts (idempotent), GET /receipts/{run_id}
@@ -71,47 +112,37 @@ cloud/
 **Tests:** 356+ tests total (SDK + cloud), all passing.
 
 **Run cloud locally:**
+
 ```
 CLOUD_SECRET=changeme ENACT_EMAIL_DRY_RUN=1 uvicorn cloud.main:app --reload
 ```
 
-### Key Design Decisions (cloud)
+### Key Design Decisions
+
 - **DateTime format:** All stored as `"%Y-%m-%dT%H:%M:%SZ"` — Python 3.9's `fromisoformat` can't parse `+00:00`
-- **Signature contract:** `_write_hitl_receipt` signs canonical JSON (`sort_keys=True, separators=(",",":")`) and stores the same canonical string
+- **Signature contract:** `_write_hitl_receipt` signs canonical JSON (`sort_keys=True, separators=(",",":")`)
 - **Badge ordering:** `ORDER BY rowid DESC` — handles same-second inserts correctly
-- **DB path isolation:** `get_connection()` reads `ENACT_DB_PATH` fresh on every call — no module reload needed in tests
+- **DB path isolation:** `get_connection()` reads `ENACT_DB_PATH` fresh on every call
 
 ### Conventions Established
-- **`already_done` flag**: Every mutating connector action includes `output["already_done"]` — `False` for fresh, descriptive string for noop
+
+- **`already_done` flag**: Every mutating connector action includes `output["already_done"]`
 - **`rollback_data` field**: Every mutating `ActionResult` captures pre-action state
-- **Plan template**: `PLAN-TEMPLATE.md` → red-team with `plans/guides/RED-TEAM-MODE-GUIDE.md` before coding
+- **Boolean naming**: Name booleans after what you _want_ to be true (see `.roorules`)
 
-### What Was Done This Session (2026-03-02)
-- **Email Policies** — `no_mass_emails` (max 1 recipient) and `no_repeat_emails` (DB-backed check for recent emails) ✅
-- **Cloud Storage Policies** — `dont_delete_without_human_ok` (DB-backed check for HITL approval) ✅
-- **Landing Page Updates** — Added Email and Cloud Storage sections, implemented accordion UI for long policy lists ✅
-- **PyPI Release** — Published `enact-sdk 0.5` ✅
+### Next Steps (priority order after demo fix)
 
-### Previously Completed
-- Cloud MVP: HITL, receipt storage, status badge, approval receipts ✅
-- `enact/ui.py`, local receipt browser with dark mode, `enact-ui` CLI ✅
-- `SlackConnector`, Slack policies, `post_slack_message` workflow, rollback ✅
-- ABAC policies, `block_ddl`, `code_freeze_active`, `user_email` rename ✅
-- `FilesystemConnector` + filesystem policies + rollback ✅
-
-### Next Steps (priority order)
-1. **Linear/Jira Policies** — Create similar DB-backed or strict policies for issue trackers (e.g., `no_duplicate_tickets`, `limit_tickets_per_hour`).
-2. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
-3. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
-4. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact` (Template A)
-5. **Show HN post** — after receipt UI ships
+1. **Fix demo player** — unpkg fallback (see blocker above)
+2. **Make new-landing.html the live page** — replace `index.html` with `new-landing.html` content
+3. **Receipt search UI** — HTMX + Tailwind CDN in `cloud/routes/ui.py`; filterable list + detail view + HITL queue
+4. **Slack alerting on BLOCK** — `SLACK_WEBHOOK_URL`, fire on `decision=BLOCK` in `push_receipt_to_cloud()`
+5. **HubSpotConnector** — `create_contact`, `update_deal`, `create_task`, `get_contact`
+6. **Show HN post** — after receipt UI ships
 
 ### Files to Reference
+
 - `SPEC.md` — full build plan, strategic thesis, workflow roadmap
 - `README.md` — install, quickstart, connector/policy/rollback reference
 - `CLAUDE.md` — conventions, design philosophy, git workflow
 - `PLAN-TEMPLATE.md` — how to write implementation plans
 - `plans/guides/RED-TEAM-MODE-GUIDE.md` — red-team checklist
-- `plans/2026-03-01-cloud-mvp.md` — cloud MVP plan (implemented)
-- `plans/2026-03-01-slack-connector.md` — Slack plan (implemented)
-- `examples/demo.py` — 3-act demo: BLOCK + PASS + ROLLBACK

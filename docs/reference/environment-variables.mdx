@@ -1,0 +1,43 @@
+---
+title: "Environment Variables"
+description: "All environment variables used by the Enact SDK and cloud backend."
+---
+
+## SDK Variables
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `ENACT_SECRET` | Yes (or pass `secret=` to `EnactClient`) | HMAC signing key. Minimum 32 characters. |
+| `GITHUB_TOKEN` | For `GitHubConnector` | GitHub Personal Access Token or App token |
+| `SLACK_BOT_TOKEN` | For `SlackConnector` | Slack bot token (`xoxb-...`). Needs `chat:write` scope. Add `chat:delete` to enable rollback. |
+| `ENACT_FREEZE` | Optional | Set to `1` to activate the `code_freeze_active` policy |
+| `CLOUD_API_KEY` | For cloud features | API key from enact.cloud — enables receipt push and HITL |
+
+## Cloud Backend Variables
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `CLOUD_SECRET` | Yes | Server-side signing secret for HITL tokens and receipts |
+| `ENACT_DB_PATH` | Optional | Path to the SQLite database file. Defaults to `enact.db`. Read fresh on every connection call (enables test isolation). |
+| `ENACT_EMAIL_DRY_RUN` | Optional | Set to `1` to skip real email sends in dev/test. Prints the approval link to stdout instead. |
+
+## Generating a Secure Secret
+
+```bash
+export ENACT_SECRET="$(openssl rand -hex 32)"
+```
+
+Or in Python:
+
+```python
+import secrets
+print(secrets.token_hex(32))
+```
+
+Minimum 32 characters. No default — `EnactClient` will raise if missing.
+
+For dev/testing only:
+
+```python
+EnactClient(..., secret="short", allow_insecure_secret=True)
+```

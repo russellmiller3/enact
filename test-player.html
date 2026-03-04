@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <!-- Functions defined FIRST so onerror can call them -->
+    <script>
+        function initPlayer() {
+            AsciinemaPlayer.create('examples/demo.cast', document.getElementById('demo-player'), {
+                cols: 85, rows: 28, autoPlay: true, loop: true, speed: 1.5,
+                theme: 'dracula', fit: 'width', terminalFontFamily: "'IBM Plex Mono', monospace"
+            });
+        }
+    </script>
+    <!-- Local bundle — downloaded from npm registry via download_player.py -->
+    <link rel="stylesheet" type="text/css" href="static/asciinema-player.css" />
+    <script
+        src="static/asciinema-player.min.js"
+        onload="console.log('local player loaded OK, AsciinemaPlayer:', typeof AsciinemaPlayer)"
+        onerror="console.error('local player FAILED to load')">
+    </script>
+</head>
+<body style="background:#0b1020; padding:40px; color:white; font-family:monospace;">
+    <p>Check DevTools console for CDN status</p>
+    <div id="demo-player"></div>
+    <script>
+        if (typeof AsciinemaPlayer !== 'undefined') {
+            initPlayer();
+        } else {
+            document.querySelector('p').textContent = 'AsciinemaPlayer not loaded — check console';
+            document.querySelector('p').style.color = 'red';
+        }
+    </script>
+</body>
+</html>

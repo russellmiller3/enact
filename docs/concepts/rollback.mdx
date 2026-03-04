@@ -1,0 +1,80 @@
+---
+title: "Rollback"
+description: "One call that reverses an entire run in the correct reverse order."
+---
+
+## What is Rollback?
+
+Say `agent_pr_workflow` ran — it created `agent/fix-149`, opened a PR, and merged it straight to `main` by mistake. You need to undo all three steps. One call:
+
+```python
+rollback_result, rollback_receipt = enact.rollback(receipt.run_id)
+
+print(rollback_result.decision)          # "ROLLED_BACK"
+print(rollback_result.actions_reversed)  # ["revert_commit", "close_pr", "delete_branch"]
+```
+
+## How It Works
+
+`rollback()` does four things in order:
+
+1. **Loads the receipt** by `run_id` — reads `receipts/a1b2c3d4-....json`
+2. **Verifies the signature** — if the receipt was tampered with, rollback refuses to run
+3. **Walks `actions_taken` in reverse** — last action first, so nothing is orphaned
+4. **Calls the undo action** for each step and writes a new rollback receipt
+
+## Why Reverse Order?
+
+```
+Original run (forward):          Rollback (reverse):
+
+  Step 1: create_branch           Step 3 undone: revert_commit  (new commit on main)
+  Step 2: create_pr            →  Step 2 undone: close_pr
+  Step 3: merge_pr                Step 1 undone: delete_branch
+```
+
+`merge_pr` happened last — you have to undo it first before closing the PR makes sense. Reverse order preserves the dependency chain.
+
+## The Rollback Receipt
+
+```json
+{
+  "run_id": "rb-9f8e7d6c-...",
+  "original_run_id": "a1b2c3d4-...",
+  "workflow": "agent_pr_workflow",
+  "decision": "ROLLED_BACK",
+  "actions_reversed": [
+    {
+      "action": "revert_commit",
+      "system": "github",
+      "success": true,
+      "output": { "revert_sha": "f7c3a1b...", "reverted_merge": "e9d2c4a...", "base_branch": "main" }
+    },
+    { "action": "close_pr",      "system": "github", "success": true },
+    { "action": "delete_branch", "system": "github", "success": true }
+  ],
+  "timestamp": "2026-02-26T03:35:00Z",
+  "signature": "hmac-sha256-hex..."
+}
+```
+
+## How `merge_pr` Rollback Works
+
+`revert_commit` is `git revert -m 1 <sha>` under the hood — it adds a new commit to `main` that restores its pre-merge state. Safe on protected branches; no force-push needed. The merge SHA is captured automatically in the receipt when `merge_pr` runs.
+
+<Warning>
+After reverting a merge, if you fix the issue and try to re-merge the same branch, Git will skip those commits (they look already-merged). Run `git revert <revert_sha>` first — "undo the undo" — then re-merge. This is standard Git behavior, not an Enact quirk.
+</Warning>
+
+## What If an Action Can't Be Undone?
+
+Some actions have no safe inverse. If rollback hits one, it stops, records which action couldn't be reversed, and tells you exactly what to fix manually. It never silently skips.
+
+| Action | Rollback? | Why not |
+|--------|-----------|---------|
+| `github.push_commit` | ❌ | Un-pushing requires a destructive force-push, blocked on protected branches |
+| `postgres.DROP TABLE` | ❌ | Blocked by `block_ddl` policy — even with rows, you'd lose indexes, constraints, sequences |
+| `postgres.TRUNCATE` | ❌ | Same — blocked by policy. Prevention beats fake recovery. |
+| `slack.delete_message` | ❌ | Slack doesn't allow un-deleting messages |
+
+For everything else — see the [full rollback table in Connectors](/concepts/connectors#what-rollback-can-and-cant-undo).
