@@ -1,0 +1,70 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Enact",
+  "colors": {
+    "primary": "#6366f1",
+    "light": "#818cf8",
+    "dark": "#4f46e5"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "getting-started",
+          "migration",
+          "integrations"
+        ]
+      },
+      {
+        "group": "Concepts",
+        "pages": [
+          "concepts/overview",
+          "concepts/connectors",
+          "concepts/policies",
+          "concepts/receipts",
+          "concepts/rollback"
+        ]
+      },
+      {
+        "group": "Cloud",
+        "pages": [
+          "cloud/overview",
+          "cloud/hitl",
+          "cloud/badge"
+        ]
+      },
+      {
+        "group": "Reference",
+        "pages": [
+          "reference/environment-variables",
+          "reference/security"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/russellmiller3/enact"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "pip install enact-sdk",
+      "href": "https://pypi.org/project/enact-sdk/"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/russellmiller3/enact"
+    }
+  }
+}
