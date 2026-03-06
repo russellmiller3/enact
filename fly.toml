@@ -1,41 +1,39 @@
-# Enact Cloud — Fly.io deployment config
-# Deploy: fly deploy
-# Logs:   fly logs
-# SSH:    fly ssh console
+# fly.toml app configuration file generated for enact on 2026-03-06T10:00:46-08:00
 #
-# Required secrets (set via `fly secrets set`):
-#   DATABASE_URL   — Supabase Postgres connection string
-#   CLOUD_SECRET   — HMAC signing key for HITL tokens
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "enact-cloud"
-primary_region = "sjc"
+app = 'enact'
+primary_region = 'sjc'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
+
+[env]
+  CLOUD_BASE_URL = 'https://enact.fly.dev'
+  ENACT_EMAIL_DRY_RUN = '1'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "suspend"
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
   min_machines_running = 1
 
   [http_service.concurrency]
-    type = "requests"
+    type = 'requests'
     hard_limit = 200
     soft_limit = 150
 
   [[http_service.checks]]
-    grace_period = "10s"
-    interval = "30s"
-    method = "GET"
-    path = "/health"
-    timeout = "5s"
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
-
-[env]
-  ENACT_EMAIL_DRY_RUN = "1"
-  CLOUD_BASE_URL = "https://enact-cloud.fly.dev"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  cpus = 1
+  memory_mb = 512
