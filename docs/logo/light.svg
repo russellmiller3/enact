@@ -1,18 +1,6 @@
 <svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
-  <!-- Light version: white text for dark backgrounds -->
-  <defs>
-    <!-- Stripe pattern -->
-    <pattern id="stripes-light" width="16" height="16" patternUnits="userSpaceOnUse">
-      <rect width="16" height="8" fill="rgba(255, 255, 255, 0.15)"/>
-      <rect y="8" width="16" height="8" fill="transparent"/>
-    </pattern>
-  </defs>
-  
-  <!-- Background with stripes (optional overlay) -->
-  <rect width="200" height="60" fill="transparent"/>
-  
-  <!-- Text elements with Roboto Bold -->
-  <text x="10" y="42" font-family="Roboto, Arial, sans-serif" font-weight="700" font-size="36" fill="white" letter-spacing="3">
+  <!-- Light mode version: IBM blue for light backgrounds -->
+  <text x="10" y="42" font-family="Roboto, Arial, sans-serif" font-weight="700" font-size="36" fill="#0f62fe" letter-spacing="3">
     <tspan>E</tspan>
     <tspan dx="2">N</tspan>
     <tspan dx="2">Λ</tspan>
