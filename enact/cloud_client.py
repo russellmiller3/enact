@@ -121,7 +121,14 @@ class CloudClient:
             }
 
         try:
-            return self._post("/receipts", body)
+            result = self._post("/receipts", body)
+            # On every successful push, drain any receipts that were queued
+            # while the cloud was previously unreachable.
+            try:
+                self.drain_queue()
+            except Exception:
+                pass  # drain failure is non-fatal; retry on next successful push
+            return result
         except Exception as e:
             if not queue_on_failure:
                 raise ConnectionError(f"Cloud unreachable: {e}") from e

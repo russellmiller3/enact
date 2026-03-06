@@ -125,11 +125,10 @@ These are conservative. One Enterprise deal at $50K/yr changes the picture overn
 
 ### Phase 1: Foundation (Week 1-2) — Do before anything public
 
-1. **Change license** from MIT/Apache to BSL 1.1
-   - Update `LICENSE` file
-   - Update `pyproject.toml` with new license classifier
-   - Add license header to source files
-   - BSL converts to open source (e.g., Apache 2.0) after 3 years — this is standard and accepted
+1. **Change license** from MIT/Apache to Elastic License 2.0
+   - Update `LICENSE` file ✅
+   - Update `pyproject.toml` with new license classifier ✅
+   - EL2 bars SaaS competitors from using Enact as a hosted service — stronger protection than BSL
    - No community to upset — do it now before anyone cares
 
 2. **Build zero-knowledge encryption into SDK**
@@ -217,19 +216,19 @@ These are conservative. One Enterprise deal at $50K/yr changes the picture overn
 
 ### Week 1
 
-- [ ] Change LICENSE to BSL 1.1
-- [ ] Update pyproject.toml license field
-- [ ] Add encryption_key param to EnactClient
-- [ ] Implement receipt metadata/payload split
-- [ ] Add AES-256-GCM encryption to cloud_client.py
+- [x] Change LICENSE to Elastic License 2.0
+- [x] Update pyproject.toml license field
+- [x] Add encryption_key param to EnactClient
+- [x] Implement receipt metadata/payload split (cloud_client.py splits metadata + encrypted payload)
+- [x] Add AES-256-GCM encryption to cloud_client.py (enact/encryption.py)
 
 ### Week 2
 
-- [ ] Add local receipt queue (async push, handle cloud downtime)
-- [ ] Update cloud backend to accept encrypted blobs
-- [ ] Add append-only constraint to receipt storage
-- [ ] Write new landing page (new positioning, new pricing, auditor trust diagram)
-- [ ] Update README
+- [x] Add local receipt queue (enact/local_queue.py — queues on failure, drains on next success)
+- [x] Update cloud backend to accept encrypted blobs (cloud/routes/receipts.py)
+- [x] Add append-only constraint to receipt storage
+- [x] Write new landing page (new positioning, new pricing, auditor trust diagram)
+- [x] Update README
 
 ### Week 3
 
@@ -257,7 +256,7 @@ These are conservative. One Enterprise deal at $50K/yr changes the picture overn
 
 | Decision                             | Rationale                                                                                                                                   |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **BSL license, not open source**     | No community management burden, no fork risk, engineers can still read every line. No existing community to upset.                          |
+| **Elastic License 2.0, not open source** | No community management burden, no fork risk, engineers can still read every line. Bars SaaS competitors from hosting Enact as a service. No existing community to upset. |
 | **Hot path local, cold path cloud**  | No 3am pages for Russell (health constraint). Agents keep working if cloud is down.                                                         |
 | **Zero-knowledge encryption**        | Nuclear trust signal. Differentiator vs every competitor. Solves "I don't trust a third party with my data" objection.                      |
 | **Cloud = independent auditor**      | Not "convenience storage" — independent, tamper-proof, append-only audit infrastructure. This is what regulations will require.             |
