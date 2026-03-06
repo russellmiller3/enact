@@ -54,12 +54,17 @@ def init_db():
             );
 
             CREATE TABLE IF NOT EXISTS receipts (
-                run_id       TEXT PRIMARY KEY,
-                team_id      TEXT NOT NULL REFERENCES teams(team_id),
-                workflow     TEXT NOT NULL,
-                decision     TEXT NOT NULL,
-                receipt_json TEXT NOT NULL,
-                created_at   TEXT DEFAULT (datetime('now'))
+                run_id        TEXT PRIMARY KEY,
+                team_id       TEXT NOT NULL REFERENCES teams(team_id),
+                workflow      TEXT NOT NULL,
+                decision      TEXT NOT NULL,
+                timestamp     TEXT,
+                policy_names  TEXT,
+                receipt_json  TEXT,
+                metadata_json TEXT,
+                payload_blob  TEXT,
+                encrypted     INTEGER DEFAULT 0,
+                created_at    TEXT DEFAULT (datetime('now'))
             );
 
             CREATE TABLE IF NOT EXISTS hitl_requests (

@@ -7,6 +7,7 @@ name = "enact-sdk"
 version = "0.5.1"
 description = "An action firewall for AI agents"
 readme = "README.md"
+license = {text = "Elastic License 2.0"}
 requires-python = ">=3.9"
 dependencies = [
     "pydantic>=2.0",
@@ -18,7 +19,8 @@ postgres = ["psycopg2-binary"]
 github = ["PyGithub"]
 hubspot = ["hubspot-api-client"]
 slack = ["slack-sdk"]
-all = ["psycopg2-binary", "PyGithub", "hubspot-api-client", "slack-sdk"]
+cloud = ["cryptography>=42.0.0"]
+all = ["psycopg2-binary", "PyGithub", "hubspot-api-client", "slack-sdk", "cryptography>=42.0.0"]
 dev = [
     "pytest",
     "pytest-asyncio",

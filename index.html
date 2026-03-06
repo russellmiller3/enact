@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enact — Governed, Auditable, Reversible AI Agents</title>
-    <link rel="stylesheet" type="text/css" href="static/asciinema-player.css" />
-    <script src="static/asciinema-player.min.js"></script>
+    <title>Enact — Independent Audit Infrastructure for AI Agents</title>
     <style>
 
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -71,7 +69,12 @@
         .btn-primary:hover { background: var(--accent-d); border-color: var(--accent-d); transform: translateY(-1px); }
         .btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
         .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-        .hero-note { margin-top: 16px; font-size: 13px; color: var(--subtle); }
+        .hero-note { margin-top: 10px; font-size: 13px; color: var(--subtle); }
+        .pip-cmd { display: inline-flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; font-family: var(--mono); font-size: 14px; margin-top: 24px; }
+        .pip-dollar { color: var(--subtle); user-select: none; }
+        .pip-copy { background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px 0 2px 4px; display: flex; align-items: center; transition: color .15s; }
+        .pip-copy:hover { color: var(--text); }
+        .pip-copy i { width: 15px; height: 15px; pointer-events: none; }
 
         /* ── SECTION SHARED ── */
         section { padding: 80px 0; }
@@ -102,10 +105,6 @@
         .qs-step p { font-size: 14px; color: var(--muted); line-height: 1.6; }
         pre { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 28px; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.7; }
         section.alt pre { background: #0b1020; }
-        /* reset pre inside asciinema player so global pre styles don't wreck terminal rows */
-        #demo-player { max-width: 720px; margin: 0 auto; }
-        #demo-player pre { all: unset; }
-        #demo-player * { box-sizing: content-box; }
         code { font-family: var(--mono); }
         .inline-code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-family: var(--mono); font-size: 13px; color: var(--accent); }
         .kw { color: #ff79c6; } .fn { color: #50fa7b; } .str { color: #f1fa8c; } .cm { color: #6272a4; }
@@ -600,13 +599,22 @@
     <div class="container">
         <h1>Make your AI agents governed,<br>auditable, and reversible.</h1>
         <p class="sub">
-            Enact is the action governance layer for AI agents. Every action is policy-checked before it runs, logged as a signed receipt, and — when something slips through — rolled back in one command. Ship agents to production without blowing up your SOC2, HIPAA, or ISO-27001 story.
+            Enact wraps every agent action in four layers: policy enforcement before it runs, a signed receipt after, human-in-the-loop for high-risk ops, and one-command rollback when something slips through. Your agents keep working. You get proof.
         </p>
         <div class="cta-row">
-            <a href="#quickstart" class="btn btn-primary">Get audit-ready in a day</a>
-            <a href="https://pypi.org/project/enact-sdk/" class="btn btn-secondary">Install the open-source SDK →</a>
+            <a href="mailto:hello@enact.cloud?subject=Demo Request" class="btn btn-primary">Request a demo →</a>
+            <a href="https://docs.enact.cloud" class="btn btn-secondary">Read the docs →</a>
         </div>
-        <p class="hero-note">Open source core · Self-host free · Cloud from $49/month · No credit card to start</p>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+            <div class="pip-cmd">
+                <span class="pip-dollar">$</span>
+                <span>pip install enact-sdk</span>
+                <button class="pip-copy" onclick="copyPip()" title="Copy to clipboard" id="pip-copy-btn">
+                    <i data-lucide="copy" id="pip-copy-icon"></i>
+                </button>
+            </div>
+            <p class="hero-note">Source-available SDK · Zero-knowledge cloud · SOC 2 / SOX / EU AI Act</p>
+        </div>
     </div>
 </section>
 
@@ -667,16 +675,18 @@ result, receipt = enact.<span class="fn">run</span>(
             Already have an agent? See the <a class="auto-style-1" href="#migrate">Migration section ↓</a> for before/after code.
         </p>
 
-        <!-- Terminal demo recording -->
+        <!-- Live interactive demo (Pyodide — runs real Python in the browser) -->
         <div style="margin-top: 48px;">
-            <p style="font-size: 13px; color: var(--subtle); margin-bottom: 12px; font-family: var(--mono); text-align: center;">$ python examples/demo.py</p>
-            <div id="demo-player" style="border-radius: 10px; overflow: hidden; border: 1px solid var(--border);"></div>
-            <script>
-                AsciinemaPlayer.create('examples/demo.cast', document.getElementById('demo-player'), {
-                    cols: 85, rows: 28, autoPlay: true, loop: true, speed: 1.0,
-                    theme: 'dracula', fit: 'width', terminalFontFamily: "'IBM Plex Mono', monospace"
-                });
-            </script>
+            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;padding:14px 18px;background:rgba(5,150,105,.1);border:1px solid rgba(5,150,105,.35);border-radius:8px;">
+                <i data-lucide="cpu" style="width:20px;height:20px;color:var(--green);flex-shrink:0;margin-top:2px;"></i>
+                <span style="font-size:14px;line-height:1.5;"><strong style="color:var(--green);">This is real Python executing in your browser.</strong> Pyodide fetches the actual <code>enact-sdk</code> from PyPI and runs it client-side — no server, no mock output. Pick a scenario and hit <strong>Run</strong> to see policy enforcement happen live.</span>
+            </div>
+            <iframe
+                src="demo.html?embed=1"
+                style="width: 100%; height: 1080px; border: 1px solid var(--border); border-radius: 10px; display: block;"
+                title="Enact Live Demo"
+                loading="lazy"
+            ></iframe>
         </div>
     </div>
 </section>
@@ -698,12 +708,12 @@ result, receipt = enact.<span class="fn">run</span>(
                 <p>When your auditor, VP, or CISO asks "what did the agent actually do?" — you're digging through CloudWatch at 2am. No searchable log. No compliance path. No proof.</p>
             </div>
             <div class="problem-card">
-                <h3>3. No human-in-the-loop</h3>
-                <p>High-risk actions run without any human seeing them first. If your agent decides to delete rows, merge to main, or message a thousand customers — nothing stops it.</p>
+                <h3>3. No rollback</h3>
+                <p>When something slips through, you're restoring from backups, manually reconstructing state, and explaining it to stakeholders. There is no undo.</p>
             </div>
             <div class="problem-card">
-                <h3>4. No rollback</h3>
-                <p>When something slips through, you're restoring from backups, manually reconstructing state, and explaining it to stakeholders. There is no undo.</p>
+                <h3>4. No human-in-the-loop</h3>
+                <p>High-risk actions run without any human seeing them first. If your agent decides to delete rows, merge to main, or message a thousand customers — nothing stops it.</p>
             </div>
         </div>
     </div>
@@ -732,31 +742,6 @@ result, receipt = enact.<span class="fn">run</span>(
     </div>
 </section>
 
-<section class="alt">
-    <div class="container centered">
-        <div class="section-label">How Enact Works</div>
-        <h2>One layer. Four things every production agent needs.</h2>
-        
-        <div class="problem-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 48px;">
-            <div class="problem-card">
-                <h3 style="color: var(--accent);">Block 1: Policy-gated execution</h3>
-                <p>Deterministic Python functions run before agents touch anything real. No LLMs. No guesswork. Versioned in Git. Testable with pytest. 20+ policies ship out of the box — or write your own in 10 lines.</p>
-            </div>
-            <div class="problem-card">
-                <h3 style="color: var(--accent);">Block 2: Signed receipts on every run</h3>
-                <p>Every action — allowed or blocked — generates a cryptographically signed receipt: agent identity, action, resource, policy result, timestamp, model version. Searchable. Exportable. Auditor-ready.</p>
-            </div>
-            <div class="problem-card">
-                <h3 style="color: var(--accent);">Block 3: Human-in-the-loop for high-risk ops</h3>
-                <p>High-risk actions pause and wait for human approval before running. Signed email link, one-time-use, auto-expire. The approver needs no login. Agent gets a signed PASS or BLOCK receipt either way.</p>
-            </div>
-            <div class="problem-card">
-                <h3 style="color: var(--accent);">Block 4: One-command rollback</h3>
-                <p><code>enact.rollback(run_id)</code> reverses what it can (DB rows, files, branches, open PRs, Slack messages), explicitly records what it can't (pushed commits), and generates a signed rollback receipt. Your undo button — with honest limits.</p>
-            </div>
-        </div>
-    </div>
-</section>
 
 <!-- MIGRATION -->
 
@@ -1308,21 +1293,68 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 
 
 
+<!-- ZERO-KNOWLEDGE TRUST -->
 <section>
     <div class="container centered">
-        <div class="section-label">Compliance & Audit</div>
+        <div class="section-label">Zero-Knowledge Architecture</div>
+        <h2>We store the proof. We can't read it.</h2>
+        
+        <div style="max-width: 780px; margin: 0 auto; text-align: left; margin-top: 48px;">
+            <p style="font-size: 16px; color: var(--muted); margin-bottom: 24px;">Receipts are encrypted with your key before they leave your machine. Enact Cloud stores the encrypted blob — we can search the metadata (which workflow ran, pass/fail, timestamp) but we literally cannot read the payload (SQL queries, file contents, business data, PII).</p>
+
+            <!-- Three-party trust model diagram -->
+            <div style="margin: 32px 0; padding: 24px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px;">
+                <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--subtle); margin-bottom: 20px; text-align: center;">Three-party trust model</div>
+                <div style="display: flex; align-items: stretch; gap: 12px; font-family: var(--mono); font-size: 12px;">
+                    <div style="flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                        <i data-lucide="monitor" style="width:18px;height:18px;color:var(--muted);margin-bottom:10px;display:block;"></i>
+                        <div style="font-weight: 700; font-size: 13px; margin-bottom: 8px;">Your Company</div>
+                        <div style="color: var(--muted); line-height: 2;">Runs agents<br>Owns the key<br>Writes policies<br><span style="color:var(--subtle);">Key stays local</span></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; gap: 4px; padding: 0 2px;">
+                        <span style="font-size: 10px; color: var(--subtle); text-align:center; line-height:1.3;">encrypted<br>receipts</span>
+                        <span style="color: var(--accent); font-size: 18px; line-height: 1;">&#8594;</span>
+                    </div>
+                    <div style="flex: 1; border: 1px solid var(--accent); border-radius: 8px; padding: 16px; background: rgba(74,111,165,.06);">
+                        <i data-lucide="lock" style="width:18px;height:18px;color:var(--accent);margin-bottom:10px;display:block;"></i>
+                        <div style="font-weight: 700; font-size: 13px; margin-bottom: 8px; color: var(--accent);">Enact Cloud</div>
+                        <div style="color: var(--muted); line-height: 2;">Stores blobs<br>Metadata only<br>Append-only<br><span style="color:var(--subtle);">Can't read payload</span></div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; gap: 4px; padding: 0 2px;">
+                        <span style="font-size: 10px; color: var(--subtle); text-align:center; line-height:1.3;">metadata<br>+ sigs</span>
+                        <span style="color: var(--accent); font-size: 18px; line-height: 1;">&#8594;</span>
+                    </div>
+                    <div style="flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 16px;">
+                        <i data-lucide="search" style="width:18px;height:18px;color:var(--muted);margin-bottom:10px;display:block;"></i>
+                        <div style="font-weight: 700; font-size: 13px; margin-bottom: 8px;">Your Auditor</div>
+                        <div style="color: var(--muted); line-height: 2;">Verifies sigs<br>Confirms controls<br>Metadata access<br><span style="color:var(--subtle);">Independent copy</span></div>
+                    </div>
+                </div>
+                <div style="margin-top: 16px; font-size: 11px; color: var(--subtle); text-align: center; line-height: 1.5;">Same independence model as Ernst &amp; Young auditing Goldman Sachs.<br>Companies can't audit themselves. Neither can their cloud provider.</div>
+            </div>
+
+            <p style="font-size: 14px; color: var(--muted); line-height: 1.6;">Same model as 1Password, Proton Mail, and Signal. Your data is encrypted before it reaches us. If our servers are breached, attackers find encrypted blobs — not your SQL queries, not your business logic, not your customer data.</p>
+        </div>
+    </div>
+</section>
+
+<!-- COMPLIANCE — "send this to your security team" -->
+<section class="alt">
+    <div class="container centered">
+        <div class="section-label">Send this to your security team</div>
         <h2>Turn every agent run into a compliance artifact.</h2>
         
         <div style="max-width: 700px; margin: 0 auto; text-align: left; margin-top: 48px;">
-            <p style="font-size: 16px; color: var(--muted); margin-bottom: 24px;">Your agents are already running. Every action is already happening. The question is whether you can <em>prove</em> it to an auditor — and whether your controls are documented and defensible.</p>
-            <p style="font-size: 16px; color: var(--muted); margin-bottom: 24px;">Enact makes that automatic:</p>
+            <p style="font-size: 16px; color: var(--muted); margin-bottom: 24px;">Your agents are already running. Auditors are already asking "how do you control your AI agents?" Enact makes the answer automatic:</p>
             <ul style="list-style: none; margin-bottom: 32px;">
-                <li style="display: flex; gap: 12px; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700;">✓</span> Every action is signed, timestamped, and attributed to a specific agent, user, and policy version.</li>
-                <li style="display: flex; gap: 12px; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700;">✓</span> Generate SOC2, ISO 27001, or HIPAA audit reports directly from your receipt database. One click. Hand it to your auditor, not your engineers.</li>
-                <li style="display: flex; gap: 12px; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700;">✓</span> Policy definitions are versioned in Git — your "controls documentation" writes itself.</li>
+                <li style="display: flex; gap: 12px; align-items: flex-start; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700; flex-shrink: 0;">✓</span><span><strong>SOC 2 Trust Services Criteria</strong> — agent receipts map directly to processing integrity and security evidence.</span></li>
+                <li style="display: flex; gap: 12px; align-items: flex-start; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700; flex-shrink: 0;">✓</span><span><strong>SOX control evidence</strong> — every agent action on financial data is signed, timestamped, and attributed. No manual evidence collection.</span></li>
+                <li style="display: flex; gap: 12px; align-items: flex-start; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700; flex-shrink: 0;">✓</span><span><strong>EU AI Act</strong> (enforced August 2026) — conformity assessment requires traceability and accountability for high-risk AI systems. Receipts are that traceability.</span></li>
+                <li style="display: flex; gap: 12px; align-items: flex-start; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700; flex-shrink: 0;">✓</span><span><strong>Independent third-party copy</strong> — auditors need evidence the company can't alter. Enact Cloud is that independent copy, encrypted and append-only.</span></li>
+                <li style="display: flex; gap: 12px; align-items: flex-start; font-size: 15px; margin-bottom: 12px; line-height: 1.6;"><span style="color: var(--green); font-weight: 700; flex-shrink: 0;">✓</span><span><strong>Policy definitions versioned in Git</strong> — your "controls documentation" writes itself.</span></li>
             </ul>
             <div style="background: var(--surface); border-left: 4px solid var(--accent); padding: 20px; border-radius: 0 8px 8px 0;">
-                <p style="font-size: 15px; color: var(--muted); margin: 0;">40 hours of engineering time explaining "what did agents do" to an auditor costs you $10,000+. Enact turns that into a 10-minute export.</p>
+                <p style="font-size: 15px; color: var(--muted); margin: 0;">40 hours of engineering time explaining "what did agents do" to an auditor costs $10,000+. Enact turns that into a 10-minute export.</p>
             </div>
         </div>
     </div>
@@ -1343,6 +1375,12 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 
         <div class="capability-grid">
 
+            <div class="capability-card auto-style-82">
+                <i data-lucide="rotate-ccw" class="cap-icon auto-style-83"></i>
+                <h3>One-Step Rollback <span class="badge-live">live</span></h3>
+                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs, Slack messages), explicitly records what it can't (pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
+            </div>
+
             <div class="capability-card">
                 <i data-lucide="hand" class="cap-icon"></i>
                 <h3>Human-in-Loop Gates <span class="badge-live">live</span></h3>
@@ -1353,12 +1391,6 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
                 <i data-lucide="layout-list" class="cap-icon"></i>
                 <h3>Receipt Browser <span class="badge-live">live</span></h3>
                 <p>Browse, filter, and verify your agent receipts locally. Run <code>enact-ui</code> for a local web UI with signature verification. Ships with <code>pip install enact-sdk</code>. <a href="#receipt-browser" style="color:var(--accent)">See the UI ↑</a></p>
-            </div>
-
-            <div class="capability-card auto-style-82">
-                <i data-lucide="rotate-ccw" class="cap-icon auto-style-83"></i>
-                <h3>One-Step Rollback <span class="badge-live">live</span></h3>
-                <p>Undo reversible agent actions in one command. <code class="auto-style-25">enact.rollback(run_id)</code> reverses what it can (branches, DB rows, files, open PRs, Slack messages), explicitly records what it can't (pushed commits), and generates a signed <code class="auto-style-25">PASS</code> / <code class="auto-style-25">PARTIAL</code> rollback receipt. Your undo button — with honest limits.</p>
             </div>
 
             <div class="capability-card">
@@ -1402,91 +1434,80 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 <section class="alt" id="pricing">
     <div class="container centered">
         <div class="section-label">Pricing</div>
-        <h2>Start free. Pay as your agents do more.</h2>
+        <h2>Start free. Scale to compliance-ready.</h2>
         
         <div class="pricing-grid" style="grid-template-columns: repeat(4, 1fr); max-width: 1200px; margin-top: 48px;">
-            <!-- Tier 0 -->
+            <!-- SDK -->
             <div class="pricing-card">
-                <h3>Tier 0 — Open Source</h3>
+                <h3>SDK</h3>
                 <div class="price">Free</div>
-                <div class="price-sub">forever</div>
+                <div class="price-sub">forever · source-available</div>
                 <ul class="feature-list">
-                    <li><span class="fi fi-check">✓</span> Self-hosted Enact core</li>
-                    <li><span class="fi fi-check">✓</span> Local receipt database and UI (<code>enact-ui</code>)</li>
-                    <li><span class="fi fi-check">✓</span> Policy enforcement and rollback</li>
-                    <li><span class="fi fi-check">✓</span> Unlimited everything — run it yourself</li>
+                    <li><span class="fi fi-check">✓</span> Full policy engine (local)</li>
+                    <li><span class="fi fi-check">✓</span> Connectors: GitHub, Postgres, Slack, etc.</li>
+                    <li><span class="fi fi-check">✓</span> Rollback support</li>
+                    <li><span class="fi fi-check">✓</span> Local receipt storage</li>
+                    <li><span class="fi fi-check">✓</span> Works without cloud</li>
+                    <li><span class="fi fi-check">✓</span> No account needed</li>
                 </ul>
                 <div style="background: var(--bg); padding: 8px; border-radius: 6px; font-family: var(--mono); font-size: 12px; margin-bottom: 16px; border: 1px solid var(--border);">pip install enact-sdk</div>
-                <a href="https://github.com/russellmiller3/enact" class="pricing-btn">Get started →</a>
+                <a href="https://github.com/russellmiller3/enact" class="pricing-btn">View source →</a>
             </div>
 
-            <!-- Tier 1 -->
+            <!-- Cloud -->
             <div class="pricing-card">
-                <h3>Tier 1 — Starter</h3>
-                <div class="price">$49<span style="font-size: 16px; font-weight: 400; color: var(--muted);">/mo</span></div>
-                <div class="price-sub">or $490/year — 2 months free<br><br>For solo devs and small teams shipping their first production agents.</div>
+                <h3>Cloud</h3>
+                <div class="price">$199<span style="font-size: 16px; font-weight: 400; color: var(--muted);">/mo</span></div>
+                <div class="price-sub">For engineering teams running agents in production</div>
                 <ul class="feature-list">
-                    <li><span class="fi fi-check">✓</span> Cloud receipt storage up to 50,000 receipts/month</li>
-                    <li><span class="fi fi-check">✓</span> 1 environment (prod or staging)</li>
-                    <li><span class="fi fi-check">✓</span> Email-based HITL up to 100 approvals/month</li>
-                    <li><span class="fi fi-check">✓</span> Cloud UI: searchable receipt browser</li>
-                    <li><span class="fi fi-check">✓</span> Basic CSV audit export</li>
-                    <li><span class="fi fi-dash">−</span> Overages: $0.50 per additional 10,000 receipts</li>
+                    <li><span class="fi fi-check">✓</span> <strong>Zero-knowledge encryption</strong></li>
+                    <li><span class="fi fi-check">✓</span> Encrypted receipt storage</li>
+                    <li><span class="fi fi-check">✓</span> Searchable metadata</li>
+                    <li><span class="fi fi-check">✓</span> HITL approval gates</li>
+                    <li><span class="fi fi-check">✓</span> Team dashboard</li>
+                    <li><span class="fi fi-check">✓</span> Anomaly alerts</li>
+                    <li><span class="fi fi-check">✓</span> 50K runs/month</li>
                 </ul>
-                <a href="mailto:hello@enact.cloud?subject=Starter Plan" class="pricing-btn">Start free trial →</a>
+                <a href="mailto:hello@enact.cloud?subject=Cloud Plan" class="pricing-btn">Start free trial →</a>
             </div>
 
-            <!-- Tier 2 -->
+            <!-- Compliance -->
             <div class="pricing-card featured">
-                <div class="featured-badge">RECOMMENDED</div>
-                <h3>Tier 2 — Team</h3>
-                <div class="price">$249<span style="font-size: 16px; font-weight: 400; color: var(--muted);">/mo</span></div>
-                <div class="price-sub">or $2,490/year — 2 months free<br><br>For teams running agents in production and starting to get compliance questions.</div>
+                <div class="featured-badge">FOR AUDIT TEAMS</div>
+                <h3>Compliance</h3>
+                <div class="price">$999<span style="font-size: 16px; font-weight: 400; color: var(--muted);">/mo</span></div>
+                <div class="price-sub">For SOC 2, SOX, EU AI Act compliance</div>
                 <ul class="feature-list">
-                    <li><span class="fi fi-check">✓</span> Cloud receipt storage up to 500,000 receipts/month</li>
-                    <li><span class="fi fi-check">✓</span> 3 environments (dev / staging / prod)</li>
-                    <li><span class="fi fi-check">✓</span> Unlimited HITL approvals</li>
-                    <li><span class="fi fi-check">✓</span> Pre-built industry policy packs: FinTech, Healthcare, DevOps</li>
-                    <li><span class="fi fi-check">✓</span> SOC2 / ISO 27001 audit export builder (standard templates)</li>
-                    <li><span class="fi fi-check">✓</span> Email support</li>
-                    <li><span class="fi fi-dash">−</span> Overages: $1 per additional 100,000 receipts</li>
+                    <li><span class="fi fi-check">✓</span> Everything in Cloud</li>
+                    <li><span class="fi fi-check">✓</span> <strong>Compliance export templates</strong></li>
+                    <li><span class="fi fi-check">✓</span> SOC 2 Trust Services Criteria</li>
+                    <li><span class="fi fi-check">✓</span> SOX control evidence</li>
+                    <li><span class="fi fi-check">✓</span> EU AI Act conformity docs</li>
+                    <li><span class="fi fi-check">✓</span> <strong>Auditor API access</strong></li>
+                    <li><span class="fi fi-check">✓</span> 3-year retention SLA</li>
+                    <li><span class="fi fi-check">✓</span> Dedicated onboarding</li>
                 </ul>
-                <a href="mailto:hello@enact.cloud?subject=Team Plan" class="pricing-btn primary">Start free trial →</a>
+                <a href="mailto:hello@enact.cloud?subject=Compliance Plan" class="pricing-btn primary">Talk to us →</a>
             </div>
 
-            <!-- Tier 3 -->
+            <!-- Enterprise -->
             <div class="pricing-card">
-                <h3>Tier 3 — Professional</h3>
-                <div class="price">$750<span style="font-size: 16px; font-weight: 400; color: var(--muted);">/mo</span></div>
-                <div class="price-sub">or $9,000/year<br><br>For mid-market teams who need full governance controls and compliance artifacts.</div>
+                <h3>Enterprise</h3>
+                <div class="price" style="font-size: 36px;">Custom</div>
+                <div class="price-sub">For regulated industries and large agent fleets</div>
                 <ul class="feature-list">
-                    <li><span class="fi fi-check">✓</span> Cloud receipt storage up to 5,000,000 receipts/month</li>
-                    <li><span class="fi fi-check">✓</span> Unlimited environments</li>
-                    <li><span class="fi fi-check">✓</span> SSO, SAML, RBAC</li>
-                    <li><span class="fi fi-check">✓</span> Full audit report builder: SOC2, ISO 27001, HIPAA templates</li>
-                    <li><span class="fi fi-check">✓</span> Anomaly detection: flag agents acting outside normal behavior</li>
-                    <li><span class="fi fi-check">✓</span> Basic SLAs</li>
-                    <li><span class="fi fi-check">✓</span> Slack support</li>
-                    <li><span class="fi fi-dash">−</span> Overages: contact us</li>
+                    <li><span class="fi fi-check">✓</span> Everything in Compliance</li>
+                    <li><span class="fi fi-check">✓</span> <strong>VPC deployment</strong></li>
+                    <li><span class="fi fi-check">✓</span> 7-year retention</li>
+                    <li><span class="fi fi-check">✓</span> Custom compliance templates</li>
+                    <li><span class="fi fi-check">✓</span> Custom policy packs</li>
+                    <li><span class="fi fi-check">✓</span> SLA guarantees</li>
+                    <li><span class="fi fi-check">✓</span> Dedicated support</li>
                 </ul>
-                <a href="mailto:hello@enact.cloud?subject=Professional Plan" class="pricing-btn">Start free trial →</a>
+                <a href="mailto:hello@enact.cloud?subject=Enterprise" class="pricing-btn">Contact sales →</a>
             </div>
         </div>
 
-        <div style="margin-top: 48px; padding: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; max-width: 800px; margin-left: auto; margin-right: auto; text-align: left;">
-            <h3 style="font-size: 18px; margin-bottom: 8px;">Tier 4 — Enterprise (Starting at $25,000 / year)</h3>
-            <p style="font-size: 14px; color: var(--muted); margin-bottom: 16px;">For regulated industries, large agent fleets, and teams where governance isn't optional.</p>
-            <ul style="list-style: none; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <li style="display: flex; gap: 8px; font-size: 13px;"><span style="color: var(--green);">✓</span> Custom receipt volume (typically 10M+/month)</li>
-                <li style="display: flex; gap: 8px; font-size: 13px;"><span style="color: var(--green);">✓</span> Custom data retention (up to 7 years)</li>
-                <li style="display: flex; gap: 8px; font-size: 13px;"><span style="color: var(--green);">✓</span> Custom policy packs and implementation support</li>
-                <li style="display: flex; gap: 8px; font-size: 13px;"><span style="color: var(--green);">✓</span> On-prem or hybrid deployment</li>
-                <li style="display: flex; gap: 8px; font-size: 13px;"><span style="color: var(--green);">✓</span> Dedicated customer success manager</li>
-                <li style="display: flex; gap: 8px; font-size: 13px;"><span style="color: var(--green);">✓</span> Priority SLAs and on-call support</li>
-                <li style="display: flex; gap: 8px; font-size: 13px; grid-column: 1 / -1;"><span style="color: var(--green);">✓</span> Custom audit templates and regulatory mapping (EU AI Act, ISO 42001)</li>
-            </ul>
-            <a href="mailto:hello@enact.cloud?subject=Enterprise" class="btn btn-secondary">Talk to us →</a>
-        </div>
 
         <p style="margin-top: 32px; font-size: 14px; color: var(--subtle);">The Kiro outage cost millions. The Replit deletion was career-limiting. Preventing one incident pays for Enact for years.</p>
     </div>
@@ -1498,7 +1519,7 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
         <p>Add Enact in minutes. Know what your agents did, enforce what they're allowed to do, and prove it to anyone who asks.</p>
         <div class="cta-row">
             <a href="https://github.com/russellmiller3/enact" class="btn btn-primary">Install the SDK free</a>
-            <a href="mailto:hello@enact.cloud?subject=Early Access" class="btn btn-secondary">Start cloud trial — $49/month</a>
+            <a href="mailto:hello@enact.cloud?subject=Cloud Trial" class="btn btn-secondary">Start cloud trial — $199/month →</a>
         </div>
     </div>
 </section>
@@ -1506,7 +1527,7 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 <footer>
     <div class="container">
         <p>Built for engineers who can't afford to find out what happens when an agent goes off-script.</p>
-        <p style="margin-top: 8px;">© 2026 Enact · Open source · Audit-trail ready · <a style="color: var(--accent);" href="https://github.com/russellmiller3/enact">GitHub</a></p>
+        <p style="margin-top: 8px;">© 2026 Enact · Source-available — read every line · Audit-trail ready · <a style="color: var(--accent);" href="https://github.com/russellmiller3/enact">GitHub</a></p>
     </div>
 </footer>
 
@@ -1542,6 +1563,22 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 </script>
 
 <script src="static/lucide.min.js"></script>
-<script>lucide.createIcons();</script>
+<script>
+lucide.createIcons();
+function copyPip() {
+    navigator.clipboard.writeText('pip install enact-sdk').then(function() {
+        var icon = document.getElementById('pip-copy-icon');
+        var btn  = document.getElementById('pip-copy-btn');
+        icon.setAttribute('data-lucide', 'check');
+        lucide.createIcons();
+        btn.style.color = 'var(--green)';
+        setTimeout(function() {
+            icon.setAttribute('data-lucide', 'copy');
+            lucide.createIcons();
+            btn.style.color = '';
+        }, 2000);
+    });
+}
+</script>
 </body>
 </html>

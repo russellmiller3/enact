@@ -64,6 +64,7 @@ class EnactClient:
         allow_insecure_secret: bool = False,
         cloud_api_key: str | None = None,
         cloud_base_url: str = "https://enact.cloud",
+        encryption_key: bytes | None = None,
     ):
         """
         Initialise the client.
@@ -82,6 +83,11 @@ class EnactClient:
             rollback_enabled     — premium feature flag. Set True to enable client.rollback(run_id).
             allow_insecure_secret — skip secret strength validation. For development/testing ONLY.
                                     Never use in production — short secrets enable receipt forgery.
+            cloud_api_key        — API key for Enact Cloud. Enables cloud receipt storage.
+            cloud_base_url       — Override cloud API endpoint (default: https://enact.cloud).
+            encryption_key       — 32-byte key for zero-knowledge encryption. If provided, receipt payloads
+                                   are encrypted before upload. The cloud CANNOT read encrypted payloads.
+                                   Use enact.encryption.generate_encryption_key() or derive_key(passphrase).
         """
         self._systems = systems or {}
         self._policies = policies or []
@@ -110,7 +116,12 @@ class EnactClient:
         self._cloud = None
         if cloud_api_key:
             from enact.cloud_client import CloudClient
-            self._cloud = CloudClient(api_key=cloud_api_key, base_url=cloud_base_url)
+            self._cloud = CloudClient(
+                api_key=cloud_api_key,
+                base_url=cloud_base_url,
+                encryption_key=encryption_key,
+                receipt_dir=receipt_dir,
+            )
 
     def run(
         self,

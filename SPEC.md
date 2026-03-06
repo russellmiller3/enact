@@ -1,7 +1,7 @@
 # Enact — Build Spec
 
 > Source of truth: `index.html`
-> Goal: Ship OSS MVP → get GitHub traction → convert to Cloud at $299/mo
+> Goal: Source-available SDK → engineer adoption → Cloud revenue at $199/mo → Compliance tier at $999/mo → Enterprise at $25K-100K/yr
 
 ---
 
@@ -159,6 +159,109 @@ Each of those is a billion-dollar company. Enact is the one product that does al
 **Build sequencing principle.** Ship 20 hardened workflows before building the ML model. Workflows are the data collection points and the reason to subscribe. The model comes after the data exists.
 
 **The #1 industry pain point (confirmed by research).** Idempotency on retries — duplicate emails, duplicate tickets, duplicate CRM records. Enact's saga approach (connector methods that check-before-act) directly addresses this. Shipped in v0.2 as a named feature, not an implementation detail.
+
+---
+
+## ICP (Ideal Customer Profile)
+
+### Primary ICP: Platform Engineer / Engineering Lead
+
+The person who **discovers** Enact and installs the SDK.
+
+| Attribute | Detail |
+|---|---|
+| **Role** | Platform engineer, engineering lead, or senior developer |
+| **Company** | Series B+ startup or mid-market (50-500 employees) running AI agents in production |
+| **Pain** | Has been burned by (or fears) an agent doing something unexpected — deleting data, sending mass emails, pushing to main |
+| **Behavior** | Finds tools via HN, GitHub, dev.to, framework Discords. Evaluates by reading source code and running `pip install`. |
+| **Budget authority** | Can expense up to ~$200/mo without VP approval |
+| **How they buy** | Install SDK → prove value → show team → request Cloud budget |
+
+### Secondary ICP: CISO / Compliance Lead
+
+The person who **approves the purchase** after the engineer champions it internally.
+
+| Attribute | Detail |
+|---|---|
+| **Role** | CISO, VP of Security, Head of Compliance, or CFO at regulated companies |
+| **Company** | Any company with AI agents touching financial, healthcare, or customer data |
+| **Pain** | Auditors asking "how do you control your AI agents?" and having no answer. EU AI Act (Aug 2026), SOX, SOC 2 requirements for AI systems. |
+| **Behavior** | Doesn't browse landing pages or GitHub. Responds to internal champion (the engineer) who sends them a link. |
+| **Budget authority** | $25K-100K/yr from compliance budget line |
+| **How they buy** | Engineer sends link → scrolls to compliance section → sees SOC2/SOX/EU AI Act → approves purchase |
+
+### The Handoff
+
+The landing page serves both ICPs in order:
+1. **Top of page** (above the fold): capabilities for the engineer — "governed, auditable, reversible"
+2. **Middle**: code examples, receipts, HITL demo — engineer evaluates
+3. **Bottom**: compliance positioning, zero-knowledge encryption — CISO justifies purchase
+
+This is the standard developer-led sales motion (Sentry, Snyk, Datadog, LaunchDarkly): engineer discovers → company pays.
+
+---
+
+## Positioning (as of 2026-03-05)
+
+**What Enact is (for engineers):** An action governance layer for AI agents. Policy enforcement, signed receipts, human-in-the-loop, one-command rollback.
+
+**What Enact is (for CISOs):** Independent audit infrastructure for AI agents. Zero-knowledge encrypted receipt storage, append-only and tamper-proof, verifiable by auditors.
+
+**One-sentence pitch:** "Enact wraps every agent action in four layers: policy enforcement before it runs, a signed receipt after, human-in-the-loop for high-risk ops, and one-command rollback when something slips through."
+
+**The regulatory story:** EU AI Act enforcement (Aug 2026) requires traceability and conformity assessment for high-risk AI systems. SOX now considers AI agents a control risk. SOC 2 auditors are already asking companies how they govern autonomous agents. Enact makes compliance automatic — every action is signed, timestamped, attributed, and stored on an independent third party (Enact Cloud) that can't read the data (zero-knowledge encryption).
+
+---
+
+## Architecture: Local Hot Path + Zero-Knowledge Cloud
+
+```
+SDK (source-available, BSL license, on PyPI + GitHub):
+  - Policy engine runs LOCALLY (hot path — no cloud dependency)
+  - Custom policies in Python (run on customer's machine)
+  - Connectors call real APIs locally
+  - Receipts generated + HMAC-signed locally
+  - Receipts ENCRYPTED with customer's key before cloud upload
+  - If cloud is down → agents keep working, receipts queue locally
+
+Cloud (proprietary — the revenue engine):
+  - Receives encrypted receipt blob + searchable metadata
+  - CAN index: run_id, timestamp, decision, workflow, policy names
+  - CANNOT read: payload contents, SQL, PII, business data (encrypted)
+  - Append-only, immutable storage (tamper-proof)
+  - HITL gates (approve/deny via signed email)
+  - Compliance exports (SOC2, SOX, EU AI Act, ISO 42001)
+  - Anomaly detection across agent fleet
+  - Auditor API (read-only, metadata + signature verification)
+  - Retention SLAs (1yr, 3yr, 7yr contractual)
+```
+
+### Three-Party Trust Model
+
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Company    │     │    Enact     │     │   Auditor   │
+│              │     │   (cloud)    │     │             │
+│ Runs agents  │────▶│ Stores proof │────▶│ Verifies    │
+│ Owns keys    │     │ Can't read   │     │ Controls    │
+│ Writes policy│     │ Can verify   │     │ Existed     │
+└─────────────┘     └──────────────┘     └─────────────┘
+```
+
+- Company can't delete evidence (cloud copy exists)
+- Enact can't read evidence (encrypted with customer's key)
+- Auditor can verify evidence (signatures + metadata via Auditor API)
+
+---
+
+## Pricing
+
+| Tier | Price | Buyer | What |
+|------|-------|-------|------|
+| **SDK** | Free | Engineers evaluating | Source-available. Full local engine: policies, connectors, rollback, local receipts. No account needed. |
+| **Cloud** | $199/mo | Eng leads, small teams | Zero-knowledge encrypted receipt storage, search, HITL gates, team dashboard, anomaly alerts. 50K runs/mo. |
+| **Compliance** | $999/mo | SOC2/SOX audit teams | + compliance export templates, auditor API, 3yr retention SLA, dedicated onboarding. |
+| **Enterprise** | Custom ($25K-100K/yr) | CISOs at regulated companies | + VPC deployment, 7yr retention, custom templates, dedicated support. Price not shown on site. |
 
 ---
 

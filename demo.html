@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enact Live Demo — Action Firewall for AI Agents</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg:       #0b1020;
+            --surface:  #131b2e;
+            --surface2: #0d1526;
+            --border:   #2a3447;
+            --text:     #e2e8f0;
+            --muted:    #94a3b8;
+            --subtle:   #64748b;
+            --accent:   #4A6FA5;
+            --accent-d: #3d5a85;
+            --green:    #10b981;
+            --green-bg: #022c22;
+            --red:      #f87171;
+            --red-bg:   #2d0707;
+            --amber:    #fbbf24;
+            --mono:     'IBM Plex Mono', 'Courier New', monospace;
+            --sans:     'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        a { color: inherit; text-decoration: none; }
+        .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+        /* ── HEADER ── */
+        header { padding: 18px 0; border-bottom: 1px solid var(--border); }
+        .header-inner { display: flex; justify-content: space-between; align-items: center; }
+        .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 19px; }
+        .logo-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 14px; }
+        nav { display: flex; gap: 24px; align-items: center; }
+        nav a { color: var(--muted); font-size: 14px; transition: color .15s; }
+        nav a:hover { color: var(--text); }
+        .nav-cta { background: var(--accent); color: white !important; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-family: var(--mono); font-size: 12px; }
+        .nav-cta:hover { background: var(--accent-d) !important; }
+
+        /* ── HERO ── */
+        .hero { padding: 44px 0 28px; text-align: center; }
+        .hero h1 { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 12px; }
+        .hero .sub { font-size: 15px; color: var(--muted); max-width: 520px; margin: 0 auto; }
+
+        /* ── SCENARIO TABS ── */
+        .scenario-tabs { display: flex; gap: 10px; margin-bottom: 0; flex-wrap: wrap; }
+
+        .tab-btn {
+            flex: 1;
+            min-width: 150px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            padding: 14px 18px;
+            cursor: pointer;
+            text-align: left;
+            color: var(--muted);
+            transition: background .15s, color .15s, border-color .15s;
+            position: relative;
+        }
+        .tab-btn:hover { background: #192035; color: var(--text); }
+        .tab-btn.active {
+            background: var(--surface2);
+            color: var(--text);
+            border-color: var(--accent);
+            border-bottom: 1px solid var(--surface2);
+            z-index: 1;
+        }
+        .tab-btn .tab-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--subtle); margin-bottom: 3px; }
+        .tab-btn.active .tab-label { color: var(--accent); }
+        .tab-btn .tab-title { font-size: 13px; font-weight: 600; }
+        .tab-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+            letter-spacing: 0.05em;
+        }
+        .badge-block { background: var(--red-bg); color: var(--red); }
+        .badge-pass  { background: var(--green-bg); color: var(--green); }
+
+        /* ── PLAYGROUND ── */
+        .playground {
+            background: var(--surface2);
+            border: 1px solid var(--accent);
+            border-radius: 0 8px 8px 8px;
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
+        .editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .editor-header .filename {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .run-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 6px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: var(--sans);
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .run-btn:hover { background: var(--accent-d); }
+        .run-btn:disabled { background: var(--subtle); cursor: not-allowed; }
+        .run-btn svg { flex-shrink: 0; }
+
+        .editor-body {
+            display: flex;
+            background: var(--surface2);
+        }
+        .line-numbers {
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.7;
+            padding: 18px 10px 18px 14px;
+            color: #3d5070;
+            background: #0a1020;
+            border-right: 1px solid var(--border);
+            text-align: right;
+            user-select: none;
+            min-width: 42px;
+            overflow: hidden;
+            white-space: pre;
+        }
+        .editor-wrapper {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+        }
+        /* Syntax-highlighted layer — sits behind the transparent textarea */
+        .highlighted {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            margin: 0;
+            padding: 18px 20px;
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.7;
+            color: #c9d1d9;
+            background: transparent;
+            white-space: pre-wrap;
+            word-break: break-all;
+            overflow: hidden;
+            pointer-events: none;
+            tab-size: 4;
+        }
+        .comment-span { color: #4d6a7a; font-style: italic; }
+        #code-editor {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: 220px;
+            max-height: 320px;
+            background: transparent;
+            color: transparent;
+            caret-color: #c9d1d9;
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.7;
+            border: none;
+            outline: none;
+            padding: 18px 20px;
+            resize: vertical;
+            tab-size: 4;
+            -moz-tab-size: 4;
+        }
+        #code-editor::selection { background: rgba(74, 111, 165, 0.4); color: transparent; }
+
+        /* ── OUTPUT ── */
+        .output-section {
+            border-top: 1px solid var(--border);
+            background: #070e1a;
+        }
+        .output-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .output-header span { font-size: 12px; color: var(--subtle); font-family: var(--mono); }
+        .output-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--subtle); }
+        .output-dot.running { background: var(--amber); animation: pulse 1s infinite; }
+        .output-dot.pass { background: var(--green); }
+        .output-dot.block { background: var(--red); }
+
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }
+
+        #output {
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.7;
+            padding: 16px 20px;
+            min-height: 80px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--muted);
+        }
+        #output.has-block { color: var(--red); }
+        #output.has-pass  { color: var(--green); }
+
+        .output-placeholder { color: var(--subtle); font-style: italic; }
+
+        /* ── LOADER ── */
+        .loading-bar {
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), #7c3aed, var(--accent));
+            background-size: 200%;
+            animation: slide 1.4s linear infinite;
+        }
+        @keyframes slide { 0% { background-position: 100% } 100% { background-position: -100% } }
+
+        /* ── FOOTER ── */
+        footer { padding: 28px 0 40px; text-align: center; color: var(--subtle); font-size: 13px; }
+        footer a { color: var(--accent); }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 680px) {
+            .hero h1 { font-size: 26px; }
+            .tab-btn { min-width: 100%; border-radius: 8px; border-bottom: 1px solid var(--border); }
+            .tab-btn.active { border-radius: 8px; border-bottom: 1px solid var(--surface2); }
+            .playground { border-radius: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <div class="header-inner">
+                <a href="index.html" class="logo">
+                    <div class="logo-icon">E</div>
+                    Enact
+                </a>
+                <nav>
+                    <a href="index.html">Home</a>
+                    <a href="https://github.com/russellmiller3/enact" target="_blank">GitHub</a>
+                    <a href="#" class="nav-cta">pip install enact-sdk</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Try Enact in Your Browser</h1>
+            <p class="sub">Real Python. No server, no signup. Pick a scenario — see how policies block dangerous actions before they fire.</p>
+        </div>
+    </section>
+
+    <div class="container">
+
+        <!-- Loading bar (shown while Pyodide boots) -->
+        <div id="loading-bar" class="loading-bar" style="border-radius:4px; margin-bottom:12px;"></div>
+        <div id="loading-msg" style="font-family:var(--mono);font-size:12px;color:var(--subtle);margin-bottom:16px;text-align:center;">
+            Loading Python runtime (Pyodide)…
+        </div>
+
+        <!-- Scenario tabs -->
+        <div class="scenario-tabs">
+            <button class="tab-btn active" onclick="loadScenario(0)">
+                <div class="tab-label">Scenario 1 — The Replit Incident</div>
+                <div class="tab-title">SQL DELETE without WHERE</div>
+                <span class="tab-badge badge-block">BLOCKED</span>
+            </button>
+            <button class="tab-btn" onclick="loadScenario(1)">
+                <div class="tab-label">Scenario 2 — The Kiro Incident</div>
+                <div class="tab-title">Direct push to main branch</div>
+                <span class="tab-badge badge-block">BLOCKED</span>
+            </button>
+            <button class="tab-btn" onclick="loadScenario(2)">
+                <div class="tab-label">Scenario 3 — Normal operation</div>
+                <div class="tab-title">Agent PR workflow passes guard</div>
+                <span class="tab-badge badge-pass">PASSED</span>
+            </button>
+            <button class="tab-btn" onclick="loadScenario(3)">
+                <div class="tab-label">Scenario 4 — Rollback</div>
+                <div class="tab-title">Cleanup gone wrong → reversed</div>
+                <span class="tab-badge" style="background:#1e293b;color:#fbbf24;">REVERSED</span>
+            </button>
+        </div>
+
+        <!-- Editor + output -->
+        <div class="playground">
+            <div class="editor-header">
+                <span class="filename">playground.py</span>
+                <button class="run-btn" id="run-btn" onclick="runCode()" disabled>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5,3 19,12 5,21"/>
+                    </svg>
+                    Run
+                </button>
+            </div>
+
+            <div class="editor-body">
+                <pre class="line-numbers" id="line-numbers">1</pre>
+                <div class="editor-wrapper">
+                    <pre class="highlighted" id="highlighted" aria-hidden="true"></pre>
+                    <textarea id="code-editor" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <div class="output-header">
+                    <div class="output-dot" id="output-dot"></div>
+                    <span id="output-label">output</span>
+                </div>
+                <pre id="output"><span class="output-placeholder">Output will appear here after you click Run.</span></pre>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <div class="container">
+            Runs entirely in your browser via <a href="https://pyodide.org" target="_blank">Pyodide</a> (WebAssembly) — no data sent anywhere.
+        </div>
+    </footer>
+
+    <!-- Pyodide -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+
+    <script>
+    // ── SCENARIOS ───────────────────────────────────────────────────────────────
+
+    const SCENARIOS = [
+        // 0: SQL DELETE without WHERE (Replit incident) — BLOCKED
+        `# The Replit incident — an AI wiped a prod sessions table (Jan 2025).
+# Enact blocks the action before the DB call ever fires.
+
+enact = EnactClient(
+    policies=[dont_delete_without_where],
+    secret="demo",
+    allow_insecure_secret=True,  # in prod: use 32+ char ENACT_SECRET env var
+)
+
+result, receipt = enact.run(
+    workflow="db_cleanup",
+    user_email="agent@company.com",
+    payload={"action": "DELETE FROM sessions"},  # no WHERE clause!
+)
+print("passed: ", receipt.passed)
+print("decision:", receipt.decision)`,
+
+        // 1: Push to main (Kiro/AWS incident) — BLOCKED
+        `# The Amazon Kiro incident — an agent pushed to main,
+# triggered a broken deploy, caused a 13-hour AWS outage (Dec 2025).
+# Enact blocks the push before the git call ever fires.
+
+enact = EnactClient(
+    policies=[dont_push_to_main],
+    secret="demo",
+    allow_insecure_secret=True,  # in prod: use 32+ char ENACT_SECRET env var
+)
+
+result, receipt = enact.run(
+    workflow="git_push",
+    user_email="agent@company.com",
+    payload={"branch": "main", "repo": "acme/app"},
+)
+print("passed: ", receipt.passed)
+print("decision:", receipt.decision)`,
+
+        // 2: Agent PR workflow — PASSES (same policy, safe branch)
+        `# Same policy as Scenario 2, but with a safe branch name.
+# dont_push_to_main passes, the branch gets created, and every
+# action is captured in a signed receipt.
+
+enact = EnactClient(
+    policies=[dont_push_to_main],
+    secret="demo",
+    allow_insecure_secret=True,  # in prod: use 32+ char ENACT_SECRET env var
+)
+
+result, receipt = enact.run(
+    workflow="agent_pr_workflow",
+    user_email="agent@company.com",
+    payload={"repo": "myorg/app", "branch": "agent/fix-149"},
+)
+print("passed: ", receipt.passed)
+print("decision:", receipt.decision)
+print("action: ", receipt.actions[0].action, "→", receipt.actions[0].output)`,
+
+        // 3: Rollback — cleanup gone wrong, $108k ARR gone, one call restores it
+        `# Your team built a cleanup job: delete rows where status = "inactive".
+# Nobody added a policy to protect high-value accounts.
+# The agent ran at 2am and deleted them. The "inactive" flag was a data
+# quality issue — these were lapsed subscribers, not churned customers.
+#
+# The agent was able to delete these rows because nobody thought to add a
+# policy blocking deletions of high-value accounts. We're all human.
+# That's exactly why Enact's receipt system exists: a sharp-eyed engineer
+# saw the deletion, called enact.rollback(receipt), and every row came back.
+
+# Step 1: Run the cleanup — it's going to pass.
+enact = EnactClient(
+    policies=[],  # no protection — this is the mistake
+    secret="demo",
+    allow_insecure_secret=True,
+)
+result, receipt = enact.run(
+    workflow="db_cleanup",
+    user_email="cleanup-agent@company.com",
+    payload={"action": "DELETE FROM customers WHERE status = 'inactive'"},
+)
+
+# Step 2: $108k ARR just disappeared.
+print("Deleted:")
+for row in receipt.actions[0].rollback_data["deleted_rows"]:
+    arr = "{:,}".format(row["arr_usd"])
+    print("  x  " + row["name"] + " — $" + arr + " ARR")
+
+# Step 3: Someone noticed at 6am. Roll it back.
+# If they'd had dont_delete_high_value_customers, this never would have run.
+print("\\nenact.rollback(receipt)  ← one call, every row back")
+rollback_receipt = enact.rollback(receipt)`,
+];
+
+    // ── STATE ────────────────────────────────────────────────────────────────────
+
+    let pyodide = null;
+    let currentScenario = 0;
+
+    const editor  = document.getElementById("code-editor");
+    const output  = document.getElementById("output");
+    const runBtn  = document.getElementById("run-btn");
+    const dot     = document.getElementById("output-dot");
+    const lbl     = document.getElementById("output-label");
+    const loadBar = document.getElementById("loading-bar");
+    const loadMsg = document.getElementById("loading-msg");
+
+    // ── TABS ─────────────────────────────────────────────────────────────────────
+
+    function escHtml(s) {
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function updateHighlight() {
+        const h = document.getElementById("highlighted");
+        // Color Python # comments; leave everything else as-is
+        h.innerHTML = escHtml(editor.value).replace(
+            /(#[^\n]*)/g,
+            '<span class="comment-span">$1</span>'
+        ) + "\n";  // trailing newline prevents last-line cursor jump
+        h.scrollTop = editor.scrollTop;
+    }
+
+    function updateLineNumbers() {
+        const lines = editor.value.split('\n').length;
+        document.getElementById('line-numbers').textContent =
+            Array.from({length: lines}, (_, i) => i + 1).join('\n');
+        updateHighlight();
+    }
+
+    function loadScenario(idx) {
+        currentScenario = idx;
+        editor.value = SCENARIOS[idx];
+        updateLineNumbers();
+
+        // Update active tab
+        document.querySelectorAll(".tab-btn").forEach((btn, i) => {
+            btn.classList.toggle("active", i === idx);
+        });
+
+        // Clear output
+        output.innerHTML = '<span class="output-placeholder">Click Run to execute.</span>';
+        output.className = "";
+        dot.className = "output-dot";
+        lbl.textContent = "output";
+    }
+
+    // ── PYODIDE BOOT ─────────────────────────────────────────────────────────────
+
+    async function boot() {
+        try {
+            pyodide = await loadPyodide();
+
+            // Step 1: Redirect stdout — suppress all boot noise
+            pyodide.runPython(`
+import sys
+from io import StringIO
+_captured = StringIO()
+sys.stdout = _captured
+sys.stderr = _captured
+`);
+
+            // Step 2: Load our mock — always works, is the foundation
+            const resp = await fetch("static/enact_demo.py");
+            const src  = await resp.text();
+            pyodide.runPython(src);
+
+            // Step 3: Try to upgrade WorkflowContext + PolicyResult to real enact-sdk
+            // The real policies use a different payload convention (payload["where"] dict
+            // vs our SQL string), so we only import the model classes, not the policies.
+            let sdkLabel = "demo mock";
+            try {
+                loadMsg.textContent = "Loading real enact-sdk from PyPI…";
+                await pyodide.loadPackage("micropip");
+                await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("enact-sdk")
+`);
+                pyodide.runPython(`
+try:
+    from enact.models import WorkflowContext, PolicyResult
+    _sdk_loaded = True
+except Exception as _e:
+    _sdk_loaded = False
+`);
+                if (pyodide.globals.get("_sdk_loaded")) {
+                    sdkLabel = "enact-sdk 0.5.1";
+                }
+            } catch (_sdkErr) {
+                // pydantic-core Rust wheels may not be available — fall back silently
+                console.info("enact-sdk via micropip unavailable, using demo mock:", _sdkErr.message);
+            }
+
+            // Step 4: Ready — show which runtime is active
+            loadBar.style.display = "none";
+            const isReal = sdkLabel.startsWith("enact-sdk");
+            loadMsg.textContent = isReal
+                ? `✓ Running real ${sdkLabel} (PyPI)`
+                : `✓ Python ready — using demo mock`;
+            loadMsg.style.color = isReal ? "var(--green)" : "var(--subtle)";
+            loadMsg.style.fontFamily = "var(--mono)";
+            runBtn.disabled = false;
+
+            // Fade out after 4 s
+            setTimeout(() => { loadMsg.style.display = "none"; }, 4000);
+
+        } catch (err) {
+            loadMsg.textContent = "Failed to load Python runtime: " + err.message;
+            loadMsg.style.color = "var(--red)";
+        }
+    }
+
+    // ── RUN ──────────────────────────────────────────────────────────────────────
+
+    async function runCode() {
+        if (!pyodide) return;
+
+        runBtn.disabled = true;
+        dot.className = "output-dot running";
+        lbl.textContent = "running…";
+        output.className = "";
+        output.textContent = "";
+
+        const code = editor.value;
+
+        try {
+            // Reset capture buffer
+            pyodide.runPython(`
+_captured = StringIO()
+sys.stdout = _captured
+sys.stderr = _captured
+`);
+
+            await pyodide.runPythonAsync(code);
+
+            const text = pyodide.runPython("_captured.getvalue()").trim();
+
+            if (!text) {
+                output.textContent = "(no output)";
+                dot.className = "output-dot";
+                lbl.textContent = "output";
+            } else {
+                output.textContent = text;
+
+                // Colour output based on content
+                const lower = text.toLowerCase();
+                if (lower.includes("passed: false") || lower.includes("block")) {
+                    output.className = "has-block";
+                    dot.className = "output-dot block";
+                    lbl.textContent = "blocked";
+                } else if (lower.includes("passed: true") || lower.includes("pass")) {
+                    output.className = "has-pass";
+                    dot.className = "output-dot pass";
+                    lbl.textContent = "passed";
+                } else {
+                    dot.className = "output-dot";
+                    lbl.textContent = "output";
+                }
+            }
+
+        } catch (err) {
+            output.textContent = "Error:\n" + err.message;
+            output.className = "has-block";
+            dot.className = "output-dot block";
+            lbl.textContent = "error";
+        }
+
+        runBtn.disabled = false;
+    }
+
+    // ── INIT ─────────────────────────────────────────────────────────────────────
+
+    // Load scenario 0 on boot
+    editor.value = SCENARIOS[0];
+    updateLineNumbers();
+
+    // Sync line-number gutter + highlight layer scroll with editor scroll
+    editor.addEventListener("scroll", () => {
+        document.getElementById("line-numbers").scrollTop = editor.scrollTop;
+        document.getElementById("highlighted").scrollTop = editor.scrollTop;
+    });
+
+    // Update line numbers + highlight on every keystroke
+    editor.addEventListener("input", updateLineNumbers);
+
+    // Tab key inserts spaces instead of leaving field
+    editor.addEventListener("keydown", e => {
+        if (e.key === "Tab") {
+            e.preventDefault();
+            const s = editor.selectionStart;
+            const v = editor.value;
+            editor.value = v.slice(0, s) + "    " + v.slice(editor.selectionEnd);
+            editor.selectionStart = editor.selectionEnd = s + 4;
+            updateLineNumbers();
+        }
+        // Shift+Enter runs
+        if (e.key === "Enter" && e.shiftKey) {
+            e.preventDefault();
+            runCode();
+        }
+    });
+
+    // Embed mode — hide header + hero, remove min-height so iframe fits content
+    if (new URLSearchParams(window.location.search).get('embed') === '1') {
+        document.querySelector('header').style.display = 'none';
+        document.querySelector('.hero').style.display = 'none';
+        document.body.style.minHeight = 'auto';
+        document.body.style.paddingTop = '0';
+        document.body.style.paddingBottom = '0';
+    }
+
+    boot();
+    </script>
+
+</body>
+</html>

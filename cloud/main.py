@@ -7,6 +7,7 @@ Run locally:
 Endpoints:
     POST   /receipts
     GET    /receipts/{run_id}
+    GET    /receipts
     POST   /hitl/request
     GET    /hitl/{hitl_id}
     GET    /hitl/{hitl_id}/approve?t=TOKEN
@@ -14,6 +15,11 @@ Endpoints:
     GET    /hitl/{hitl_id}/deny?t=TOKEN
     POST   /hitl/{hitl_id}/deny?t=TOKEN
     GET    /badge/{team_id}/{workflow}.svg
+
+Auditor API (for SOC 2, SOX, EU AI Act compliance):
+    GET    /auditor/receipts/{run_id}
+    GET    /auditor/receipts
+    GET    /auditor/stats
 """
 import os
 from contextlib import asynccontextmanager
@@ -22,6 +28,7 @@ from cloud.db import init_db
 from cloud.routes.receipts import router as receipts_router
 from cloud.routes.hitl import router as hitl_router
 from cloud.routes.badge import router as badge_router
+from cloud.routes.auditor import router as auditor_router
 
 
 @asynccontextmanager
@@ -41,6 +48,7 @@ app = FastAPI(title="Enact Cloud", version="0.1.0", lifespan=lifespan)
 app.include_router(receipts_router)
 app.include_router(hitl_router)
 app.include_router(badge_router)
+app.include_router(auditor_router)
 
 
 @app.get("/health")
