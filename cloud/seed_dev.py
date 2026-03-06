@@ -17,11 +17,11 @@ init_db()
 
 with db() as conn:
     exists = conn.execute(
-        "SELECT team_id FROM teams WHERE team_id = ?", (TEAM_ID,)
+        "SELECT team_id FROM teams WHERE team_id = %s", (TEAM_ID,)
     ).fetchone()
     if not exists:
         conn.execute(
-            "INSERT INTO teams (team_id, name, plan) VALUES (?, ?, ?)",
+            "INSERT INTO teams (team_id, name, plan) VALUES (%s, %s, %s)",
             (TEAM_ID, "Russell Dev Team", "free"),
         )
         print(f"[OK] Created team: {TEAM_ID}")

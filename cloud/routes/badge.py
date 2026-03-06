@@ -35,8 +35,8 @@ def get_badge(team_id: str, workflow: str):
     with db() as conn:
         row = conn.execute(
             """SELECT decision, created_at FROM receipts
-               WHERE team_id = ? AND workflow = ?
-               ORDER BY rowid DESC LIMIT 1""",
+               WHERE team_id = %s AND workflow = %s
+               ORDER BY created_at DESC, run_id DESC LIMIT 1""",
             (team_id, workflow),
         ).fetchone()
 

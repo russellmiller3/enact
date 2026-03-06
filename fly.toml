@@ -1,0 +1,41 @@
+# Enact Cloud — Fly.io deployment config
+# Deploy: fly deploy
+# Logs:   fly logs
+# SSH:    fly ssh console
+#
+# Required secrets (set via `fly secrets set`):
+#   DATABASE_URL   — Supabase Postgres connection string
+#   CLOUD_SECRET   — HMAC signing key for HITL tokens
+
+app = "enact-cloud"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[env]
+  ENACT_EMAIL_DRY_RUN = "1"
+  CLOUD_BASE_URL = "https://enact-cloud.fly.dev"

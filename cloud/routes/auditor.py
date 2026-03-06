@@ -41,7 +41,7 @@ def get_receipt_for_audit(
     """
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM receipts WHERE run_id = ? AND team_id = ?",
+            "SELECT * FROM receipts WHERE run_id = %s AND team_id = %s",
             (run_id, team_id),
         ).fetchone()
     
@@ -85,23 +85,23 @@ def list_receipts_for_audit(
 
     Returns metadata only (encrypted payloads are never returned).
     """
-    query = "SELECT * FROM receipts WHERE team_id = ?"
+    query = "SELECT * FROM receipts WHERE team_id = %s"
     params = [team_id]
-    
+
     if workflow:
-        query += " AND workflow = ?"
+        query += " AND workflow = %s"
         params.append(workflow)
     if decision:
-        query += " AND decision = ?"
+        query += " AND decision = %s"
         params.append(decision)
     if start_date:
-        query += " AND date(created_at) >= date(?)"
-        params.append(start_date)
+        query += " AND created_at >= %s"
+        params.append(start_date + "T00:00:00Z")
     if end_date:
-        query += " AND date(created_at) <= date(?)"
-        params.append(end_date)
-    
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        query += " AND created_at < %s"
+        params.append(end_date + "T24:00:00Z")
+
+    query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
     params.extend([limit, offset])
     
     with db() as conn:
@@ -145,15 +145,15 @@ def get_audit_stats(
         - by_workflow: {workflow_name: count}
         - encrypted_count: how many use zero-knowledge encryption
     """
-    base_query = "FROM receipts WHERE team_id = ?"
+    base_query = "FROM receipts WHERE team_id = %s"
     params = [team_id]
-    
+
     if start_date:
-        base_query += " AND date(created_at) >= date(?)"
-        params.append(start_date)
+        base_query += " AND created_at >= %s"
+        params.append(start_date + "T00:00:00Z")
     if end_date:
-        base_query += " AND date(created_at) <= date(?)"
-        params.append(end_date)
+        base_query += " AND created_at < %s"
+        params.append(end_date + "T24:00:00Z")
     
     with db() as conn:
         # Total count
@@ -175,7 +175,7 @@ def get_audit_stats(
         
         # Encrypted count
         encrypted = conn.execute(
-            f"SELECT COUNT(*) as cnt {base_query} AND encrypted = 1",
+            f"SELECT COUNT(*) as cnt {base_query} AND encrypted = TRUE",
             params
         ).fetchone()["cnt"]
     

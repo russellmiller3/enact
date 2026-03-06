@@ -93,7 +93,7 @@ def create_hitl_request(body: HitlRequest, team_id: str = Depends(resolve_api_ke
         conn.execute(
             """INSERT INTO hitl_requests
                (hitl_id, team_id, workflow, payload, notify_email, callback_url, expires_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (%s, %s, %s, %s, %s, %s, %s)""",
             (hitl_id, team_id, body.workflow, json.dumps(body.payload),
              body.notify_email, body.callback_url, expires_at_str),
         )
@@ -113,7 +113,7 @@ def create_hitl_request(body: HitlRequest, team_id: str = Depends(resolve_api_ke
 def get_hitl_status(hitl_id: str, team_id: str = Depends(resolve_api_key)):
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM hitl_requests WHERE hitl_id = ? AND team_id = ?",
+            "SELECT * FROM hitl_requests WHERE hitl_id = %s AND team_id = %s",
             (hitl_id, team_id),
         ).fetchone()
         if not row:
@@ -129,7 +129,7 @@ def get_hitl_status(hitl_id: str, team_id: str = Depends(resolve_api_key)):
             if datetime.now(timezone.utc) > expires_at:
                 status = "EXPIRED"
                 conn.execute(
-                    "UPDATE hitl_requests SET status = 'EXPIRED' WHERE hitl_id = ?",
+                    "UPDATE hitl_requests SET status = 'EXPIRED' WHERE hitl_id = %s",
                     (hitl_id,),
                 )
 
@@ -156,7 +156,7 @@ def approve_hitl(hitl_id: str, t: str = Query(...)):
         raise HTTPException(status_code=403, detail="Invalid or expired token")
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM hitl_requests WHERE hitl_id = ?", (hitl_id,)
+            "SELECT * FROM hitl_requests WHERE hitl_id = %s", (hitl_id,)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="HITL request not found")
@@ -167,7 +167,7 @@ def approve_hitl(hitl_id: str, t: str = Query(...)):
             )
         decided_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         conn.execute(
-            "UPDATE hitl_requests SET status = 'APPROVED', decided_at = ? WHERE hitl_id = ?",
+            "UPDATE hitl_requests SET status = 'APPROVED', decided_at = %s WHERE hitl_id = %s",
             (decided_at, hitl_id),
         )
         _write_hitl_receipt(conn, row, decision="APPROVED", decided_at=decided_at)
@@ -197,7 +197,7 @@ def deny_hitl(hitl_id: str, t: str = Query(...)):
         raise HTTPException(status_code=403, detail="Invalid or expired token")
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM hitl_requests WHERE hitl_id = ?", (hitl_id,)
+            "SELECT * FROM hitl_requests WHERE hitl_id = %s", (hitl_id,)
         ).fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="HITL request not found")
@@ -208,7 +208,7 @@ def deny_hitl(hitl_id: str, t: str = Query(...)):
             )
         decided_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         conn.execute(
-            "UPDATE hitl_requests SET status = 'DENIED', decided_at = ? WHERE hitl_id = ?",
+            "UPDATE hitl_requests SET status = 'DENIED', decided_at = %s WHERE hitl_id = %s",
             (decided_at, hitl_id),
         )
         _write_hitl_receipt(conn, row, decision="DENIED", decided_at=decided_at)
@@ -230,7 +230,7 @@ def _render_confirm_page(hitl_id: str, action: str) -> str:
     from markupsafe import escape
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM hitl_requests WHERE hitl_id = ?", (hitl_id,)
+            "SELECT * FROM hitl_requests WHERE hitl_id = %s", (hitl_id,)
         ).fetchone()
     if not row:
         return _render_result_page(icon="&#9888;", title="Not found", desc="This request does not exist.")
@@ -330,9 +330,10 @@ def _write_hitl_receipt(conn, row, decision: str, decided_at: str):
     signature = hmac.new(secret.encode(), receipt_json.encode(), hashlib.sha256).hexdigest()
 
     conn.execute(
-        """INSERT OR IGNORE INTO hitl_receipts
+        """INSERT INTO hitl_receipts
            (hitl_id, team_id, workflow, decision, decided_by, decided_at, receipt_json, signature)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+           ON CONFLICT (hitl_id) DO NOTHING""",
         (row["hitl_id"], row["team_id"], row["workflow"], decision,
          row["notify_email"], decided_at, receipt_json, signature),
     )

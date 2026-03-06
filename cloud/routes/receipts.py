@@ -89,7 +89,7 @@ def push_receipt(body: ReceiptPayload, team_id: str = Depends(resolve_api_key)):
     # Check for duplicate run_id (idempotent push)
     with db() as conn:
         existing = conn.execute(
-            "SELECT run_id FROM receipts WHERE run_id = ?", (run_id,)
+            "SELECT run_id FROM receipts WHERE run_id = %s", (run_id,)
         ).fetchone()
         if existing:
             return {"run_id": run_id, "already_stored": True}
@@ -99,7 +99,7 @@ def push_receipt(body: ReceiptPayload, team_id: str = Depends(resolve_api_key)):
             conn.execute(
                 """INSERT INTO receipts
                    (run_id, team_id, workflow, decision, timestamp, policy_names, metadata_json, payload_blob, encrypted)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)""",
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, TRUE)""",
                 (
                     run_id,
                     team_id,
@@ -115,7 +115,7 @@ def push_receipt(body: ReceiptPayload, team_id: str = Depends(resolve_api_key)):
             conn.execute(
                 """INSERT INTO receipts
                    (run_id, team_id, workflow, decision, timestamp, policy_names, receipt_json, encrypted)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 0)""",
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, FALSE)""",
                 (
                     run_id,
                     team_id,
@@ -139,7 +139,7 @@ def get_receipt(run_id: str, team_id: str = Depends(resolve_api_key)):
     """
     with db() as conn:
         row = conn.execute(
-            "SELECT * FROM receipts WHERE run_id = ? AND team_id = ?",
+            "SELECT * FROM receipts WHERE run_id = %s AND team_id = %s",
             (run_id, team_id),
         ).fetchone()
     if not row:
@@ -183,17 +183,17 @@ def list_receipts(
 
     Returns metadata only (encrypted payloads are never returned).
     """
-    query = "SELECT * FROM receipts WHERE team_id = ?"
+    query = "SELECT * FROM receipts WHERE team_id = %s"
     params = [team_id]
-    
+
     if workflow:
-        query += " AND workflow = ?"
+        query += " AND workflow = %s"
         params.append(workflow)
     if decision:
-        query += " AND decision = ?"
+        query += " AND decision = %s"
         params.append(decision)
-    
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+
+    query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
     params.extend([limit, offset])
     
     with db() as conn:
@@ -226,17 +226,17 @@ def list_receipts(
         receipts.append(item)
 
     # Count total matching rows (for pagination)
-    count_query = "SELECT COUNT(*) FROM receipts WHERE team_id = ?"
+    count_query = "SELECT COUNT(*) as cnt FROM receipts WHERE team_id = %s"
     count_params: list = [team_id]
     if workflow:
-        count_query += " AND workflow = ?"
+        count_query += " AND workflow = %s"
         count_params.append(workflow)
     if decision:
-        count_query += " AND decision = ?"
+        count_query += " AND decision = %s"
         count_params.append(decision)
 
     with db() as conn:
-        total = conn.execute(count_query, count_params).fetchone()[0]
+        total = conn.execute(count_query, count_params).fetchone()["cnt"]
 
     return {
         "receipts": receipts,
