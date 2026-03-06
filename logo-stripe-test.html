@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENACT Logo — Clean vs Striped Comparison</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; 
+            background: #f5f5f5;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            max-width: 1400px;
+            margin: 0 auto 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .comparison-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .section {
+            background: white;
+            border: 2px solid #1a1a1a;
+            padding: 30px;
+        }
+        
+        .section h2 {
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+            color: #1a1a1a;
+        }
+        
+        .logo-showcase {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .showcase-item {
+            text-align: center;
+        }
+        
+        .showcase-item.dark-bg {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        
+        .showcase-item.light-bg {
+            background: #f5f5f5;
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .size-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+        }
+        
+        .showcase-item.dark-bg .size-label {
+            color: #999;
+        }
+        
+        /* Clean version styles */
+        .logo-clean {
+            font-family: 'Roboto', Arial, sans-serif;
+            font-weight: 700;
+            letter-spacing: 3px;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .logo-clean span {
+            display: inline-block;
+        }
+        
+        .logo-clean .letter-c {
+            transform: scaleX(0.7);
+            margin: 0 -4px;
+        }
+        
+        /* Striped version styles */
+        .logo-striped {
+            font-family: 'Roboto', Arial, sans-serif;
+            font-weight: 700;
+            letter-spacing: 3px;
+            display: inline-flex;
+            align-items: center;
+            position: relative;
+        }
+        
+        .logo-striped span {
+            display: inline-block;
+        }
+        
+        .logo-striped .letter-c {
+            transform: scaleX(0.7);
+            margin: 0 -4px;
+        }
+        
+        /* Stripe overlay - IBM 8-bar style */
+        .logo-striped::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -5%;
+            right: -5%;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 6px,
+                currentColor 6px,
+                currentColor 11px
+            );
+            pointer-events: none;
+            opacity: 1;
+        }
+        
+        .logo-striped.white::after {
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 6px,
+                white 6px,
+                white 11px
+            );
+        }
+        
+        .logo-striped.blue::after {
+            background: repeating-linear-gradient(
+                0deg,
+                transparent 0px,
+                transparent 6px,
+                #0f62fe 6px,
+                #0f62fe 11px
+            );
+        }
+        
+        /* Size variations */
+        .logo-hero { font-size: 56px; }
+        .logo-nav { font-size: 28px; }
+        .logo-small { font-size: 18px; }
+        
+        /* Colors */
+        .color-white { color: white; }
+        .color-blue { color: #0f62fe; }
+        
+        .notes {
+            max-width: 1400px;
+            margin: 40px auto 0;
+            background: white;
+            border: 2px solid #1a1a1a;
+            padding: 30px;
+        }
+        
+        .notes h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+        }
+        
+        .notes ul {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #4a4a4a;
+        }
+        
+        @media (max-width: 968px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ENΛCT Logo — Clean vs IBM Stripes</h1>
+        <p>Side-by-side comparison at multiple sizes and backgrounds</p>
+    </div>
+    
+    <div class="comparison-grid">
+        <!-- CLEAN VERSION -->
+        <div class="section">
+            <h2>Clean (Current)</h2>
+            <div class="logo-showcase">
+                <!-- Dark background -->
+                <div class="showcase-item dark-bg">
+                    <div class="logo-clean logo-hero color-white">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Hero / Landing (56px) - Dark BG</div>
+                </div>
+                
+                <!-- Light background -->
+                <div class="showcase-item light-bg">
+                    <div class="logo-clean logo-hero color-blue">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Hero / Landing (56px) - Light BG</div>
+                </div>
+                
+                <!-- Navbar dark -->
+                <div class="showcase-item dark-bg">
+                    <div class="logo-clean logo-nav color-white">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Navbar (28px) - Dark BG</div>
+                </div>
+                
+                <!-- Navbar light -->
+                <div class="showcase-item light-bg">
+                    <div class="logo-clean logo-nav color-blue">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Navbar (28px) - Light BG</div>
+                </div>
+                
+                <!-- Small dark -->
+                <div class="showcase-item dark-bg">
+                    <div class="logo-clean logo-small color-white">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Badge / Small (18px) - Dark BG</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- STRIPED VERSION -->
+        <div class="section">
+            <h2>IBM Stripes (Option B)</h2>
+            <div class="logo-showcase">
+                <!-- Dark background -->
+                <div class="showcase-item dark-bg">
+                    <div class="logo-striped logo-hero color-white white">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Hero / Landing (56px) - Dark BG</div>
+                </div>
+                
+                <!-- Light background -->
+                <div class="showcase-item light-bg">
+                    <div class="logo-striped logo-hero color-blue blue">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Hero / Landing (56px) - Light BG</div>
+                </div>
+                
+                <!-- Navbar dark -->
+                <div class="showcase-item dark-bg">
+                    <div class="logo-striped logo-nav color-white white">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Navbar (28px) - Dark BG</div>
+                </div>
+                
+                <!-- Navbar light -->
+                <div class="showcase-item light-bg">
+                    <div class="logo-striped logo-nav color-blue blue">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Navbar (28px) - Light BG</div>
+                </div>
+                
+                <!-- Small dark -->
+                <div class="showcase-item dark-bg">
+                    <div class="logo-striped logo-small color-white white">
+                        <span>E</span>
+                        <span>N</span>
+                        <span>Λ</span>
+                        <span class="letter-c">C</span>
+                        <span>T</span>
+                    </div>
+                    <div class="size-label">Badge / Small (18px) - Dark BG</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="notes">
+        <h3>Clean vs Striped — Analysis</h3>
+        <ul>
+            <li><strong>Clean:</strong> Professional, safe, works everywhere. Risk: might be forgettable ("just blue text"). Best if you want pure restraint.</li>
+            <li><strong>Striped:</strong> Distinctive IBM corporate modernism. More memorable, reinforces "governance layers" metaphor. Risk: busier, might feel dated in 10 years.</li>
+            <li><strong>Legibility:</strong> Both are readable at small sizes. Stripes add texture but don't hurt readability at navbar size (28px).</li>
+            <li><strong>Brand recall:</strong> Striped version is more likely to be remembered ("that IBM-style logo"). Clean blends in more.</li>
+            <li><strong>For HN launch:</strong> Striped stands out more in a crowded "Show HN" thread. Clean is safer but less attention-grabbing.</li>
+            <li><strong>For enterprise sales:</strong> Both work. Striped feels more "established" (IBM legacy). Clean feels more "modern SaaS".</li>
+        </ul>
+    </div>
+</body>
+</html>
