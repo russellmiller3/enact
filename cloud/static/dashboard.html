@@ -244,6 +244,14 @@
             font-family: var(--mono);
             font-size: 12px;
         }
+        .cell-person {
+            font-size: 12px;
+            color: var(--muted);
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
         .cell-time {
             font-size: 12px;
             color: var(--muted);
@@ -541,7 +549,7 @@
 <body>
     <!-- ── HEADER ── -->
     <div class="header">
-        <span class="header-logo">ENACT</span>
+        <span class="header-logo">EN&#923;CT</span>
         <span class="header-cloud">Cloud</span>
         <div class="header-spacer"></div>
         <div class="header-stats" id="headerStats">
@@ -580,7 +588,13 @@
             <option value="PASS">PASS</option>
             <option value="BLOCK">BLOCK</option>
         </select>
-        <input class="filter-input" id="filterSearch" type="text" placeholder="Search run ID...">
+        <select class="filter-select" id="filterPerson">
+            <option value="">All people</option>
+        </select>
+        <select class="filter-select" id="filterSystem">
+            <option value="">All systems</option>
+        </select>
+        <input class="filter-input" id="filterSearch" type="text" placeholder="Search run ID or email...">
         <div class="filter-spacer"></div>
         <button class="filter-btn" id="autoRefreshBtn" title="Auto-refresh every 30s">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
@@ -603,13 +617,14 @@
                 <tr>
                     <th>Run ID</th>
                     <th>Workflow</th>
+                    <th>Person</th>
                     <th>Decision</th>
                     <th>Time</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="receiptBody">
-                <tr class="loading-row"><td colspan="5"><div class="spinner" style="margin:0 auto"></div></td></tr>
+                <tr class="loading-row"><td colspan="6"><div class="spinner" style="margin:0 auto"></div></td></tr>
             </tbody>
         </table>
     </div>
@@ -639,7 +654,8 @@
     <div class="overlay" id="modalOverlay"></div>
     <div class="modal" id="apiKeyModal">
         <h2>Connect to Enact Cloud</h2>
-        <p>Enter your API key to view receipts. Your key is stored locally in this browser and never sent to third parties.</p>
+        <p>Paste the API key from your Enact Cloud account to view your team's audit receipts. You can find it at <strong>Settings &rarr; API Keys</strong> in the Enact dashboard.</p>
+        <p style="margin-bottom:20px">Your key stays in this browser's local storage and is only sent to your Enact Cloud instance. All receipt data is zero-knowledge encrypted and append-only — Enact cannot read your payloads.</p>
         <input class="modal-input" id="apiKeyInput" type="password" placeholder="enact_live_..." autocomplete="off">
         <div class="modal-error" id="apiKeyError"></div>
         <button class="modal-submit" id="apiKeySubmit">Connect</button>
@@ -654,11 +670,13 @@
         totalCount: 0,
         offset: 0,
         limit: 50,
-        filters: { workflow: '', decision: '', search: '' },
+        filters: { workflow: '', decision: '', person: '', system: '', search: '' },
         selectedRunId: null,
         autoRefresh: false,
         autoRefreshTimer: null,
         workflows: new Set(),
+        persons: new Set(),
+        systems: new Set(),
     };
 
     // ── DOM REFS ──
@@ -694,14 +712,18 @@
             const data = await api('/receipts?' + params);
             state.receipts = data.receipts || [];
             state.totalCount = data.count || 0;
-            // Collect workflow names for filter dropdown
-            state.receipts.forEach(r => state.workflows.add(r.workflow));
+            // Collect filter values from response data
+            state.receipts.forEach(r => {
+                state.workflows.add(r.workflow);
+                if (r.user_email) state.persons.add(r.user_email);
+                if (r.systems) r.systems.forEach(s => state.systems.add(s));
+            });
             renderTable();
             renderPagination();
-            populateWorkflowFilter();
+            populateFilters();
         } catch (e) {
             if (e.message !== 'Invalid API key') {
-                body.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--red)">${esc(e.message)}</td></tr>`;
+                body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--red)">${esc(e.message)}</td></tr>`;
             }
         }
     }
@@ -727,7 +749,7 @@
     // ── RENDER TABLE ──
     function renderTable() {
         if (state.receipts.length === 0) {
-            body.innerHTML = `<tr><td colspan="5">
+            body.innerHTML = `<tr><td colspan="6">
                 <div class="table-empty">
                     <div class="table-empty-icon">&#9776;</div>
                     <h3>No receipts found</h3>
@@ -737,17 +759,27 @@
             return;
         }
         let filtered = state.receipts;
+        if (state.filters.person) {
+            filtered = filtered.filter(r => r.user_email === state.filters.person);
+        }
+        if (state.filters.system) {
+            filtered = filtered.filter(r => r.systems && r.systems.includes(state.filters.system));
+        }
         if (state.filters.search) {
             const q = state.filters.search.toLowerCase();
-            filtered = filtered.filter(r => r.run_id.toLowerCase().includes(q));
+            filtered = filtered.filter(r =>
+                r.run_id.toLowerCase().includes(q) ||
+                (r.user_email && r.user_email.toLowerCase().includes(q))
+            );
         }
         body.innerHTML = filtered.map(r => `
             <tr data-runid="${esc(r.run_id)}" class="${r.run_id === state.selectedRunId ? 'selected' : ''}">
                 <td class="cell-runid">${esc(r.run_id.slice(0, 8))}</td>
                 <td class="cell-workflow">${esc(r.workflow)}</td>
+                <td class="cell-person">${r.user_email ? esc(r.user_email) : '<span style="color:var(--subtle);font-size:11px">--</span>'}</td>
                 <td><span class="badge badge-${r.decision.toLowerCase()}">${esc(r.decision)}</span>
                     ${r.encrypted ? '<span class="badge badge-encrypted">E2E</span>' : ''}</td>
-                <td class="cell-time">${timeAgo(r.timestamp || r.created_at)}</td>
+                <td class="cell-time">${formatTime(r.timestamp || r.created_at)}</td>
                 <td style="text-align:right;color:var(--subtle)">&#8250;</td>
             </tr>
         `).join('');
@@ -760,9 +792,11 @@
             <div class="detail-section-title">Metadata</div>
             <div class="detail-row"><span class="detail-label">Run ID</span><span class="detail-val">${esc(data.run_id)}</span></div>
             <div class="detail-row"><span class="detail-label">Workflow</span><span class="detail-val">${esc(data.workflow)}</span></div>
+            <div class="detail-row"><span class="detail-label">Person</span><span class="detail-val">${data.user_email ? esc(data.user_email) : '<span style="color:var(--subtle)">encrypted</span>'}</span></div>
+            ${data.systems && data.systems.length ? '<div class="detail-row"><span class="detail-label">Systems</span><span class="detail-val">' + data.systems.map(s => esc(s)).join(', ') + '</span></div>' : ''}
             <div class="detail-row"><span class="detail-label">Decision</span><span class="detail-val"><span class="badge badge-${data.decision.toLowerCase()}">${esc(data.decision)}</span></span></div>
-            <div class="detail-row"><span class="detail-label">Time</span><span class="detail-val">${esc(data.timestamp || data.created_at || '--')}</span></div>
-            <div class="detail-row"><span class="detail-label">Stored</span><span class="detail-val">${esc(data.created_at || '--')}</span></div>
+            <div class="detail-row"><span class="detail-label">Time</span><span class="detail-val">${formatTime(data.timestamp || data.created_at)}</span></div>
+            <div class="detail-row"><span class="detail-label">Stored</span><span class="detail-val">${formatTime(data.created_at)}</span></div>
             ${data.encrypted ? '<div class="detail-row"><span class="detail-label">Encryption</span><span class="detail-val"><span class="badge badge-encrypted">Zero-knowledge E2E</span></span></div>' : ''}
         </div>`;
 
@@ -824,14 +858,33 @@
         $('nextBtn').disabled = state.offset + state.limit >= state.totalCount;
     }
 
-    function populateWorkflowFilter() {
-        const sel = $('filterWorkflow');
-        const current = sel.value;
-        const opts = ['<option value="">All workflows</option>'];
+    function populateFilters() {
+        // Workflows
+        const wSel = $('filterWorkflow');
+        const wCur = wSel.value;
+        const wOpts = ['<option value="">All workflows</option>'];
         state.workflows.forEach(w => {
-            opts.push(`<option value="${esc(w)}" ${w === current ? 'selected' : ''}>${esc(w)}</option>`);
+            wOpts.push(`<option value="${esc(w)}" ${w === wCur ? 'selected' : ''}>${esc(w)}</option>`);
         });
-        sel.innerHTML = opts.join('');
+        wSel.innerHTML = wOpts.join('');
+
+        // Persons
+        const pSel = $('filterPerson');
+        const pCur = pSel.value;
+        const pOpts = ['<option value="">All people</option>'];
+        state.persons.forEach(p => {
+            pOpts.push(`<option value="${esc(p)}" ${p === pCur ? 'selected' : ''}>${esc(p)}</option>`);
+        });
+        pSel.innerHTML = pOpts.join('');
+
+        // Systems
+        const sSel = $('filterSystem');
+        const sCur = sSel.value;
+        const sOpts = ['<option value="">All systems</option>'];
+        state.systems.forEach(s => {
+            sOpts.push(`<option value="${esc(s)}" ${s === sCur ? 'selected' : ''}>${esc(s)}</option>`);
+        });
+        sSel.innerHTML = sOpts.join('');
     }
 
     // ── MODAL ──
@@ -878,9 +931,9 @@
     // ── CSV EXPORT ──
     function exportCSV() {
         if (!state.receipts.length) return;
-        const rows = [['run_id', 'workflow', 'decision', 'timestamp', 'encrypted']];
+        const rows = [['run_id', 'workflow', 'person', 'decision', 'systems', 'timestamp', 'encrypted']];
         state.receipts.forEach(r => {
-            rows.push([r.run_id, r.workflow, r.decision, r.timestamp || r.created_at || '', r.encrypted ? 'true' : 'false']);
+            rows.push([r.run_id, r.workflow, r.user_email || '', r.decision, (r.systems || []).join('; '), r.timestamp || r.created_at || '', r.encrypted ? 'true' : 'false']);
         });
         const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv' });
@@ -904,17 +957,16 @@
         d.textContent = String(s);
         return d.innerHTML;
     }
-    function timeAgo(iso) {
+    function formatTime(iso) {
         if (!iso) return '--';
-        const diff = Date.now() - new Date(iso).getTime();
-        if (diff < 0) return 'just now';
-        const mins = Math.floor(diff / 60000);
-        if (mins < 1) return 'just now';
-        if (mins < 60) return mins + 'm ago';
-        const hrs = Math.floor(mins / 60);
-        if (hrs < 24) return hrs + 'h ago';
-        const days = Math.floor(hrs / 24);
-        return days + 'd ago';
+        try {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '--';
+            return d.toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+                hour: 'numeric', minute: '2-digit',
+            });
+        } catch (_) { return '--'; }
     }
 
     // ── EVENT WIRING ──
@@ -938,6 +990,14 @@
         state.filters.decision = e.target.value;
         state.offset = 0;
         loadReceipts();
+    });
+    $('filterPerson').addEventListener('change', e => {
+        state.filters.person = e.target.value;
+        renderTable();
+    });
+    $('filterSystem').addEventListener('change', e => {
+        state.filters.system = e.target.value;
+        renderTable();
     });
     let searchTimeout;
     $('filterSearch').addEventListener('input', e => {

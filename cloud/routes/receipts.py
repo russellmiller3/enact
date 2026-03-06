@@ -152,12 +152,21 @@ def get_receipt(run_id: str, team_id: str = Depends(resolve_api_key)):
         "timestamp": row["timestamp"],
         "created_at": row["created_at"],
         "encrypted": bool(row["encrypted"]),
+        "user_email": None,
+        "systems": [],
     }
-    
-    # For legacy receipts, include the full receipt
+
+    # For legacy receipts, include the full receipt + extract metadata
     if not row["encrypted"] and row["receipt_json"]:
-        response["receipt"] = json.loads(row["receipt_json"])
-    
+        rj = json.loads(row["receipt_json"])
+        response["receipt"] = rj
+        response["user_email"] = rj.get("user_email")
+        response["systems"] = list(set(
+            a.get("system", "")
+            for a in rj.get("actions_taken", [])
+            if a.get("system")
+        ))
+
     return response
 
 
@@ -190,17 +199,46 @@ def list_receipts(
     with db() as conn:
         rows = conn.execute(query, params).fetchall()
     
+    receipts = []
+    for row in rows:
+        item = {
+            "run_id": row["run_id"],
+            "workflow": row["workflow"],
+            "decision": row["decision"],
+            "timestamp": row["timestamp"],
+            "created_at": row["created_at"],
+            "encrypted": bool(row["encrypted"]),
+            "user_email": None,
+            "systems": [],
+        }
+        # Extract user_email + systems from receipt JSON (legacy only)
+        if not row["encrypted"] and row["receipt_json"]:
+            try:
+                rj = json.loads(row["receipt_json"])
+                item["user_email"] = rj.get("user_email")
+                item["systems"] = list(set(
+                    a.get("system", "")
+                    for a in rj.get("actions_taken", [])
+                    if a.get("system")
+                ))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        receipts.append(item)
+
+    # Count total matching rows (for pagination)
+    count_query = "SELECT COUNT(*) FROM receipts WHERE team_id = ?"
+    count_params: list = [team_id]
+    if workflow:
+        count_query += " AND workflow = ?"
+        count_params.append(workflow)
+    if decision:
+        count_query += " AND decision = ?"
+        count_params.append(decision)
+
+    with db() as conn:
+        total = conn.execute(count_query, count_params).fetchone()[0]
+
     return {
-        "receipts": [
-            {
-                "run_id": row["run_id"],
-                "workflow": row["workflow"],
-                "decision": row["decision"],
-                "timestamp": row["timestamp"],
-                "created_at": row["created_at"],
-                "encrypted": bool(row["encrypted"]),
-            }
-            for row in rows
-        ],
-        "count": len(rows),
+        "receipts": receipts,
+        "count": total,
     }
