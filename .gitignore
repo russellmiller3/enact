@@ -32,6 +32,12 @@ cloud.db
 .DS_Store
 Thumbs.db
 
+# IDE
+.vscode/
+
+# Local dev scripts
+cloud/start_dev.bat
+
 # Claude
 .claude/
 

@@ -23,12 +23,18 @@ Auditor API (for SOC 2, SOX, EU AI Act compliance):
 """
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from cloud.db import init_db
 from cloud.routes.receipts import router as receipts_router
 from cloud.routes.hitl import router as hitl_router
 from cloud.routes.badge import router as badge_router
 from cloud.routes.auditor import router as auditor_router
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 @asynccontextmanager
@@ -44,13 +50,28 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Enact Cloud", version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(receipts_router)
 app.include_router(hitl_router)
 app.include_router(badge_router)
 app.include_router(auditor_router)
 
+# Serve static dashboard files
+if STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/dashboard")
+def dashboard():
+    return FileResponse(str(STATIC_DIR / "dashboard.html"))
