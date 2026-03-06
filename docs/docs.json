@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "Enact",
   "colors": {
-    "primary": "#6366f1",
-    "light": "#818cf8",
-    "dark": "#4f46e5"
+    "primary": "#0f62fe",
+    "light": "#3b82f6",
+    "dark": "#1e40af"
   },
   "favicon": "/favicon.svg",
   "navigation": {
