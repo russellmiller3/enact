@@ -1443,15 +1443,16 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
         <div style="max-width: 760px; margin: 0 auto;">
 
             <!-- Install command -->
-            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 32px; text-align: left;">
-                <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); margin-bottom: 14px;">Install the skill</div>
-                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; font-family: var(--mono); font-size: 12px; line-height: 1.8; overflow-x: auto; position: relative;">
-                    <span style="color: var(--subtle); user-select: none;">$ </span><span style="color: var(--text);">mkdir -p ~/.claude/skills/enact-setup &amp;&amp; \</span><br>
-                    <span style="color: var(--subtle); user-select: none;">  </span><span style="color: var(--text);">curl -sL https://raw.githubusercontent.com/russellmiller3/enact/master/skills/enact-setup/SKILL.md \</span><br>
-                    <span style="color: var(--subtle); user-select: none;">  </span><span style="color: var(--text);">  -o ~/.claude/skills/enact-setup/SKILL.md</span>
+            <div style="margin-bottom: 12px; display: flex; justify-content: center;">
+                <div class="pip-cmd" style="max-width: 100%; overflow: hidden;">
+                    <span class="pip-dollar">$</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 560px;">mkdir -p ~/.claude/skills/enact-setup &amp;&amp; curl -sL https://raw.githubusercontent.com/russellmiller3/enact/master/skills/enact-setup/SKILL.md -o ~/.claude/skills/enact-setup/SKILL.md</span>
+                    <button class="pip-copy" onclick="copySkill()" title="Copy to clipboard" id="skill-copy-btn">
+                        <i data-lucide="copy" id="skill-copy-icon"></i>
+                    </button>
                 </div>
-                <p style="font-size: 12px; color: var(--subtle); margin-top: 12px; text-align: left;">Then run <code style="font-family:var(--mono);color:var(--accent);font-size:12px;">/enact-setup</code> inside Claude Code, pointed at your repo.</p>
             </div>
+            <p style="font-size: 13px; color: var(--subtle); margin-bottom: 32px;">Paste in your terminal, then run <code style="font-family:var(--mono);color:var(--accent);font-size:13px;">/enact-setup</code> inside Claude Code.</p>
 
             <!-- What it does -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; margin-bottom: 32px;">
@@ -1629,6 +1630,21 @@ function copyPip() {
     navigator.clipboard.writeText('pip install enact-sdk').then(function() {
         var icon = document.getElementById('pip-copy-icon');
         var btn  = document.getElementById('pip-copy-btn');
+        icon.setAttribute('data-lucide', 'check');
+        lucide.createIcons();
+        btn.style.color = 'var(--green)';
+        setTimeout(function() {
+            icon.setAttribute('data-lucide', 'copy');
+            lucide.createIcons();
+            btn.style.color = '';
+        }, 2000);
+    });
+}
+function copySkill() {
+    var cmd = 'mkdir -p ~/.claude/skills/enact-setup && curl -sL https://raw.githubusercontent.com/russellmiller3/enact/master/skills/enact-setup/SKILL.md -o ~/.claude/skills/enact-setup/SKILL.md';
+    navigator.clipboard.writeText(cmd).then(function() {
+        var icon = document.getElementById('skill-copy-icon');
+        var btn  = document.getElementById('skill-copy-btn');
         icon.setAttribute('data-lucide', 'check');
         lucide.createIcons();
         btn.style.color = 'var(--green)';
