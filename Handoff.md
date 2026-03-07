@@ -35,8 +35,9 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 ### Git State
 
 - Branch: `master`
-- Last commit: `379efe1` feat: 8 new safety policies, /enact-setup skill, and landing page skill section
-- Remote: `origin` → https://github.com/russellmiller3/enact (in sync)
+- Last commit: `28116b7` docs(evals): add evals/README.md with index and protocol for future mock agents
+- Remote: `origin` + `backup` (D drive) — both in sync
+- Vercel: `www.enact.cloud` — deployed ✅
 - PyPI: `enact-sdk 0.5.1` — published
 - Working tree: **clean**
 
@@ -46,7 +47,8 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - **`enact/policies/_secrets.py`** — shared module with 9 vendor API key regexes (OpenAI, GitHub, Slack, AWS, Google); avoids duplication across filesystem + git policies
 - **63 new tests** — 478 total passing
 - **`/enact-setup` Claude Code skill** — `skills/enact-setup/SKILL.md`; 7-step flow: scan → map → propose → write with approval; eval tested against `evals/enact-setup-eval/mock_agent/agent.py`
-- **Landing page skill section** — curl install command + 4 feature cards on `index.html`
+- **Landing page skill section** — single-line copy-button install command on `index.html`
+- **`evals/README.md`** — eval index + cold subagent protocol + pattern table for future mock agents
 - **CLAUDE.md** — added teaching style bullet about WHY explanations
 
 ### Infrastructure State
