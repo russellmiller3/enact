@@ -29,22 +29,25 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-07 (session 4)
+**Date:** 2026-03-07 (session 5)
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 
 - Branch: `master`
-- Last commit: `cab8963` feat(cloud): Supabase Postgres + Fly.io deploy config + rate limiting
+- Last commit: `379efe1` feat: 8 new safety policies, /enact-setup skill, and landing page skill section
 - Remote: `origin` → https://github.com/russellmiller3/enact (in sync)
 - PyPI: `enact-sdk 0.5.1` — published
 - Working tree: **clean**
 
-### What Was Done (session 4)
+### What Was Done (session 5)
 
-- **First production deploy** to `https://enact.fly.dev` — live and passing health checks.
-- Fixed deploy blocker: `DATABASE_URL` was set to Supabase's direct connection (`db.xxx.supabase.co:5432`). Fly.io connects via IPv6; direct Supabase port 5432 rejects IPv6. Fixed by switching to Supabase **Supavisor pooler URL** (`aws-0-us-west-2.pooler.supabase.com:6543`).
-- `curl https://enact.fly.dev/health` → `{"status":"ok"}` ✅
+- **8 new built-in policies** — `dont_edit_gitignore`, `dont_read_env`, `dont_touch_ci_cd`, `dont_access_home_dir`, `dont_copy_api_keys` (filesystem); `dont_force_push`, `require_meaningful_commit_message`, `dont_commit_api_keys` (git)
+- **`enact/policies/_secrets.py`** — shared module with 9 vendor API key regexes (OpenAI, GitHub, Slack, AWS, Google); avoids duplication across filesystem + git policies
+- **63 new tests** — 478 total passing
+- **`/enact-setup` Claude Code skill** — `skills/enact-setup/SKILL.md`; 7-step flow: scan → map → propose → write with approval; eval tested against `evals/enact-setup-eval/mock_agent/agent.py`
+- **Landing page skill section** — curl install command + 4 feature cards on `index.html`
+- **CLAUDE.md** — added teaching style bullet about WHY explanations
 
 ### Infrastructure State
 
@@ -66,11 +69,13 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - `cloud/main.py` — FastAPI app + rate limiting
 - `Dockerfile` / `fly.toml` — deployment config
 - `plans/2026-03-06-revenue-launch.md` — revenue launch plan (Phase 1 done, Phase 2 done, Phase 3 next)
+- `skills/enact-setup/SKILL.md` — Claude Code skill for adding Enact to any repo
+- `enact/policies/_secrets.py` — shared API key regex patterns
 
 ### What Exists (fully built + tested)
 
-**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), 16 policies, 3 workflows
+**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), 24 policies, 3 workflows
 
 **Cloud:** `cloud/` — FastAPI backend (receipt storage, HITL gates, badge SVG, auditor API, zero-knowledge encryption, dashboard UI)
 
-**Tests:** 415 passing.
+**Tests:** 478 passing.
