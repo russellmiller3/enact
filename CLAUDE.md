@@ -22,17 +22,6 @@ Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 
 **Core Rule:** If you mention a test, WRITE THE TEST CODE. If you mention an edge case, WRITE THE HANDLER CODE. If you mention an error, WRITE THE ERROR STRING. No vague bullshit.
 
-**Chat output MUST include:**
-
-1. 🎯 Attack summary table (with fixes already applied to plan file) — in CHAT only, not in plan file
-2. 📝 Complete test code (pytest, copy-paste ready)
-3. 📦 Data contracts (Pydantic models or ActionResult output shapes)
-4. ⚠️ Exact error message strings
-5. ✏️ Fixed plan sections (applied directly to original plan file)
-
-**CRITICAL: Attack summary goes in CHAT, not in plan file.**
-The plan file should read as a clean final spec. No "Red Team Attack Summary" sections.
-The implementing AI doesn't need to know what was wrong — just needs the corrected plan.
 
 ## Environment
 
@@ -63,8 +52,8 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - Dev: `pytest`, `pytest-asyncio`, `responses`
 
 ## Git Workflow
-
-- Solo dev — commit directly to `master`, no branches, no PRs
+- Always do new features as branches. Fix bugs on main.
+- Solo dev
 - When Russell says **"commit"** or **"git workflow"**: invoke `commit-commands:commit-and-push` skill
 - Main branch: `master`
 - No need for backward compatibility — just change things
@@ -94,6 +83,7 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 
 - Use Russell's name periodically (not shouted at the start of every message)
 - Use emojis for effect — but never inside code
+- You have a playful sense of humor.
 - Curse freely for effect
 - Skip formalities and compliments unless genuinely warranted — no "Great idea!" reflexes
 - Be highly opinionated: give the best option and explain WHY, not just HOW
@@ -130,3 +120,17 @@ The implementing AI doesn't need to know what was wrong — just needs the corre
 - Russell has Mito disease — low energy, frequent fatigue and headaches
 - Keep sessions focused; don't create unnecessary back-and-forth
 - Married to Jess Schein (b. 1985); both Jewish; live in San Francisco
+
+## For Red Teaming Plans
+
+**Chat output MUST include:**
+
+1. 🎯 Attack summary table (with fixes already applied to plan file) — in CHAT only, not in plan file
+2. 📝 Complete test code (pytest, copy-paste ready)
+3. 📦 Data contracts (Pydantic models or ActionResult output shapes)
+4. ⚠️ Exact error message strings
+5. ✏️ Fixed plan sections (applied directly to original plan file)
+
+**CRITICAL: Attack summary goes in CHAT, not in plan file.**
+The plan file should read as a clean final spec. No "Red Team Attack Summary" sections.
+The implementing AI doesn't need to know what was wrong — just needs the corrected plan.

@@ -29,80 +29,48 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-06 (late evening, session 2)
+**Date:** 2026-03-07 (session 4)
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 
 - Branch: `master`
-- Last commit: `9b244a3` feat(docs+landing): new landing page live + Mintlify docs scaffold + short README
-- Remote: `origin` → https://github.com/russellmiller3/enact
+- Last commit: `cab8963` feat(cloud): Supabase Postgres + Fly.io deploy config + rate limiting
+- Remote: `origin` → https://github.com/russellmiller3/enact (in sync)
 - PyPI: `enact-sdk 0.5.1` — published
-- **Uncommitted:** `demo.html`, `static/enact_demo.py`, `vercel.json`, `index.html`
+- Working tree: **clean**
 
-### What Was Done This Session
+### What Was Done (session 4)
 
-Demo polish + landing page embed — all work complete:
+- **First production deploy** to `https://enact.fly.dev` — live and passing health checks.
+- Fixed deploy blocker: `DATABASE_URL` was set to Supabase's direct connection (`db.xxx.supabase.co:5432`). Fly.io connects via IPv6; direct Supabase port 5432 rejects IPv6. Fixed by switching to Supabase **Supavisor pooler URL** (`aws-0-us-west-2.pooler.supabase.com:6543`).
+- `curl https://enact.fly.dev/health` → `{"status":"ok"}` ✅
 
-1. **Removed redundant `print("reason: ...")` from scenarios 0, 1, 2** in `demo.html`. Run() trace already shows it inline.
+### Infrastructure State
 
-2. **Rewrote Tab 4 (Rollback)** — full narrative: cleanup job at 2am, no policy protecting high-value accounts, "inactive" flag was bad data, $108k ARR deleted. Kicker: "If they'd had `dont_delete_high_value_customers`, this never would have run."
+- **Fly app**: `enact` at `https://enact.fly.dev` (SJC) — **LIVE** ✅
+- **Supabase**: pooler URL set as `DATABASE_URL` Fly secret — connected ✅
+- **Fly CLI path** (Windows): `~/.fly/bin/flyctl` (not in PATH)
+- **`ENACT_EMAIL_DRY_RUN=1`** set in fly.toml — HITL emails won't send until toggled
 
-3. **Replaced asciinema player with live iframe demo** in `index.html`:
-   - Removed `asciinema-player.css` + `asciinema-player.min.js` from head
-   - Removed `#demo-player` CSS block
-   - Added `?embed=1` support to `demo.html` — hides header+hero when embedded
-   - Iframe: `src="/demo.html?embed=1"`, 680px tall, matches landing page border style
-   - `/demo.html?embed=1` works locally (python http.server) AND on Vercel
+### Next Step
 
-### Next Steps
-
-**Commit + deploy:**
-```
-git add demo.html static/enact_demo.py index.html vercel.json
-git commit -m "feat(demo): live playground on landing page, polish scenarios, rollback narrative"
-git push
-```
-Then verify at https://enact.cloud (iframe should show, Pyodide loads, all 4 tabs run).
-
-**After deploy:**
-- Smoke-test all 4 tabs embedded in landing page
-- Consider a 5th scenario in `static/enact_demo.py`: add `dont_delete_high_value_customers` policy — shows proactive protection vs reactive rollback
-
-### Technical Notes
-
-**Payload mismatch (important):** Real `dont_delete_without_where` checks `payload["where"]` (a dict). Demo uses `payload["action"]` (SQL string) for readability. Don't swap in the real policy without fixing the payload format.
-
-**Browser limits:** Pyodide loads 5-8s on first visit (downloads WASM runtime). Normal. The loading bar communicates this.
-
-**COOP/COEP headers:** `vercel.json` has these set. Pyodide requires `SharedArrayBuffer` which requires these headers. Without them, Pyodide will fall back to a slower mode or fail.
+**Phase 3: Stripe integration** — see `plans/2026-03-06-revenue-launch.md`
+- Add Stripe checkout for `$199/mo` Cloud plan
+- Webhook handler to provision team + API key on payment
+- Gate receipt storage behind valid API key (already built in `cloud/auth.py`)
 
 ### Key Files
 
-- `demo.html` — the playground
-- `static/enact_demo.py` — mock SDK (browser-safe, no cloud deps)
-- `vercel.json` — static deploy config
-- `index.html` — landing page (add "Try it live →" CTA here)
+- `cloud/db.py` — dual-mode DB layer (Postgres + SQLite)
+- `cloud/main.py` — FastAPI app + rate limiting
+- `Dockerfile` / `fly.toml` — deployment config
+- `plans/2026-03-06-revenue-launch.md` — revenue launch plan (Phase 1 done, Phase 2 done, Phase 3 next)
 
 ### What Exists (fully built + tested)
 
-**SDK:**
+**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), 16 policies, 3 workflows
 
-```
-enact/
-  models.py, policy.py, receipt.py, client.py
-  rollback.py, cloud_client.py, ui.py
-  connectors/github.py, postgres.py, filesystem.py, slack.py
-  policies/git.py, db.py, filesystem.py, crm.py, access.py, time.py, email.py, slack.py
-  workflows/agent_pr_workflow.py, db_safe_insert.py, post_slack_message.py
-```
+**Cloud:** `cloud/` — FastAPI backend (receipt storage, HITL gates, badge SVG, auditor API, zero-knowledge encryption, dashboard UI)
 
-**Cloud:** FastAPI backend — receipt storage, HITL gates, status badge, zero-knowledge encryption.
-
-**Tests:** 356+ passing.
-
-### Files to Reference
-
-- `SPEC.md` — full build plan, strategic thesis, workflow roadmap
-- `CLAUDE.md` — conventions, design philosophy, git workflow
-- `examples/demo.py` — the 3-act terminal demo this browser demo mirrors
+**Tests:** 415 passing.
