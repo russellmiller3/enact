@@ -3,7 +3,11 @@ Tests for git safety policies and the agent_pr_workflow.
 """
 import pytest
 from unittest.mock import MagicMock
-from enact.policies.git import dont_push_to_main, max_files_per_commit, require_branch_prefix, dont_delete_branch, dont_merge_to_main
+from enact.policies.git import (
+    dont_push_to_main, max_files_per_commit, require_branch_prefix,
+    dont_delete_branch, dont_merge_to_main,
+    dont_force_push, require_meaningful_commit_message, dont_commit_api_keys,
+)
 from enact.workflows.agent_pr_workflow import agent_pr_workflow
 from enact.models import WorkflowContext, ActionResult
 
@@ -269,3 +273,135 @@ class TestAgentPrWorkflow:
             body="My custom body",
             head="agent/feature-x",
         )
+
+
+# ── dont_force_push ───────────────────────────────────────────────────────────
+
+class TestDontForcePush:
+    def test_blocks_force_flag(self):
+        ctx = make_context({"args": ["git", "push", "origin", "main", "--force"]})
+        result = dont_force_push(ctx)
+        assert result.passed is False
+        assert "force" in result.reason.lower()
+
+    def test_blocks_short_f_flag(self):
+        ctx = make_context({"args": ["git", "push", "-f"]})
+        result = dont_force_push(ctx)
+        assert result.passed is False
+
+    def test_blocks_force_with_lease(self):
+        ctx = make_context({"args": ["git", "push", "--force-with-lease"]})
+        result = dont_force_push(ctx)
+        assert result.passed is False
+
+    def test_allows_normal_push(self):
+        ctx = make_context({"args": ["git", "push", "origin", "agent/feature"]})
+        result = dont_force_push(ctx)
+        assert result.passed is True
+
+    def test_accepts_string_args(self):
+        ctx = make_context({"args": "git push origin main --force"})
+        result = dont_force_push(ctx)
+        assert result.passed is False
+
+    def test_accepts_command_key(self):
+        ctx = make_context({"command": ["git", "push", "--force"]})
+        result = dont_force_push(ctx)
+        assert result.passed is False
+
+    def test_pass_through_on_no_args(self):
+        ctx = make_context({})
+        result = dont_force_push(ctx)
+        assert result.passed is True
+
+    def test_policy_name(self):
+        ctx = make_context({"args": ["git", "push", "--force"]})
+        assert dont_force_push(ctx).policy == "dont_force_push"
+
+
+# ── require_meaningful_commit_message ─────────────────────────────────────────
+
+class TestRequireMeaningfulCommitMessage:
+    def test_blocks_empty_message(self):
+        ctx = make_context({"commit_message": ""})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False
+        assert "empty" in result.reason.lower()
+
+    def test_blocks_whitespace_only(self):
+        ctx = make_context({"commit_message": "   "})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False
+
+    def test_blocks_too_short(self):
+        ctx = make_context({"commit_message": "fix bug"})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False
+        assert "short" in result.reason.lower()
+
+    def test_blocks_meaningless_fix(self):
+        ctx = make_context({"commit_message": "fix"})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False
+
+    def test_blocks_meaningless_update(self):
+        ctx = make_context({"commit_message": "update"})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False
+
+    def test_blocks_wip(self):
+        ctx = make_context({"commit_message": "wip"})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False
+
+    def test_allows_good_message(self):
+        ctx = make_context({"commit_message": "fix: prevent agents from pushing to main"})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is True
+
+    def test_pass_through_on_no_key(self):
+        ctx = make_context({})
+        result = require_meaningful_commit_message(ctx)
+        assert result.passed is False  # empty string → blocked
+
+    def test_policy_name(self):
+        ctx = make_context({"commit_message": "wip"})
+        assert require_meaningful_commit_message(ctx).policy == "require_meaningful_commit_message"
+
+
+# ── dont_commit_api_keys ──────────────────────────────────────────────────────
+
+class TestDontCommitApiKeys:
+    def test_blocks_openai_key_in_diff(self):
+        ctx = make_context({"diff": "+API_KEY = 'sk-abcdefghijklmnopqrstu12345'"})
+        result = dont_commit_api_keys(ctx)
+        assert result.passed is False
+
+    def test_blocks_github_pat_in_diff(self):
+        ctx = make_context({"diff": "+token = 'ghp_" + "a" * 36 + "'"})
+        result = dont_commit_api_keys(ctx)
+        assert result.passed is False
+
+    def test_blocks_aws_key_in_content(self):
+        ctx = make_context({"content": "aws_key = 'AKIAIOSFODNN7EXAMPLE'"})
+        result = dont_commit_api_keys(ctx)
+        assert result.passed is False
+
+    def test_blocks_slack_token_in_commit_message(self):
+        ctx = make_context({"commit_message": "added xoxb-123456789-987654321-abcdef token"})
+        result = dont_commit_api_keys(ctx)
+        assert result.passed is False
+
+    def test_allows_clean_diff(self):
+        ctx = make_context({"diff": "+def hello():\n+    return 'world'\n"})
+        result = dont_commit_api_keys(ctx)
+        assert result.passed is True
+
+    def test_pass_through_on_no_payload(self):
+        ctx = make_context({})
+        result = dont_commit_api_keys(ctx)
+        assert result.passed is True
+
+    def test_policy_name(self):
+        ctx = make_context({"diff": "+key = 'sk-" + "x" * 25 + "'"})
+        assert dont_commit_api_keys(ctx).policy == "dont_commit_api_keys"

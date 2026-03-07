@@ -1431,6 +1431,66 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 
 
 
+<!-- CLAUDE CODE SKILL -->
+<section id="skill">
+    <div class="container centered">
+        <div class="section-label">Claude Code Skill</div>
+        <h2>Add Enact to any repo in one session.</h2>
+        <p class="section-sub" style="margin-left:auto;margin-right:auto;">
+            Drop this skill into Claude Code, point it at your agent repo, and it walks you through the whole setup — scans for dangerous patterns, maps them to policies, proposes the integration code, and writes it with your approval at every step.
+        </p>
+
+        <div style="max-width: 760px; margin: 0 auto;">
+
+            <!-- Install command -->
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 32px; text-align: left;">
+                <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--subtle); margin-bottom: 14px;">Install the skill</div>
+                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; font-family: var(--mono); font-size: 12px; line-height: 1.8; overflow-x: auto; position: relative;">
+                    <span style="color: var(--subtle); user-select: none;">$ </span><span style="color: var(--text);">mkdir -p ~/.claude/skills/enact-setup &amp;&amp; \</span><br>
+                    <span style="color: var(--subtle); user-select: none;">  </span><span style="color: var(--text);">curl -sL https://raw.githubusercontent.com/russellmiller3/enact/master/skills/enact-setup/SKILL.md \</span><br>
+                    <span style="color: var(--subtle); user-select: none;">  </span><span style="color: var(--text);">  -o ~/.claude/skills/enact-setup/SKILL.md</span>
+                </div>
+                <p style="font-size: 12px; color: var(--subtle); margin-top: 12px; text-align: left;">Then run <code style="font-family:var(--mono);color:var(--accent);font-size:12px;">/enact-setup</code> inside Claude Code, pointed at your repo.</p>
+            </div>
+
+            <!-- What it does -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; text-align: left; margin-bottom: 32px;">
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
+                    <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="search" style="width:15px;height:15px;color:var(--accent);flex-shrink:0;"></i>
+                        Scans your codebase
+                    </div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Finds HTTP mutations, shell calls, DB writes, GitHub and Slack API calls. Names the file and line number for every risky pattern it finds.</p>
+                </div>
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
+                    <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="shield" style="width:15px;height:15px;color:var(--accent);flex-shrink:0;"></i>
+                        Maps to policies
+                    </div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Each pattern gets an Enact policy recommendation with reasoning. Explains the risk specifically — not generic security theater.</p>
+                </div>
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
+                    <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="check-circle" style="width:15px;height:15px;color:var(--accent);flex-shrink:0;"></i>
+                        Approval-gated writes
+                    </div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Shows you the exact code before touching anything. Every change goes on a new branch. You review and merge — or don't.</p>
+                </div>
+                <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px;">
+                    <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="book-open" style="width:15px;height:15px;color:var(--accent);flex-shrink:0;"></i>
+                        Teaches as it goes
+                    </div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Asks questions to check understanding. Explains the why, not just the what. Offers to write custom policies if the built-ins don't fit.</p>
+                </div>
+            </div>
+
+            <a href="https://docs.enact.cloud" class="btn btn-secondary" style="margin-right:12px;">Read the docs →</a>
+            <a href="https://raw.githubusercontent.com/russellmiller3/enact/master/skills/enact-setup/SKILL.md" class="btn btn-secondary">View skill source →</a>
+        </div>
+    </div>
+</section>
+
 <section class="alt" id="pricing">
     <div class="container centered">
         <div class="section-label">Pricing</div>

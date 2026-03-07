@@ -109,6 +109,7 @@ Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 - Play devil's advocate with yourself: find weak spots, patch holes
 - ASCII or Mermaid diagrams when they clarify something
 - Always say which lines to touch, what to remove, where to insert
+- When writing code, briefly explain the WHY behind non-obvious implementation choices — focus on decisions specific to this codebase, skip generic programming concepts Russell didn't ask about
 
 ## UI / Icons
 

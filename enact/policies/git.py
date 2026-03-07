@@ -31,6 +31,7 @@ Payload keys used by this module
   "file_count" — integer count of files in the commit (used by max_files_per_commit)
 """
 from enact.models import WorkflowContext, PolicyResult
+from enact.policies._secrets import SECRET_PATTERNS
 
 
 def dont_push_to_main(context: WorkflowContext) -> PolicyResult:
@@ -198,4 +199,149 @@ def dont_merge_to_main(context: WorkflowContext) -> PolicyResult:
             if merge_target_is_not_main
             else f"Merge into '{base}' is blocked — PRs must target a non-protected branch"
         ),
+    )
+
+
+def dont_force_push(context: WorkflowContext) -> PolicyResult:
+    """
+    Block git push operations that include --force or -f flags.
+
+    Force pushing rewrites remote branch history and can permanently destroy
+    commits for everyone working on that branch. It also bypasses the normal
+    PR review process and can silently overwrite teammates' work. There is no
+    safe agent use case for force pushing.
+
+    Reads context.payload.get("args", []) or context.payload.get("command", []).
+    Accepts a list (["git", "push", "--force"]) or a space-separated string.
+
+    Args:
+        context — WorkflowContext; reads payload["args"] or payload["command"]
+
+    Returns:
+        PolicyResult — passed=False if --force, -f, or --force-with-lease is present
+    """
+    args = context.payload.get("args", context.payload.get("command", []))
+    if isinstance(args, str):
+        args = args.split()
+    has_force = any(a in ("--force", "-f", "--force-with-lease") for a in args)
+    if has_force:
+        return PolicyResult(
+            policy="dont_force_push",
+            passed=False,
+            reason="Force push is not permitted — it can permanently destroy git history",
+        )
+    return PolicyResult(
+        policy="dont_force_push",
+        passed=True,
+        reason="No force push flags detected",
+    )
+
+
+_MEANINGLESS_MESSAGES = {
+    "fix", "fixes", "fixed", "fixing",
+    "update", "updates", "updated", "updating",
+    "change", "changes", "changed",
+    "wip", "work in progress",
+    ".", "..", "...",
+    "commit", "committed",
+    "test", "testing",
+    "temp", "tmp",
+    "misc",
+}
+
+_MIN_COMMIT_MESSAGE_LENGTH = 10
+
+
+def require_meaningful_commit_message(context: WorkflowContext) -> PolicyResult:
+    """
+    Block commits whose message is empty, too short, or meaninglessly generic.
+
+    AI agents frequently commit with messages like "fix", "update", or "wip".
+    These are useless in audit trails and in git log — they tell you nothing
+    about what changed or why. This policy enforces a minimum bar.
+
+    Rules:
+      1. Message must not be empty
+      2. Message must be at least 10 characters (after stripping whitespace)
+      3. Message must not be in the known-meaningless denylist
+
+    Reads context.payload.get("commit_message", ""). Pass-through if absent.
+
+    Args:
+        context — WorkflowContext; reads payload["commit_message"]
+
+    Returns:
+        PolicyResult — passed=False if message fails any of the three rules
+    """
+    message = context.payload.get("commit_message", "")
+    stripped = message.strip()
+    if not stripped:
+        return PolicyResult(
+            policy="require_meaningful_commit_message",
+            passed=False,
+            reason="Commit message is empty",
+        )
+    if len(stripped) < _MIN_COMMIT_MESSAGE_LENGTH:
+        return PolicyResult(
+            policy="require_meaningful_commit_message",
+            passed=False,
+            reason=(
+                f"Commit message '{stripped}' is too short "
+                f"({len(stripped)} chars, minimum {_MIN_COMMIT_MESSAGE_LENGTH})"
+            ),
+        )
+    if stripped.lower() in _MEANINGLESS_MESSAGES:
+        return PolicyResult(
+            policy="require_meaningful_commit_message",
+            passed=False,
+            reason=f"Commit message '{stripped}' is not meaningful — describe what changed and why",
+        )
+    return PolicyResult(
+        policy="require_meaningful_commit_message",
+        passed=True,
+        reason=f"Commit message meets requirements ({len(stripped)} chars)",
+    )
+
+
+def dont_commit_api_keys(context: WorkflowContext) -> PolicyResult:
+    """
+    Block commits whose diff, content, or message contains API key patterns.
+
+    Prevents agents from committing files that contain credentials — the most
+    common way secrets end up in version control. Checks payload["diff"],
+    payload["content"], and payload["commit_message"] against known vendor
+    key formats (OpenAI, GitHub, Slack, AWS, Google).
+
+    Workflows should put the staged diff in payload["diff"] before calling
+    enact.run() so this policy can inspect commit content. If no "diff" key
+    is present, the policy checks "content" and "commit_message" as fallbacks.
+
+    Detection is conservative by design — known vendor formats only, to keep
+    false positives low. See enact/policies/_secrets.py for the full pattern list.
+
+    Args:
+        context — WorkflowContext; reads payload["diff"], ["content"], ["commit_message"]
+
+    Returns:
+        PolicyResult — passed=False if any checked field matches a known API key pattern
+    """
+    candidates = [
+        context.payload.get("diff", ""),
+        context.payload.get("content", ""),
+        context.payload.get("commit_message", ""),
+    ]
+    for text in candidates:
+        if not text:
+            continue
+        for pattern in SECRET_PATTERNS:
+            if pattern.search(text):
+                return PolicyResult(
+                    policy="dont_commit_api_keys",
+                    passed=False,
+                    reason="Possible API key detected in commit content — committing credentials is not permitted",
+                )
+    return PolicyResult(
+        policy="dont_commit_api_keys",
+        passed=True,
+        reason="No API key patterns detected in commit",
     )
