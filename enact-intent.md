@@ -396,9 +396,12 @@ Separate FastAPI app in `cloud/`. Deployed to Fly.io. Not part of the SDK packag
 | `cloud/db.py` | Dual-mode: SQLite for dev/tests, Postgres in prod |
 | `cloud/token.py` | HMAC-signed approve/deny tokens |
 | `cloud/approval_email.py` | smtplib, `ENACT_EMAIL_DRY_RUN=1` for dev |
-| `cloud/routes/receipts.py` | `POST /receipts` (idempotent upsert), `GET /receipts/{run_id}` |
+| `cloud/routes/receipts.py` | `POST /receipts` (idempotent upsert), `GET /receipts/{run_id}`; 50K soft limit (warning header), 75K hard limit (429) |
 | `cloud/routes/hitl.py` | `POST /hitl/request`, approve/deny endpoints, callback webhook |
 | `cloud/routes/badge.py` | `GET /badge/{team_id}/{workflow}.svg` |
+| `cloud/routes/stripe.py` | `POST /stripe/create-checkout-session`, `POST /stripe/webhook` (HMAC-verified), `GET /stripe/success`, `GET /stripe/status/{session_id}` (one-time key read) |
+
+**DB tables:** `teams`, `api_keys`, `receipts`, `hitl_requests`, `hitl_receipts`, `subscriptions` (Stripe subscription state), `checkout_sessions` (one-time raw key bridge — NULLed after first read)
 
 ---
 
@@ -459,7 +462,6 @@ state queue_dir : Path = receipt_dir / "queue"       # auto-created
 
 ## Open Questions
 
-- Stripe integration for $199/mo Cloud plan — in progress (see `plans/2026-03-07-stripe-integration.md`)
 - HubSpot connector — planned, not yet implemented
 - Anomaly detection — rule-based first, ML later. No code yet.
 - Multi-agent arbitration (soft locks) — designed in SPEC, not built

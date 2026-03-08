@@ -79,13 +79,15 @@ result, receipt = enact.run(
 - **`cloud/routes/receipts.py`** — `POST /receipts` (idempotent upsert), `GET /receipts/{run_id}`
 - **`cloud/routes/hitl.py`** — `POST /hitl/request`, `GET /hitl/{id}`, `GET/POST /hitl/{id}/approve`, `GET/POST /hitl/{id}/deny`, confirm page, callback webhook (fire-and-forget daemon thread), HMAC-signed approval receipt
 - **`cloud/routes/badge.py`** — `GET /badge/{team_id}/{workflow}.svg` — public SVG badge (green/red/grey), `ORDER BY rowid DESC` for correct same-second ordering
+- **`cloud/routes/stripe.py`** — `POST /stripe/create-checkout-session` (Stripe Checkout URL), `POST /stripe/webhook` (HMAC-signed; provisions team + API key + subscription atomically), `GET /stripe/success` (polls for key), `GET /stripe/status/{session_id}` (one-time key read — NULLed after first call)
 - **`cloud/auth.py`** — `X-Enact-Api-Key` header; SHA-256 hash stored, raw key never persisted
 - **`cloud/token.py`** — HMAC-signed approve/deny tokens; action is bound to the token (deny token can't approve)
-- **`cloud/db.py`** — SQLite, `ENACT_DB_PATH` read fresh per call (test isolation via `monkeypatch.setenv`)
+- **`cloud/db.py`** — SQLite + Postgres dual-mode; `ENACT_DB_PATH` read fresh per call; tables: `teams`, `api_keys`, `receipts`, `hitl_requests`, `hitl_receipts`, `subscriptions`, `checkout_sessions`
 - **`cloud/approval_email.py`** — `smtplib`; `ENACT_EMAIL_DRY_RUN=1` for local dev (renamed from `email.py` — was shadowing stdlib `email` package)
 - **`enact/cloud_client.py`** — thin HTTP client for cloud API (`push_receipt`, `request_hitl`, `get_hitl_status`, `poll_until_decided`)
 - **`enact/client.py`** — added `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
-- **Tests:** `tests/cloud/` (conftest, test_auth, test_receipts, test_hitl, test_badge, test_hitl_receipt) + `tests/test_cloud_client.py`
+- **Usage enforcement:** `POST /receipts` counts receipts in current UTC month; 50K+ → `X-Enact-Usage-Warning` header; 75K+ → 429
+- **Tests:** `tests/cloud/` (conftest, test_auth, test_receipts, test_hitl, test_badge, test_hitl_receipt, test_stripe) + `tests/test_cloud_client.py`
 
 ### Built-in Policies (30 policies across 9 files)
 | File | Policies |
@@ -303,9 +305,10 @@ enact/
 │   ├── email.py                  # smtplib; ENACT_EMAIL_DRY_RUN=1 for dev
 │   ├── token.py                  # HMAC-signed approve/deny tokens
 │   └── routes/
-│       ├── receipts.py           # POST /receipts, GET /receipts/{run_id}
+│       ├── receipts.py           # POST /receipts, GET /receipts/{run_id}; usage enforcement
 │       ├── hitl.py               # POST /hitl/request, approve/deny endpoints
-│       └── badge.py              # GET /badge/{team_id}/{workflow}.svg
+│       ├── badge.py              # GET /badge/{team_id}/{workflow}.svg
+│       └── stripe.py             # POST /stripe/create-checkout-session, POST /stripe/webhook, GET /stripe/success, GET /stripe/status/{id}
 ├── tests/
 │   ├── test_client.py
 │   ├── test_receipt.py
@@ -406,6 +409,7 @@ enact/
 46. ✅ `enact/cloud_client.py` — thin HTTP client for cloud API (stdlib urllib only)
 47. ✅ `enact/client.py` — `cloud_api_key=` param, `push_receipt_to_cloud()`, `run_with_hitl()`
 48. ✅ Tests: 356+ tests total (SDK + cloud), 0 failures
+49. ✅ Stripe integration — `POST /stripe/create-checkout-session`, webhook provisioning, success page, usage enforcement (50K/75K limits). 505 tests, 0 failures.
 49. ✅ PyPI publish — `enact-sdk 0.4` live
 
 ---

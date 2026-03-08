@@ -35,6 +35,7 @@ from cloud.routes.receipts import router as receipts_router
 from cloud.routes.hitl import router as hitl_router
 from cloud.routes.badge import router as badge_router
 from cloud.routes.auditor import router as auditor_router
+from cloud.routes.stripe import router as stripe_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -45,6 +46,11 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(
             "CLOUD_SECRET env var is required. "
             "Set it with: export CLOUD_SECRET=$(openssl rand -hex 32)"
+        )
+    if not os.environ.get("STRIPE_SECRET_KEY"):
+        import logging
+        logging.getLogger(__name__).warning(
+            "STRIPE_SECRET_KEY not set — Stripe checkout/webhook endpoints will return 503"
         )
     init_db()
     yield
@@ -72,8 +78,9 @@ _WINDOW = 60.0          # seconds
 
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
-    # Skip rate limiting for health checks and static assets
-    if request.url.path in ("/health", "/dashboard") or request.url.path.startswith("/static"):
+    # Skip rate limiting for health checks, static assets, and Stripe webhooks
+    # (Stripe webhooks are protected by HMAC signature verification, not rate limiting)
+    if request.url.path in ("/health", "/dashboard", "/stripe/webhook") or request.url.path.startswith("/static"):
         return await call_next(request)
 
     ip = request.client.host if request.client else "unknown"
@@ -98,6 +105,7 @@ app.include_router(receipts_router)
 app.include_router(hitl_router)
 app.include_router(badge_router)
 app.include_router(auditor_router)
+app.include_router(stripe_router)
 
 # Serve static dashboard files
 if STATIC_DIR.is_dir():

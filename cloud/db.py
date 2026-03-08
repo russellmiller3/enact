@@ -158,6 +158,29 @@ def _init_postgres():
                 signature    TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                team_id                TEXT PRIMARY KEY REFERENCES teams(team_id),
+                stripe_customer_id     TEXT NOT NULL,
+                stripe_subscription_id TEXT NOT NULL,
+                status                 TEXT NOT NULL DEFAULT 'trialing',
+                plan_name              TEXT NOT NULL DEFAULT 'cloud',
+                current_period_end     TEXT,
+                created_at             TEXT DEFAULT to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+                updated_at             TEXT DEFAULT to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS checkout_sessions (
+                session_id     TEXT PRIMARY KEY,
+                team_id        TEXT,
+                raw_api_key    TEXT,
+                customer_email TEXT,
+                status         TEXT NOT NULL DEFAULT 'pending',
+                retrieved_at   TEXT,
+                created_at     TEXT DEFAULT to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+            )
+        """)
         _create_indexes(conn)
 
 
@@ -220,6 +243,29 @@ def _init_sqlite():
                 signature    TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                team_id                TEXT PRIMARY KEY REFERENCES teams(team_id),
+                stripe_customer_id     TEXT NOT NULL,
+                stripe_subscription_id TEXT NOT NULL,
+                status                 TEXT NOT NULL DEFAULT 'trialing',
+                plan_name              TEXT NOT NULL DEFAULT 'cloud',
+                current_period_end     TEXT,
+                created_at             TEXT DEFAULT (datetime('now')),
+                updated_at             TEXT DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS checkout_sessions (
+                session_id     TEXT PRIMARY KEY,
+                team_id        TEXT,
+                raw_api_key    TEXT,
+                customer_email TEXT,
+                status         TEXT NOT NULL DEFAULT 'pending',
+                retrieved_at   TEXT,
+                created_at     TEXT DEFAULT (datetime('now'))
+            )
+        """)
         _create_indexes(conn)
 
 
@@ -230,3 +276,5 @@ def _create_indexes(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_receipts_team_decision ON receipts(team_id, decision)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_hitl_team ON hitl_requests(team_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_team ON api_keys(team_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_checkout_sessions_status ON checkout_sessions(status)")

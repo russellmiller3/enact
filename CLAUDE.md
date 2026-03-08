@@ -6,9 +6,9 @@
 
 ## Startup
 
-At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
+At the start of every session, read `Handoff.md`.Also read `enact-intent.md` for the full state/action map of the app. Flag any drift vs code before starting work. See `INTENT_GUIDE.md` for the full protocol.
 
-Also read `enact-intent.md` for the full state/action map of the app. Flag any drift vs code before starting work. See `INTENT_GUIDE.md` for the full protocol.
+As supplement, if needed, read `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
 
 Note: Russell is an amateur dev, and this whole repo was written by AI.
 
@@ -59,7 +59,7 @@ Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 - When Russell says **"commit"** or **"git workflow"**: invoke `commit-commands:commit-and-push` skill
 - Main branch: `master`
 - No need for backward compatibility — just change things
-- **End of feature checklist** (the skill handles this): (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `index.html` — add features, remove any "coming soon" badges for shipped features, etc (5) delete dead code and stale files, (6) push to remote
+- **End of feature checklist** (the skill handles this): (0) Update enact-intent.md (1) update README if public API changed, (2) update SPEC if roadmap items were completed, (3) update Handoff.md with what was done and the next task, (4) update `index.html` — add features, remove any "coming soon" badges for shipped features, etc (5) delete dead code and stale files, (6) push to remote
 
 ## File & Code Discipline
 

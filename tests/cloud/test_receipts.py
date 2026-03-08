@@ -70,3 +70,61 @@ class TestPushReceipt:
 
         resp = client.get("/receipts/private", headers={"X-Enact-Api-Key": "other_key_99999999999999999999"})
         assert resp.status_code == 404
+
+
+# ── Cycle 6: Usage enforcement ────────────────────────────────────────────────
+
+class TestUsageEnforcement:
+    """Insert fake rows directly into DB to simulate usage thresholds."""
+
+    def _bulk_insert(self, n: int, month_prefix: str = "2026-03"):
+        """Insert n receipt rows for team-1 with created_at in the given month."""
+        with db() as conn:
+            for i in range(n):
+                conn.execute(
+                    """INSERT INTO receipts
+                       (run_id, team_id, workflow, decision, created_at)
+                       VALUES (?, 'team-1', 'wf', 'PASS', ?)""",
+                    (f"bulk-{i}", f"{month_prefix}-01T00:00:0{i % 10}Z"),
+                )
+
+    def test_under_soft_limit_no_warning(self):
+        resp = client.post("/receipts", json={
+            "run_id": "fresh-1", "workflow": "wf", "decision": "PASS", "receipt": {}
+        }, headers=headers())
+        assert resp.status_code == 201
+        assert "X-Enact-Usage-Warning" not in resp.headers
+
+    def test_at_soft_limit_adds_warning_header(self, monkeypatch):
+        # Patch _SOFT_LIMIT to 2 so we don't insert 50K rows
+        import cloud.routes.receipts as receipts_mod
+        monkeypatch.setattr(receipts_mod, "_SOFT_LIMIT", 2)
+        monkeypatch.setattr(receipts_mod, "_HARD_LIMIT", 5)
+        self._bulk_insert(2)
+        resp = client.post("/receipts", json={
+            "run_id": "warn-me", "workflow": "wf", "decision": "PASS", "receipt": {}
+        }, headers=headers())
+        assert resp.status_code == 201
+        assert "X-Enact-Usage-Warning" in resp.headers
+
+    def test_at_hard_limit_returns_429(self, monkeypatch):
+        import cloud.routes.receipts as receipts_mod
+        monkeypatch.setattr(receipts_mod, "_SOFT_LIMIT", 2)
+        monkeypatch.setattr(receipts_mod, "_HARD_LIMIT", 3)
+        self._bulk_insert(3)
+        resp = client.post("/receipts", json={
+            "run_id": "blocked", "workflow": "wf", "decision": "PASS", "receipt": {}
+        }, headers=headers())
+        assert resp.status_code == 429
+        assert "limit" in resp.json()["detail"].lower()
+
+    def test_prior_month_receipts_not_counted(self, monkeypatch):
+        """Receipts from a previous month don't count toward the current month limit."""
+        import cloud.routes.receipts as receipts_mod
+        monkeypatch.setattr(receipts_mod, "_SOFT_LIMIT", 2)
+        monkeypatch.setattr(receipts_mod, "_HARD_LIMIT", 3)
+        self._bulk_insert(3, month_prefix="2026-02")  # previous month
+        resp = client.post("/receipts", json={
+            "run_id": "fresh-month", "workflow": "wf", "decision": "PASS", "receipt": {}
+        }, headers=headers())
+        assert resp.status_code == 201

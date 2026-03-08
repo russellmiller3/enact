@@ -1529,7 +1529,7 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
                     <li><span class="fi fi-check">✓</span> Anomaly alerts</li>
                     <li><span class="fi fi-check">✓</span> 50K runs/month</li>
                 </ul>
-                <a href="mailto:hello@enact.cloud?subject=Cloud Plan" class="pricing-btn">Start free trial →</a>
+                <a href="#" onclick="startCheckout(); return false;" class="pricing-btn">Start free trial →</a>
             </div>
 
             <!-- Compliance -->
@@ -1580,7 +1580,7 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
         <p>Add Enact in minutes. Know what your agents did, enforce what they're allowed to do, and prove it to anyone who asks.</p>
         <div class="cta-row">
             <a href="https://github.com/russellmiller3/enact" class="btn btn-primary">Install the SDK free</a>
-            <a href="mailto:hello@enact.cloud?subject=Cloud Trial" class="btn btn-secondary">Start cloud trial — $199/month →</a>
+            <a href="#" onclick="startCheckout(); return false;" class="btn btn-secondary">Start cloud trial — $199/month →</a>
         </div>
     </div>
 </section>
@@ -1593,6 +1593,25 @@ result, receipt = enact.<span class="fn">run_with_hitl</span>(
 </footer>
 
 <script>
+    // Stripe Checkout redirect
+    async function startCheckout() {
+        try {
+            const resp = await fetch('/stripe/create-checkout-session', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({}),
+            });
+            const data = await resp.json();
+            if (data.checkout_url) {
+                window.location.href = data.checkout_url;
+            } else {
+                alert('Unable to start checkout. Please email hello@enact.cloud.');
+            }
+        } catch (e) {
+            alert('Unable to start checkout. Please email hello@enact.cloud.');
+        }
+    }
+
     // Theme toggle
     function toggleTheme() {
         const html = document.documentElement;

@@ -20,11 +20,16 @@ Receipts are append-only. Once stored, they cannot be modified or deleted.
 This ensures audit trail integrity for compliance (SOC 2, SOX, EU AI Act).
 """
 import json
+from datetime import datetime, timezone
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from cloud.auth import resolve_api_key
 from cloud.db import db
+
+_SOFT_LIMIT = 50_000   # warn at this threshold
+_HARD_LIMIT = 75_000   # reject above this threshold
 
 router = APIRouter()
 
@@ -86,6 +91,10 @@ def push_receipt(body: ReceiptPayload, team_id: str = Depends(resolve_api_key)):
         if not run_id:
             raise HTTPException(status_code=400, detail="run_id is required")
 
+    # Usage enforcement: count receipts for this team in the current UTC month
+    now = datetime.now(timezone.utc)
+    month_start = f"{now.year}-{now.month:02d}-01T00:00:00Z"
+
     # Check for duplicate run_id (idempotent push)
     with db() as conn:
         existing = conn.execute(
@@ -93,6 +102,19 @@ def push_receipt(body: ReceiptPayload, team_id: str = Depends(resolve_api_key)):
         ).fetchone()
         if existing:
             return {"run_id": run_id, "already_stored": True}
+
+        monthly_count = conn.execute(
+            "SELECT COUNT(*) as cnt FROM receipts WHERE team_id = %s AND created_at >= %s",
+            (team_id, month_start),
+        ).fetchone()["cnt"]
+
+        if monthly_count >= _HARD_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Monthly receipt limit exceeded ({_HARD_LIMIT:,}). Upgrade your plan at enact.cloud.",
+            )
+
+        usage_warning = monthly_count >= _SOFT_LIMIT
 
         # Store receipt (append-only)
         if body.encrypted:
@@ -126,7 +148,14 @@ def push_receipt(body: ReceiptPayload, team_id: str = Depends(resolve_api_key)):
                     json.dumps(body.receipt),
                 ),
             )
-    return {"run_id": run_id, "stored": True}
+    if usage_warning:
+        response = JSONResponse({"run_id": run_id, "stored": True}, status_code=201)
+        response.headers["X-Enact-Usage-Warning"] = (
+            f"Approaching monthly receipt limit ({_SOFT_LIMIT:,}/mo). "
+            "Upgrade your plan at enact.cloud to avoid interruptions."
+        )
+        return response
+    return JSONResponse({"run_id": run_id, "stored": True}, status_code=201)
 
 
 @router.get("/receipts/{run_id}")
