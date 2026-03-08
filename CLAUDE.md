@@ -8,12 +8,14 @@
 
 At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
 
+Also read `enact.intent` for the full state/action map of the app. Flag any drift vs code before starting work. See `INTENT_GUIDE.md` for the full protocol.
+
 Note: Russell is an amateur dev, and this whole repo was written by AI.
 
 ## Coding
 
 1. Make a plan using `PLAN-TEMPLATE.md`. Plans go in `plans/`.
-2. Red-team the plan using `plans/guides/RED-TEAM-MODE-GUIDE.md`. Fix issues before coding.
+2. **Always red-team the plan immediately after creating it** using `plans/guides/RED-TEAM-MODE-GUIDE.md`. Fix issues before coding. Never skip this step.
 3. Implement using TDD.
 
 ## Red Team Protocol
