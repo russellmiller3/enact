@@ -29,54 +29,69 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-07 (session 5)
+**Date:** 2026-03-07 (session 6)
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 
 - Branch: `master`
-- Last commit: `28116b7` docs(evals): add evals/README.md with index and protocol for future mock agents
-- Remote: `origin` + `backup` (D drive) — both in sync
-- Vercel: `www.enact.cloud` — deployed ✅
+- Last commit: `c8a0b37` feat: add .intent spec system
+- Remote: `origin` + `backup` (D drive)
+- Vercel: `www.enact.cloud` — deployed
 - PyPI: `enact-sdk 0.5.1` — published
-- Working tree: **clean**
+- Working tree: **uncommitted changes** (see below)
 
-### What Was Done (session 5)
+### Uncommitted Changes
 
-- **8 new built-in policies** — `dont_edit_gitignore`, `dont_read_env`, `dont_touch_ci_cd`, `dont_access_home_dir`, `dont_copy_api_keys` (filesystem); `dont_force_push`, `require_meaningful_commit_message`, `dont_commit_api_keys` (git)
-- **`enact/policies/_secrets.py`** — shared module with 9 vendor API key regexes (OpenAI, GitHub, Slack, AWS, Google); avoids duplication across filesystem + git policies
-- **63 new tests** — 478 total passing
-- **`/enact-setup` Claude Code skill** — `skills/enact-setup/SKILL.md`; 7-step flow: scan → map → propose → write with approval; eval tested against `evals/enact-setup-eval/mock_agent/agent.py`
-- **Landing page skill section** — single-line copy-button install command on `index.html`
-- **`evals/README.md`** — eval index + cold subagent protocol + pattern table for future mock agents
-- **CLAUDE.md** — added teaching style bullet about WHY explanations
+- `CLAUDE.md` — updated: references `enact-intent.md` instead of `enact.intent`; added "always red-team plans" rule
+- `SPEC.md` — added cross-reference to `enact-intent.md`
+- `enact.intent` — **deleted** (replaced by `enact-intent.md`)
+- `enact-intent.md` — **new** (markdown rewrite of the `.intent` file)
+- `plans/2026-03-07-stripe-integration.md` — **new** (Stripe plan, red-teamed)
 
-### Infrastructure State
+### What Was Done (session 6)
 
-- **Fly app**: `enact` at `https://enact.fly.dev` (SJC) — **LIVE** ✅
-- **Supabase**: pooler URL set as `DATABASE_URL` Fly secret — connected ✅
-- **Fly CLI path** (Windows): `~/.fly/bin/flyctl` (not in PATH)
-- **`ENACT_EMAIL_DRY_RUN=1`** set in fly.toml — HITL emails won't send until toggled
+- **Converted `enact.intent` → `enact-intent.md`** — same content, proper markdown format (headings, tables, code blocks instead of `//` comments)
+- **Stripe integration plan** — wrote and red-teamed `plans/2026-03-07-stripe-integration.md`. Red team found 2 critical issues (raw key plaintext in DB, unauthenticated key exposure) and fixed them (one-time-read pattern, `retrieved_at` + NULL key after read)
+- **CLAUDE.md updates** — added "always red-team plans immediately after creating" rule; updated intent file reference
+- **SPEC.md** — added cross-reference to `enact-intent.md`
 
 ### Next Step
 
-**Phase 3: Stripe integration** — see `plans/2026-03-06-revenue-launch.md`
-- Add Stripe checkout for `$199/mo` Cloud plan
-- Webhook handler to provision team + API key on payment
-- Gate receipt storage behind valid API key (already built in `cloud/auth.py`)
+**Implement Stripe integration** — follow `plans/2026-03-07-stripe-integration.md`
+
+TDD cycles in order:
+1. DB schema (subscriptions + checkout_sessions tables) in `cloud/db.py`
+2. Checkout session endpoint in `cloud/routes/stripe.py`
+3. Webhook handler (`checkout.session.completed`)
+4. Success page + one-time-read polling
+5. Subscription lifecycle events
+6. Usage enforcement (50K soft / 75K hard) in `cloud/routes/receipts.py`
+7. Landing page CTA updates in `index.html`
+
+**Before coding:** commit the uncommitted changes from this session first.
 
 ### Key Files
 
-- `cloud/db.py` — dual-mode DB layer (Postgres + SQLite)
-- `cloud/main.py` — FastAPI app + rate limiting
-- `Dockerfile` / `fly.toml` — deployment config
-- `plans/2026-03-06-revenue-launch.md` — revenue launch plan (Phase 1 done, Phase 2 done, Phase 3 next)
-- `skills/enact-setup/SKILL.md` — Claude Code skill for adding Enact to any repo
-- `enact/policies/_secrets.py` — shared API key regex patterns
+- `plans/2026-03-07-stripe-integration.md` — the plan (red-teamed, ready to implement)
+- `cloud/db.py` — add subscriptions + checkout_sessions tables
+- `cloud/routes/stripe.py` — new file: all Stripe endpoints
+- `cloud/routes/receipts.py` — add usage enforcement to `push_receipt()`
+- `cloud/main.py` — register stripe router
+- `cloud/auth.py` — reuse `create_api_key()` for provisioning
+- `index.html` — update Cloud tier CTA from mailto to Stripe Checkout
+
+### Infrastructure State
+
+- **Fly app**: `enact` at `https://enact.fly.dev` (SJC) — LIVE
+- **Supabase**: pooler URL set as `DATABASE_URL` Fly secret — connected
+- **Fly CLI path** (Windows): `~/.fly/bin/flyctl` (not in PATH)
+- **`ENACT_EMAIL_DRY_RUN=1`** set in fly.toml
+- **New env vars needed for Stripe:** `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (Fly secrets), `STRIPE_PRICE_ID` (fly.toml env)
 
 ### What Exists (fully built + tested)
 
-**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), 24 policies, 3 workflows
+**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), 30 policies, 3 workflows
 
 **Cloud:** `cloud/` — FastAPI backend (receipt storage, HITL gates, badge SVG, auditor API, zero-knowledge encryption, dashboard UI)
 

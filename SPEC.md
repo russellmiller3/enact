@@ -1,6 +1,7 @@
 # Enact — Build Spec
 
 > Source of truth: `index.html`
+> See also: `enact-intent.md` — canonical state/action map (shapes, invariants, error contracts, effects)
 > Goal: Source-available SDK → engineer adoption → Cloud revenue at $199/mo → Compliance tier at $999/mo → Enterprise at $25K-100K/yr
 
 ---

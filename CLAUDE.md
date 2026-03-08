@@ -8,7 +8,7 @@
 
 At the start of every session, read `Handoff.md`, `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
 
-Also read `enact.intent` for the full state/action map of the app. Flag any drift vs code before starting work. See `INTENT_GUIDE.md` for the full protocol.
+Also read `enact-intent.md` for the full state/action map of the app. Flag any drift vs code before starting work. See `INTENT_GUIDE.md` for the full protocol.
 
 Note: Russell is an amateur dev, and this whole repo was written by AI.
 
