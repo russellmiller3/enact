@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enact — Independent Audit Infrastructure for AI Agents</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><path d='M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z' fill='white'/></svg>">
     <style>
 
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -46,7 +47,7 @@
         header { padding: 20px 0; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
         .header-inner { display: flex; justify-content: space-between; align-items: center; }
         .logo { display: flex; align-items: center; }
-        .logo img { height: 32px; width: auto; display: block; }
+        .logo svg { height: 32px; width: auto; display: block; }
         [data-theme="dark"]  .logo-light { display: none; }
         [data-theme="dark"]  .logo-dark  { display: block; }
         [data-theme="light"] .logo-light { display: block; }
@@ -571,10 +572,11 @@
 <header>
     <div class="container">
         <div class="header-inner">
-            <div class="logo">
-                <img class="logo-light" src="docs/logo/light.svg" alt="Enact">
-                <img class="logo-dark"  src="docs/logo/dark.svg"  alt="Enact">
-            </div>
+            <a href="#" class="logo">
+                <svg class="logo-light" width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#2563eb"/><path d="M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z" fill="white"/></svg>
+                <svg class="logo-dark" width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#4A6FA5"/><path d="M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z" fill="white"/></svg>
+                <span style="font-family:var(--mono);font-weight:700;font-size:18px;margin-left:8px;letter-spacing:1px;">EN<svg width="10" height="11" viewBox="0 0 12 14" style="display:inline-block;vertical-align:middle;position:relative;top:-1px;"><path d="M6 0L0 14h2.5l3.5-8.75L9.5 14H12L6 0z" fill="currentColor"/></svg>CT</span>
+            </a>
             <button class="nav-toggle" onclick="document.querySelector('nav').classList.toggle('open')">
                 <span></span>
                 <span></span>
@@ -624,7 +626,7 @@
     <div class="container">
         <div class="section-label">Quickstart</div>
         <h2>Running in 5 minutes</h2>
-        <p class="section-sub">Install, connect your systems, define policies, call <span class="inline-code">enact.run()</span>. That's it.</p>
+        <p class="section-sub">Enact wraps your existing actions — from any source — in policy checks and audit receipts. Bring your own functions, use <a href="https://composio.dev" style="color:var(--accent);">Composio</a>, <a href="https://www.stackone.com" style="color:var(--accent);">StackOne</a>, or any connector platform. Enact doesn't care how you talk to APIs — it cares about what your agent is allowed to do.</p>
 
         <div class="qs-steps">
             <div class="qs-step">
@@ -634,8 +636,8 @@
             </div>
             <div class="qs-step">
                 <div class="qs-num">2</div>
-                <h3>Connect your systems</h3>
-                <p>GitHub, Postgres, Filesystem, Slack — pass your credentials, get policy-gated, receipt-backed actions back.</p>
+                <h3>Wire in your actions</h3>
+                <p>Any Python callable — your own functions, Composio tools, StackOne connectors, raw API calls. Enact wraps them, not replaces them.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
@@ -653,20 +655,24 @@
         <pre class="auto-style-22"><code><span class="cm"># 1. install</span>
 pip install enact-sdk
 
-<span class="cm"># 2. set up your client</span>
+<span class="cm"># 2. bring your own action — any Python callable</span>
+<span class="kw">def</span> <span class="fn">insert_user</span>(table, data):
+    <span class="str">"""Your code, your database, your way."""</span>
+    db.<span class="fn">execute</span>(<span class="str">f"INSERT INTO </span>{table}<span class="str"> ..."</span>, data)
+
+<span class="cm"># 3. enact wraps it in policy + audit</span>
 <span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
-<span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
 <span class="kw">from</span> enact.policies.db <span class="kw">import</span> block_ddl, dont_delete_without_where
 
 enact = <span class="fn">EnactClient</span>(
     secret=<span class="str">"your-secret"</span>,
-    systems={<span class="str">"postgres"</span>: <span class="fn">PostgresConnector</span>(dsn=<span class="str">"postgresql://..."</span>)},
+    actions={<span class="str">"insert_user"</span>: insert_user},
     policies=[block_ddl, dont_delete_without_where],
 )
 
-<span class="cm"># 3. your agent calls this — policy-gated, receipt-backed</span>
+<span class="cm"># 4. your agent calls this — policy-gated, receipt-backed</span>
 result, receipt = enact.<span class="fn">run</span>(
-    workflow=<span class="str">"safe_insert"</span>,
+    action=<span class="str">"insert_user"</span>,
     user_email=<span class="str">"agent@company.com"</span>,
     payload={<span class="str">"table"</span>: <span class="str">"users"</span>, <span class="str">"data"</span>: {...}},
 )</code></pre>
@@ -749,24 +755,24 @@ result, receipt = enact.<span class="fn">run</span>(
     <div class="container">
         <div class="section-label">Already have an agent?</div>
         <h2>Migration takes 10 minutes.</h2>
-        <p class="section-sub">Your agent's reasoning and planning logic doesn't change. You're adding a safety layer between it and your systems. Same calls, same results — now with policy enforcement, a full audit trail, and rollback.</p>
+        <p class="section-sub">Your agent's reasoning and planning logic doesn't change. You're adding a policy layer between your agent and whatever actions it already takes. Keep your existing tools, SDKs, and connector platforms — Enact wraps them.</p>
 
         <!-- 3 migration steps -->
         <div class="migration-steps auto-style-24">
             <div class="qs-step">
                 <div class="qs-num">1</div>
-                <h3>Register your systems</h3>
-                <p>Swap your existing SDK clients for Enact connectors. GitHub, Postgres, Filesystem, Slack — same credentials, now policy-gated and receipt-backed.</p>
+                <h3>Wrap your actions</h3>
+                <p>Take the functions your agent already calls — API clients, Composio tools, raw SDK calls — and register them as Enact actions. No rewrites, just wrap.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">2</div>
-                <h3>Move your guard logic</h3>
-                <p>Any <code class="auto-style-25">if/else</code> checks you already write become Python policy functions. Or just use ours — 20+ ship out of the box.</p>
+                <h3>Add policies</h3>
+                <p>Turn your scattered <code class="auto-style-25">if/else</code> guard checks into testable policy functions. Or use ours — 20+ ship out of the box.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
-                <h3>Replace direct calls</h3>
-                <p><code class="auto-style-25">tool.do_thing()</code> becomes <code class="auto-style-25">enact.run()</code>. That's the whole migration.</p>
+                <h3>Route through Enact</h3>
+                <p><code class="auto-style-25">tool.do_thing()</code> becomes <code class="auto-style-25">enact.run("do_thing")</code>. Same result, now policy-gated with a receipt.</p>
             </div>
         </div>
 
@@ -802,25 +808,26 @@ db.<span class="fn">execute</span>(<span class="str">"DELETE FROM sessions"</spa
                     <span class="before-after-dot auto-style-31"></span>
                     <span class="before-after-label auto-style-32">After — wrapped with Enact</span>
                 </div>
-                <pre class="auto-style-30"><code><span class="cm"># one-time setup — replaces your SDK clients</span>
+                <pre class="auto-style-30"><code><span class="cm"># keep your existing code — just wrap it</span>
 <span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
-<span class="kw">from</span> enact.connectors.github <span class="kw">import</span> <span class="fn">GitHubConnector</span>
-<span class="kw">from</span> enact.connectors.postgres <span class="kw">import</span> <span class="fn">PostgresConnector</span>
 <span class="kw">from</span> enact.policies.git <span class="kw">import</span> dont_push_to_main
 <span class="kw">from</span> enact.policies.db <span class="kw">import</span> dont_delete_without_where
 
+<span class="kw">def</span> <span class="fn">create_pr</span>(repo, branch, title):
+    <span class="kw">return</span> github_sdk.<span class="fn">create_pr</span>(repo=repo, branch=branch, title=title)
+
+<span class="kw">def</span> <span class="fn">delete_sessions</span>(query):
+    <span class="kw">return</span> db.<span class="fn">execute</span>(query)
+
 enact = <span class="fn">EnactClient</span>(
     secret=<span class="str">"..."</span>,
-    systems={
-        <span class="str">"github"</span>:   <span class="fn">GitHubConnector</span>(token=<span class="str">"..."</span>),
-        <span class="str">"postgres"</span>: <span class="fn">PostgresConnector</span>(dsn=<span class="str">"postgresql://..."</span>),
-    },
+    actions={<span class="str">"create_pr"</span>: create_pr, <span class="str">"delete_sessions"</span>: delete_sessions},
     policies=[dont_push_to_main, dont_delete_without_where],
 )
 
 <span class="cm"># same intent — now policy-gated + receipt-backed</span>
 result, receipt = enact.<span class="fn">run</span>(
-    workflow=<span class="str">"agent_pr_workflow"</span>,
+    action=<span class="str">"create_pr"</span>,
     user_email=<span class="str">"agent@company.com"</span>,
     payload={<span class="str">"repo"</span>: <span class="str">"myorg/app"</span>, <span class="str">"branch"</span>: <span class="str">"agent/fix-123"</span>},
 )</code></pre>
