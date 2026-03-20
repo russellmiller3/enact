@@ -646,7 +646,7 @@
             </div>
             <div class="qs-step">
                 <div class="qs-num">4</div>
-                <h3>Call <span class="inline-code">enact.run()</span></h3>
+                <h3>Call <span class="inline-code">enact.run_action()</span></h3>
                 <p>Your agent gets a result and a receipt. Blocked actions are logged with a reason.</p>
             </div>
         </div>
@@ -655,24 +655,26 @@
         <pre class="auto-style-22"><code><span class="cm"># 1. install</span>
 pip install enact-sdk
 
-<span class="cm"># 2. bring your own action — any Python callable</span>
+<span class="cm"># 2. decorate your function — any Python callable</span>
+<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>, action
+<span class="kw">from</span> enact.policies.db <span class="kw">import</span> block_ddl, dont_delete_without_where
+
+<span class="fn">@action</span>(<span class="str">"db.insert_user"</span>)
 <span class="kw">def</span> <span class="fn">insert_user</span>(table, data):
     <span class="str">"""Your code, your database, your way."""</span>
     db.<span class="fn">execute</span>(<span class="str">f"INSERT INTO </span>{table}<span class="str"> ..."</span>, data)
+    <span class="kw">return</span> {<span class="str">"inserted"</span>: True}
 
 <span class="cm"># 3. enact wraps it in policy + audit</span>
-<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
-<span class="kw">from</span> enact.policies.db <span class="kw">import</span> block_ddl, dont_delete_without_where
-
 enact = <span class="fn">EnactClient</span>(
     secret=<span class="str">"your-secret"</span>,
-    actions={<span class="str">"insert_user"</span>: insert_user},
+    actions=[insert_user],
     policies=[block_ddl, dont_delete_without_where],
 )
 
 <span class="cm"># 4. your agent calls this — policy-gated, receipt-backed</span>
-result, receipt = enact.<span class="fn">run</span>(
-    action=<span class="str">"insert_user"</span>,
+result, receipt = enact.<span class="fn">run_action</span>(
+    action=<span class="str">"db.insert_user"</span>,
     user_email=<span class="str">"agent@company.com"</span>,
     payload={<span class="str">"table"</span>: <span class="str">"users"</span>, <span class="str">"data"</span>: {...}},
 )</code></pre>
@@ -772,7 +774,7 @@ result, receipt = enact.<span class="fn">run</span>(
             <div class="qs-step">
                 <div class="qs-num">3</div>
                 <h3>Route through Enact</h3>
-                <p><code class="auto-style-25">tool.do_thing()</code> becomes <code class="auto-style-25">enact.run("do_thing")</code>. Same result, now policy-gated with a receipt.</p>
+                <p><code class="auto-style-25">tool.do_thing()</code> becomes <code class="auto-style-25">enact.run_action("system.do_thing")</code>. Same result, now policy-gated with a receipt.</p>
             </div>
         </div>
 
@@ -808,26 +810,28 @@ db.<span class="fn">execute</span>(<span class="str">"DELETE FROM sessions"</spa
                     <span class="before-after-dot auto-style-31"></span>
                     <span class="before-after-label auto-style-32">After — wrapped with Enact</span>
                 </div>
-                <pre class="auto-style-30"><code><span class="cm"># keep your existing code — just wrap it</span>
-<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>
+                <pre class="auto-style-30"><code><span class="cm"># keep your existing code — just decorate it</span>
+<span class="kw">from</span> enact <span class="kw">import</span> <span class="fn">EnactClient</span>, action
 <span class="kw">from</span> enact.policies.git <span class="kw">import</span> dont_push_to_main
 <span class="kw">from</span> enact.policies.db <span class="kw">import</span> dont_delete_without_where
 
+<span class="fn">@action</span>(<span class="str">"github.create_pr"</span>)
 <span class="kw">def</span> <span class="fn">create_pr</span>(repo, branch, title):
     <span class="kw">return</span> github_sdk.<span class="fn">create_pr</span>(repo=repo, branch=branch, title=title)
 
+<span class="fn">@action</span>(<span class="str">"db.delete_sessions"</span>)
 <span class="kw">def</span> <span class="fn">delete_sessions</span>(query):
     <span class="kw">return</span> db.<span class="fn">execute</span>(query)
 
 enact = <span class="fn">EnactClient</span>(
     secret=<span class="str">"..."</span>,
-    actions={<span class="str">"create_pr"</span>: create_pr, <span class="str">"delete_sessions"</span>: delete_sessions},
+    actions=[create_pr, delete_sessions],
     policies=[dont_push_to_main, dont_delete_without_where],
 )
 
 <span class="cm"># same intent — now policy-gated + receipt-backed</span>
-result, receipt = enact.<span class="fn">run</span>(
-    action=<span class="str">"create_pr"</span>,
+result, receipt = enact.<span class="fn">run_action</span>(
+    action=<span class="str">"github.create_pr"</span>,
     user_email=<span class="str">"agent@company.com"</span>,
     payload={<span class="str">"repo"</span>: <span class="str">"myorg/app"</span>, <span class="str">"branch"</span>: <span class="str">"agent/fix-123"</span>},
 )</code></pre>
