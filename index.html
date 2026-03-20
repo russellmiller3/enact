@@ -47,11 +47,6 @@
         header { padding: 20px 0; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 100; }
         .header-inner { display: flex; justify-content: space-between; align-items: center; }
         .logo { display: flex; align-items: center; }
-        .logo svg { height: 32px; width: auto; display: block; }
-        [data-theme="dark"]  .logo-light { display: none; }
-        [data-theme="dark"]  .logo-dark  { display: block; }
-        [data-theme="light"] .logo-light { display: block; }
-        [data-theme="light"] .logo-dark  { display: none; }
         nav { display: flex; gap: 28px; align-items: center; }
         nav a { color: var(--muted); font-size: 14px; transition: color .2s; }
         nav a:hover { color: var(--text); }
@@ -573,9 +568,7 @@
     <div class="container">
         <div class="header-inner">
             <a href="#" class="logo">
-                <svg class="logo-light" width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#2563eb"/><path d="M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z" fill="white"/></svg>
-                <svg class="logo-dark" width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#4A6FA5"/><path d="M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z" fill="white"/></svg>
-                <span style="font-family:var(--mono);font-weight:700;font-size:18px;margin-left:8px;letter-spacing:1px;">EN<svg width="10" height="11" viewBox="0 0 12 14" style="display:inline-block;vertical-align:middle;position:relative;top:-1px;"><path d="M6 0L0 14h2.5l3.5-8.75L9.5 14H12L6 0z" fill="currentColor"/></svg>CT</span>
+                <span style="font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:1px;">EN<svg width="12" height="13" viewBox="0 0 12 13" style="display:inline-block;vertical-align:baseline;position:relative;top:0px;"><line x1="6" y1="0" x2="0" y2="13" stroke="currentColor" stroke-width="2"/><line x1="6" y1="0" x2="12" y2="13" stroke="currentColor" stroke-width="2"/></svg>CT</span>
             </a>
             <button class="nav-toggle" onclick="document.querySelector('nav').classList.toggle('open')">
                 <span></span>
