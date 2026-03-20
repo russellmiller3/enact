@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Read, Edit, Glob, Grep
+allowed-tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push:*), Bash(git log:*), Bash(git diff:*), Bash(git checkout:*), Bash(git merge:*), Bash(git branch:*), Read, Edit, Glob, Grep
 description: Commit and push directly to master (solo dev — no branches, no PRs)
 ---
 
@@ -48,6 +48,16 @@ Post any drift findings in the chat before proceeding.
 
 5. Stage the relevant changed/untracked files (prefer specific file names over `git add -A`)
 6. Create a single commit with an appropriate message on the current branch
-7. Push the current branch to origin
+
+### Step 6: Merge to master and push
+
+7. If on a feature branch (not `master`):
+   - `git checkout master`
+   - `git merge <feature-branch> --no-edit`
+   - `git push origin master`
+   - Then push the backup remote if configured: `git push backup master`
+8. If already on `master`:
+   - `git push origin master`
+   - Then push the backup remote if configured: `git push backup master`
 
 You have the capability to call multiple tools in a single response. Do not create branches. Do not create pull requests.
