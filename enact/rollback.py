@@ -42,7 +42,7 @@ _READ_ONLY = {
 }
 
 
-def execute_rollback_action(action_result: ActionResult, systems: dict) -> ActionResult:
+def execute_rollback_action(action_result: ActionResult, systems: dict, action_registry: dict | None = None) -> ActionResult:
     """
     Reverse a single action using its rollback_data.
 
@@ -73,6 +73,32 @@ def execute_rollback_action(action_result: ActionResult, systems: dict) -> Actio
             success=False,
             output={"error": f"{action_result.action} cannot be reversed"},
         )
+
+    # Check action registry first — user-provided rollback functions take priority
+    # for actions registered via @action decorator
+    if action_registry:
+        registered = action_registry.get(action_result.action)
+        if registered and registered.rollback_fn:
+            try:
+                rb_fn = registered.rollback_fn.fn
+                rb_result = rb_fn(**action_result.rollback_data)
+                if rb_result is None:
+                    rb_result = {}
+                if isinstance(rb_result, dict):
+                    rb_result.setdefault("already_done", False)
+                return ActionResult(
+                    action=f"rollback_{action_result.action}",
+                    system=action_result.system,
+                    success=True,
+                    output=rb_result if isinstance(rb_result, dict) else {"result": rb_result},
+                )
+            except Exception as e:
+                return ActionResult(
+                    action=f"rollback_{action_result.action}",
+                    system=action_result.system,
+                    success=False,
+                    output={"error": f"Rollback failed: {str(e)}"},
+                )
 
     connector = systems.get(action_result.system)
     if connector is None:

@@ -84,6 +84,42 @@ python examples/quickstart.py
 
 Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts. No credentials needed.
 
+### Generic Actions
+
+Wrap any Python function — no connector class needed:
+
+```python
+from enact import EnactClient, action
+
+@action("crm.create_contact")
+def create_contact(name, email):
+    result = your_crm_sdk.create(name=name, email=email)
+    return {"id": result.id}, {"contact_id": result.id}  # output, rollback_data
+
+@action("crm.delete_contact")
+def delete_contact(contact_id):
+    your_crm_sdk.delete(contact_id)
+    return {"deleted": True}
+
+create_contact.rollback_with(delete_contact)
+
+client = EnactClient(
+    actions=[create_contact, delete_contact],
+    policies=[your_policies],
+    secret="your-secret-key",
+    rollback_enabled=True,
+)
+
+result, receipt = client.run_action(
+    action="crm.create_contact",
+    user_email="agent@company.com",
+    payload={"name": "Jane", "email": "jane@acme.com"},
+)
+
+# One-call rollback
+client.rollback(receipt.run_id)
+```
+
 ---
 
 ## Docs

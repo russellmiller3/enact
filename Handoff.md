@@ -29,29 +29,29 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-08 (session 7)
+**Date:** 2026-03-19 (session 8)
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 
-- Branch: `master`
+- Branch: `feature/generic-actions` (merging to `master`)
 - Remote: `origin` + `backup` (D drive)
 - Vercel: `www.enact.cloud` — deployed
 - PyPI: `enact-sdk 0.5.1` — published
 - Working tree: **clean after this commit**
 
-### What Was Done (session 7)
+### What Was Done (session 8)
 
-**Stripe integration** — fully implemented and tested (505 tests, 0 failures):
-- `cloud/routes/stripe.py` — 4 endpoints: `POST /stripe/create-checkout-session`, `POST /stripe/webhook` (HMAC-verified; provisions team + API key + subscription atomically, idempotent on duplicate webhooks), `GET /stripe/success` (polling success page), `GET /stripe/status/{session_id}` (one-time key read — NULLed from DB after first call)
-- `cloud/db.py` — added `subscriptions` + `checkout_sessions` tables + indexes
-- `cloud/routes/receipts.py` — usage enforcement: 50K → warning header, 75K → 429
-- `cloud/main.py` — stripe router registered; `/stripe/webhook` exempted from rate limiting (has its own HMAC auth)
-- `cloud/requirements.txt` — added `stripe>=8.0.0`
-- `tests/cloud/test_stripe.py` — 23 new tests
-- `tests/cloud/test_receipts.py` — 4 new usage enforcement tests
-- `tests/cloud/conftest.py` — clears `_rate_buckets` per test to prevent rate limiter bleed
-- `index.html` — both Cloud CTAs now call `startCheckout()` JS function → Stripe Checkout redirect
+**Generic actions feature** — `@action` decorator + `run_action()` (530 tests, 0 failures):
+- `enact/action.py` (NEW) — `@action("system.name")` decorator, `Action` dataclass, `execute_action()` with return normalization, `rollback_with()` pairing, module-level registry
+- `enact/client.py` — added `actions=` param to init, `_action_registry` built from decorated fns, new `run_action()` method (single action through full policy/receipt pipeline), passes `action_registry` to rollback
+- `enact/rollback.py` — added `action_registry` param to `execute_rollback_action()`, checks user-registered rollback fns BEFORE connector dispatch
+- `enact/__init__.py` — exports `action`
+- `tests/test_action.py` (NEW) — 25 tests covering decorator, normalization, rollback pairing, client integration, pluggable rollback, and full e2e lifecycle
+- `index.html` — BYOC positioning, quickstart/migration reframed for wrapping plain functions
+- `docs/logo/` — restored E icon, barless A in wordmark only, favicon added
+
+**Landing page updates** — BYOC (bring your own connector) positioning throughout. Quickstart shows wrapping plain Python functions, not importing Enact connectors.
 
 ### Next Step
 
@@ -76,8 +76,8 @@ After deploy: manually test the full signup flow end-to-end (Stripe test mode).
 
 ### What Exists (fully built + tested)
 
-**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), 30 policies, 3 workflows
+**SDK:** `enact/` — models, policy, receipt, client, rollback, cloud_client, ui, connectors (GitHub, Postgres, Filesystem, Slack), `@action` decorator, 30 policies, 3 workflows
 
 **Cloud:** `cloud/` — FastAPI backend (receipt storage, HITL gates, badge SVG, auditor API, zero-knowledge encryption, dashboard UI, Stripe signup flow, usage enforcement)
 
-**Tests:** 505 passing.
+**Tests:** 530 passing.

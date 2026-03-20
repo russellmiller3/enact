@@ -28,9 +28,14 @@ What each public method raises and when. Callers catch these.
 ### `EnactClient.__init__`
 - raises `ValueError` — no secret provided (or `ENACT_SECRET` unset)
 - raises `ValueError` — secret < 32 chars (unless `allow_insecure_secret=True`)
+- raises `TypeError` — `actions=` list contains non-`@action`-decorated function
+- raises `ValueError` — `actions=` list contains duplicate action names
 
 ### `EnactClient.run()`
 - raises `ValueError` — workflow name not in registered workflows
+
+### `EnactClient.run_action()`
+- raises `ValueError` — action name not in registered actions
 
 ### `EnactClient.rollback()`
 - raises `PermissionError` — `rollback_enabled=False`
@@ -111,6 +116,26 @@ shape RunResult {
 
 ---
 
+## Generic Action Decorator
+
+`enact/action.py` — wraps any Python function into the policy/receipt/rollback pipeline.
+
+```
+shape Action {
+  name        : str                    # "system.action_name" format
+  system      : str                    # parsed from name or explicit override
+  fn          : callable               # the original function
+  rollback_fn : Action? = null         # paired via fn.rollback_with(other_fn)
+}
+```
+
+- `@action("system.name")` decorator registers function, attaches `_enact_action` attribute
+- Return contract: `dict` (output only), `tuple(dict, dict)` (output + rollback_data), `ActionResult`, or `None`
+- `execute_action(action_obj, payload)` normalizes all returns to `ActionResult`
+- `fn.rollback_with(other_fn)` pairs forward/backward actions for pluggable rollback
+
+---
+
 ## Connector Shapes
 
 Runtime classes in `enact/connectors/*.py`. All mutating methods return `ActionResult`.
@@ -167,6 +192,7 @@ File: `enact/client.py`
 state systems          : dict = {}                  # connector instances
 state policies         : List<callable> = []        # policy fns
 state workflows        : dict = {}                  # {fn.__name__: fn}
+state action_registry  : dict = {}                  # {action_name: Action} from actions= list
 state secret           : str                        # HMAC key (required, 32+ chars)
 state receipt_dir      : str = "receipts"
 state rollback_enabled : bool = false
@@ -211,6 +237,24 @@ action run(workflow: str, user_email: str, payload: dict) {
 }
 ```
 
+### `run_action(action, user_email, payload, user_attributes?)`
+
+`enact/client.py :: EnactClient.run_action()`
+
+```
+action run_action(action: str, user_email: str, payload: dict, user_attributes?: dict) {
+  guard action in self.action_registry        # ValueError if unknown
+  context = WorkflowContext(workflow=action, user_email, payload, systems, user_attributes)
+  policy_results = evaluate_all(context, policies)    # never short-circuits
+  if not all_passed:
+    receipt = build -> sign -> write (decision=BLOCK, actions=[])
+    return (RunResult(success=false), receipt)
+  action_result = execute_action(action_obj, payload)
+  receipt = build -> sign -> write (decision=PASS, actions=[action_result])
+  return (RunResult(success=action_result.success, output=run_output), receipt)
+}
+```
+
 ### `rollback(run_id)`
 
 `enact/client.py :: EnactClient.rollback()`
@@ -222,7 +266,7 @@ action rollback(run_id: str) {
   guard signature_valid(original)           # ValueError if tampered
   guard original.decision != BLOCK          # ValueError — nothing to undo
   for action in reversible:
-    result = execute_rollback_action(action, systems)
+    result = execute_rollback_action(action, systems, action_registry)  # checks @action rollback_fn first
   receipt = build -> sign -> write (decision=PASS|PARTIAL)
   return (RunResult, receipt)
 }

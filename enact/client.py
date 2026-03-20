@@ -58,6 +58,7 @@ class EnactClient:
         systems: dict | None = None,
         policies: list | None = None,
         workflows: list | None = None,
+        actions: list | None = None,
         secret: str | None = None,
         receipt_dir: str = "receipts",
         rollback_enabled: bool = False,
@@ -94,6 +95,21 @@ class EnactClient:
         # Index by function name so run(workflow="foo") can find the function without
         # requiring the caller to import it directly.
         self._workflows = {wf.__name__: wf for wf in (workflows or [])}
+
+        # Build action registry from @action-decorated functions
+        self._action_registry = {}
+        for fn in (actions or []):
+            if not hasattr(fn, "_enact_action"):
+                raise TypeError(
+                    f"Function '{fn.__name__}' is not decorated with @action. "
+                    "All functions in actions= must use the @action decorator."
+                )
+            name = fn._enact_action.name
+            if name in self._action_registry:
+                raise ValueError(
+                    f"Duplicate action name: '{name}'. Each action must have a unique name."
+                )
+            self._action_registry[name] = fn._enact_action
 
         # --- Secret validation (Risk #2: no more insecure default) ---
         self._secret = secret or os.environ.get("ENACT_SECRET")
@@ -208,6 +224,83 @@ class EnactClient:
         output = {a.action: a.output for a in actions_taken if a.success}
         return RunResult(success=True, workflow=workflow, output=output), receipt
 
+    def run_action(
+        self,
+        action: str,
+        user_email: str,
+        payload: dict,
+        user_attributes: dict | None = None,
+    ) -> tuple[RunResult, Receipt]:
+        """
+        Execute a single @action-decorated function through the full Enact pipeline.
+
+        Like run(), but for individual actions instead of workflows. No workflow
+        definition needed — just register the action and call it.
+
+        Args:
+            action          — name of a registered action (e.g. "github.create_pr")
+            user_email      — identity of the agent making the request
+            payload         — dict of kwargs to pass to the action function
+            user_attributes — optional ABAC context (role, clearance, etc.)
+
+        Returns:
+            tuple[RunResult, Receipt] — RunResult.success reflects the action's outcome
+
+        Raises:
+            ValueError — if the action name is not registered
+        """
+        if action not in self._action_registry:
+            raise ValueError(
+                f"Unknown action: '{action}'. "
+                f"Registered: {list(self._action_registry.keys())}"
+            )
+        action_obj = self._action_registry[action]
+
+        # Build context — same as run() but using the action name as workflow
+        context = WorkflowContext(
+            workflow=action,
+            user_email=user_email,
+            payload=payload,
+            systems=self._systems,
+            user_attributes=user_attributes or {},
+        )
+
+        # Run all policies
+        policy_results = evaluate_all(context, self._policies)
+
+        # BLOCK path
+        if not all_passed(policy_results):
+            receipt = build_receipt(
+                workflow=action,
+                user_email=user_email,
+                payload=payload,
+                policy_results=policy_results,
+                decision="BLOCK",
+            )
+            receipt = sign_receipt(receipt, self._secret)
+            write_receipt(receipt, self._receipt_dir)
+            return RunResult(success=False, workflow=action), receipt
+
+        # PASS path — execute the action
+        from enact.action import execute_action
+        action_result = execute_action(action_obj, payload)
+        actions_taken = [action_result]
+
+        receipt = build_receipt(
+            workflow=action,
+            user_email=user_email,
+            payload=payload,
+            policy_results=policy_results,
+            decision="PASS",
+            actions_taken=actions_taken,
+        )
+        receipt = sign_receipt(receipt, self._secret)
+        write_receipt(receipt, self._receipt_dir)
+
+        # For single actions, success = action's success (not always True like run())
+        output = {a.action: a.output for a in actions_taken if a.success}
+        return RunResult(success=action_result.success, workflow=action, output=output), receipt
+
     def rollback(self, run_id: str) -> tuple[RunResult, Receipt]:
         """
         Reverse all successful actions from a previous run, in reverse order.
@@ -259,7 +352,7 @@ class EnactClient:
         # Best-effort: execute all rollbacks, collect results
         rollback_results = []
         for action in reversible:
-            result = execute_rollback_action(action, self._systems)
+            result = execute_rollback_action(action, self._systems, action_registry=self._action_registry)
             rollback_results.append(result)
 
         # Determine overall outcome BEFORE building the receipt — decision depends on it

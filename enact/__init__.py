@@ -1,6 +1,7 @@
 """Enact — an action firewall for AI agents."""
 
 from enact.client import EnactClient
+from enact.action import action
 from enact.models import (
     WorkflowContext,
     PolicyResult,
@@ -11,6 +12,7 @@ from enact.models import (
 
 __all__ = [
     "EnactClient",
+    "action",
     "WorkflowContext",
     "PolicyResult",
     "ActionResult",
