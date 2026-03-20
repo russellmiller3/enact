@@ -14,3 +14,7 @@ from enact.policies.git import (
     require_meaningful_commit_message,
     dont_commit_api_keys,
 )
+from enact.policies.prompt_injection import (
+    block_prompt_injection,
+    block_prompt_injection_fields,
+)

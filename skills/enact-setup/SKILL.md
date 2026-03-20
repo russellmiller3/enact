@@ -144,6 +144,10 @@ within_maintenance_window(22, 6)          # factory — UTC hours
 # Email  (from enact.policies.email)
 no_mass_emails
 no_repeat_emails
+
+# Prompt Injection  (from enact.policies.prompt_injection)
+block_prompt_injection                    # scans ALL payload strings recursively
+block_prompt_injection_fields(["msg"])   # factory — scans only named fields
 ```
 
 **Note on human approval:** There is no standalone "require human approval" policy.

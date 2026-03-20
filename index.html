@@ -769,7 +769,7 @@ result, receipt = enact.<span class="fn">run_action</span>(
             <div class="qs-step">
                 <div class="qs-num">2</div>
                 <h3>Add policies</h3>
-                <p>Turn your scattered <code class="auto-style-25">if/else</code> guard checks into testable policy functions. Or use ours — 20+ ship out of the box.</p>
+                <p>Turn your scattered <code class="auto-style-25">if/else</code> guard checks into testable policy functions. Or use ours — 30+ ship out of the box.</p>
             </div>
             <div class="qs-step">
                 <div class="qs-num">3</div>
@@ -863,7 +863,7 @@ result, receipt = enact.<span class="fn">run_action</span>(
 <section id="policies" class="alt">
     <div class="container">
         <div class="section-label">Built-in policies</div>
-        <h2>20+ production policies. Ship on day one.</h2>
+        <h2>30+ production policies. Ship on day one.</h2>
         <p class="section-sub">Pure Python functions — no LLMs, versioned in Git, testable with pytest. Register any combination on your <span class="inline-code">EnactClient</span>.</p>
 
         <div class="policy-grid auto-style-37">
@@ -913,6 +913,24 @@ result, receipt = enact.<span class="fn">run_action</span>(
                     <div class="auto-style-44">
                         <code class="auto-style-25">within_maintenance_window(start, end)</code>
                         <br><span class="auto-style-45">Restricts actions to a UTC time window — midnight-crossing windows supported (e.g. 22:00–06:00 UTC)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROMPT INJECTION -->
+            <div class="auto-style-48">
+                <div class="auto-style-39">
+                    <i class="auto-style-49" data-lucide="shield-alert"></i>
+                    <h3 class="auto-style-50">Prompt Injection</h3>
+                </div>
+                <div class="auto-style-51">
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">block_prompt_injection</code>
+                        <br><span class="auto-style-45">Scans all payload strings recursively for injection patterns — instruction overrides, role hijacking, jailbreaks, delimiter attacks</span>
+                    </div>
+                    <div class="auto-style-44">
+                        <code class="auto-style-25">block_prompt_injection_fields(list)</code>
+                        <br><span class="auto-style-45">Factory — scans only named fields for injection. Use when you know which keys contain user-supplied text</span>
                     </div>
                 </div>
             </div>

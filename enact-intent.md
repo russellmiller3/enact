@@ -401,7 +401,7 @@ on success => {"status": APPROVED | DENIED | EXPIRED | PENDING}
 
 ## Built-in Policies
 
-30 policies across 9 files in `enact/policies/`. Each is a callable: `(WorkflowContext) -> PolicyResult`. Factory policies return closures (e.g. `max_files_per_commit(10)`).
+32 policies across 10 files in `enact/policies/`. Each is a callable: `(WorkflowContext) -> PolicyResult`. Factory policies return closures (e.g. `max_files_per_commit(10)`).
 
 | File | Policies |
 |------|----------|
@@ -414,6 +414,7 @@ on success => {"status": APPROVED | DENIED | EXPIRED | PENDING}
 | `slack.py` | `require_channel_allowlist`, `block_dms` |
 | `email.py` | `no_mass_emails`, `no_repeat_emails` |
 | `cloud_storage.py` | `dont_delete_without_human_ok` |
+| `prompt_injection.py` | `block_prompt_injection`, `block_prompt_injection_fields(fields)` |
 
 Shared: `enact/policies/_secrets.py` — 9 vendor API key regex patterns.
 
