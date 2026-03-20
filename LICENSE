@@ -74,6 +74,20 @@ condition, and the licensor will not be liable to you for any damages arising
 out of these terms or the use or nature of the software, under any kind of
 legal claim.
 
+## Disclaimer of Responsibility for Agent Actions
+
+The software provides policy enforcement, audit logging, and rollback
+capabilities for AI agent actions. However, the software does not guarantee
+that all harmful, unauthorized, or unintended agent actions will be prevented,
+detected, or reversed. The user is solely responsible for the actions taken by
+any AI agents operating within their systems, whether or not those actions are
+governed by this software. The licensor accepts no liability for any damages,
+losses, or consequences resulting from actions taken by AI agents, including
+but not limited to data loss, unauthorized access, financial harm, or
+regulatory violations. Users must independently verify that their agent
+governance configuration meets their security, compliance, and operational
+requirements.
+
 ## Definitions
 
 The *licensor* is the entity offering these terms, and the *software* is the

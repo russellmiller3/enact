@@ -135,6 +135,10 @@ client.rollback(receipt.run_id)
 
 ---
 
+## Disclaimer
+
+Enact provides policy enforcement, audit receipts, and rollback for AI agent actions — but it does not guarantee prevention of all harmful or unintended actions. **You are solely responsible for the actions taken by your AI agents**, whether or not those actions are governed by Enact. See the [LICENSE](LICENSE) for full terms.
+
 ## License
 
 [ELv2](LICENSE) + no-resale clause. Free to use, self-host, and modify. Cannot be resold as a competing product.

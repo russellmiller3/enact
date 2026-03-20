@@ -40,18 +40,22 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 - PyPI: `enact-sdk 0.5.1` — published
 - Working tree: **clean after this commit**
 
-### What Was Done (session 8)
+### What Was Done (session 8–9)
 
-**Generic actions feature** — `@action` decorator + `run_action()` (530 tests, 0 failures):
+**Generic actions feature** — `@action` decorator + `run_action()` (566 tests, 0 failures):
 - `enact/action.py` (NEW) — `@action("system.name")` decorator, `Action` dataclass, `execute_action()` with return normalization, `rollback_with()` pairing, module-level registry
 - `enact/client.py` — added `actions=` param to init, `_action_registry` built from decorated fns, new `run_action()` method (single action through full policy/receipt pipeline), passes `action_registry` to rollback
 - `enact/rollback.py` — added `action_registry` param to `execute_rollback_action()`, checks user-registered rollback fns BEFORE connector dispatch
 - `enact/__init__.py` — exports `action`
 - `tests/test_action.py` (NEW) — 25 tests covering decorator, normalization, rollback pairing, client integration, pluggable rollback, and full e2e lifecycle
-- `index.html` — BYOC positioning, quickstart/migration reframed for wrapping plain functions
-- `docs/logo/` — restored E icon, barless A in wordmark only, favicon added
 
-**Landing page updates** — BYOC (bring your own connector) positioning throughout. Quickstart shows wrapping plain Python functions, not importing Enact connectors.
+**Prompt injection policy** — `enact/policies/prompt_injection.py` — regex-based payload scanning for injection patterns (instruction overrides, role hijacking, jailbreaks, delimiter attacks). Two policies: `block_prompt_injection` (scans all strings) and `block_prompt_injection_fields(list)` (scans only named fields).
+
+**Landing page** — BYOC positioning, barless A wordmark (filled-path SVG), blue E as favicon only, footer disclaimer added.
+
+**Legal** — liability disclaimer in LICENSE ("Disclaimer of Responsibility for Agent Actions"), README, and landing page footer. User is solely responsible for agent actions.
+
+**Outreach** — `docs/outreach-plan.md` — 10 people to contact for validation/feedback (potential customers, agent space founders, governance experts).
 
 ### Next Step
 
