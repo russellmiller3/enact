@@ -59,8 +59,22 @@ AFTER (this plan)
    `customers` table empty? `force-push` in reflog? `.env` committed?
    Each rule is a Python function returning a `DamageEvent`. Deterministic.
 6. **Telemetry → SQLite (`chaos.db`).** Single file, easy to inspect with
-   `sqlite3` CLI or pandas. Schema in A.4.
-7. **Phase 1 lives in main repo (`enact/chaos/` package + `chaos/` data dir).**
+   `sqlite3` CLI or pandas. WAL mode enabled at init for concurrent writes.
+7. **psql shim in sandbox `bin/`.** The hook parser only handles `psql -c "..."`
+   syntax. Sandbox uses SQLite (no postgres infra). Solution: sandbox seeds
+   `run_dir/bin/psql` — a 12-line shell script that translates `psql -c "SQL"`
+   into `sqlite3 fake_db.sqlite "SQL"`. Subagent's prompt instructs it to use
+   `psql`. Hook sees psql syntax → policies fire correctly. Subagent gets
+   real DB behavior.
+8. **Receipts discovered via timestamp diff, not location.** The hook writes
+   receipts to `Path.cwd()/receipts/` — that's CC's session cwd
+   (`/home/user/enact/receipts/`), NOT `run_dir/receipts/`. Subagent's `cd`
+   inside bash doesn't change CC-process cwd, and hooks fire from CC's
+   perspective. Solution: `run_one` captures `pre_run_set = set(receipts/)`
+   before subagent dispatch. `record_run_result` does
+   `new_receipts = current - pre_run_set`. Race-free as long as a single
+   subagent runs at a time. Phase 2 adds run-id env-var threading.
+9. **Phase 1 lives in main repo (`enact/chaos/` package + `chaos/` data dir).**
    Per IP-protection plan: when we add real customer telemetry, that data
    moves to the proprietary `enact-pro` repo. The harness *code* can stay
    ELv2; the *data and tuned policies* go private.
