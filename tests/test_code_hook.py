@@ -75,6 +75,17 @@ class TestCmdPre:
         assert rc == 0
         assert out == ""
 
+    def test_protected_table_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Bash",
+            "tool_input": {"command": 'psql -c "DELETE FROM customers WHERE id=1"'},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert result["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
+        assert "customers" in result["hookSpecificOutput"]["permissionDecisionReason"]
+
 
 # -- init tests --
 
