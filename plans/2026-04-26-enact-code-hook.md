@@ -151,7 +151,7 @@ import sys
 import secrets as secrets_module
 from pathlib import Path
 
-from enact.models import WorkflowContext
+from enact.models import WorkflowContext, ActionResult
 from enact.policy import evaluate_all, all_passed
 from enact.receipt import build_receipt, sign_receipt, write_receipt
 
@@ -224,6 +224,14 @@ def parse_bash_command(command: str) -> dict:
 ### File 2 — `enact/cli/code_hook.py` (Part 2: subcommands + entry)
 
 ```python
+def _is_enact_hook_entry(entry: dict) -> bool:
+    """Detect a previously-installed enact-code-hook entry, for idempotent reinstall."""
+    for h in entry.get("hooks", []):
+        if "enact-code-hook" in h.get("command", ""):
+            return True
+    return False
+
+
 def cmd_init() -> int:
     """Write .claude/settings.json and bootstrap .enact/ config in cwd."""
     cwd = Path.cwd()
@@ -235,14 +243,26 @@ def cmd_init() -> int:
     settings_path = claude_dir / "settings.json"
     settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
     settings.setdefault("hooks", {})
-    settings["hooks"]["PreToolUse"] = [{
+
+    pre_entry = {
         "matcher": "Bash",
         "hooks": [{"type": "command", "command": "enact-code-hook pre"}],
-    }]
-    settings["hooks"]["PostToolUse"] = [{
+    }
+    post_entry = {
         "matcher": "Bash",
         "hooks": [{"type": "command", "command": "enact-code-hook post"}],
-    }]
+    }
+
+    # Merge: keep user's existing hooks for other tools / matchers; replace any
+    # prior enact-code-hook entry so re-running init never duplicates ours.
+    existing_pre = settings["hooks"].get("PreToolUse", [])
+    existing_post = settings["hooks"].get("PostToolUse", [])
+    settings["hooks"]["PreToolUse"] = (
+        [e for e in existing_pre if not _is_enact_hook_entry(e)] + [pre_entry]
+    )
+    settings["hooks"]["PostToolUse"] = (
+        [e for e in existing_post if not _is_enact_hook_entry(e)] + [post_entry]
+    )
     settings_path.write_text(json.dumps(settings, indent=2))
 
     policies_path = enact_dir / "policies.py"
@@ -282,74 +302,117 @@ def _load_policies() -> list:
 
 
 def cmd_pre() -> int:
-    """PreToolUse handler. Emit deny JSON to stdout if any policy blocks."""
+    """PreToolUse handler. Emit deny JSON to stdout if any policy blocks.
+
+    Wraps the entire body in try/except so any unexpected error (broken
+    .enact/policies.py, ImportError, policy bug) results in fail-open
+    behaviour. A buggy hook must NEVER permanently brick CC.
+    """
     try:
-        event = json.loads(sys.stdin.read() or "{}")
-    except json.JSONDecodeError:
-        return 0  # fail open
+        try:
+            event = json.loads(sys.stdin.read() or "{}")
+        except json.JSONDecodeError:
+            return 0  # fail open on malformed stdin
 
-    if event.get("tool_name") != "Bash":
-        return 0  # only Bash for v1
+        if event.get("tool_name") != "Bash":
+            return 0  # only Bash for v1
 
-    command = event.get("tool_input", {}).get("command", "")
-    if not command:
-        return 0
+        command = event.get("tool_input", {}).get("command", "")
+        if not command:
+            return 0
 
-    payload = parse_bash_command(command)
-    context = WorkflowContext(
-        workflow="shell.bash",
-        user_email="claude-code@local",
-        payload=payload,
-    )
-    results = evaluate_all(context, _load_policies())
+        payload = parse_bash_command(command)
+        context = WorkflowContext(
+            workflow="shell.bash",
+            user_email="claude-code@local",
+            payload=payload,
+        )
+        results = evaluate_all(context, _load_policies())
 
-    if all_passed(results):
-        return 0  # silent allow
+        if all_passed(results):
+            return 0  # silent allow
 
-    failed = [r for r in results if not r.passed]
-    reasons = "; ".join(f"{r.policy}: {r.reason}" for r in failed)
-    plural = "y" if len(failed) == 1 else "ies"
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": (
-                f"Enact blocked ({len(failed)} polic{plural}): {reasons}"
-            ),
+        failed = [r for r in results if not r.passed]
+        reasons = "; ".join(f"{r.policy}: {r.reason}" for r in failed)
+        plural = "y" if len(failed) == 1 else "ies"
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": (
+                    f"Enact blocked ({len(failed)} polic{plural}): {reasons}"
+                ),
+            }
         }
-    }
-    print(json.dumps(output))
-    return 0
+        print(json.dumps(output))
+        return 0
+    except Exception:
+        # Fail open — broken policies, import errors, bad policy logic.
+        return 0
 
 
 def cmd_post() -> int:
-    """PostToolUse handler. Write a signed Receipt for the executed action."""
+    """PostToolUse handler. Write a signed Receipt for the executed action.
+
+    Receipt always carries decision="PASS" — we only reach PostToolUse if the
+    PreToolUse policy gate allowed the call. Whether the bash command itself
+    succeeded operationally is recorded in actions_taken[0].success and the
+    exit_code in its output dict. The receipt records what was attempted and
+    its outcome; the policy decision is separate.
+    """
     try:
-        event = json.loads(sys.stdin.read() or "{}")
-    except json.JSONDecodeError:
+        try:
+            event = json.loads(sys.stdin.read() or "{}")
+        except json.JSONDecodeError:
+            return 0
+
+        if event.get("tool_name") != "Bash":
+            return 0
+
+        secret_path = Path.cwd() / ".enact" / "secret"
+        if not secret_path.exists():
+            return 0  # not initialized — skip silently
+
+        secret = secret_path.read_text().strip()
+        command = event.get("tool_input", {}).get("command", "")
+        tool_response = event.get("tool_response") or {}
+
+        # Reflect bash exit status in ActionResult.success; do not change
+        # decision="PASS" — that field reflects the policy gate, not bash.
+        exit_code = tool_response.get("exit_code", 0)
+        interrupted = tool_response.get("interrupted", False) is True
+        bash_succeeded = (exit_code == 0) and not interrupted
+
+        action_result = ActionResult(
+            action="shell.bash",
+            system="shell",
+            success=bash_succeeded,
+            output={
+                "command": command,
+                "exit_code": exit_code,
+                "interrupted": interrupted,
+                "already_done": False,
+            },
+        )
+
+        payload = {
+            "command": command,
+            "session_id": event.get("session_id", ""),
+        }
+
+        receipt = build_receipt(
+            workflow="shell.bash",
+            user_email="claude-code@local",
+            payload=payload,
+            policy_results=[],
+            decision="PASS",
+            actions_taken=[action_result],
+        )
+        receipt = sign_receipt(receipt, secret)
+        write_receipt(receipt, "receipts")
         return 0
-
-    if event.get("tool_name") != "Bash":
+    except Exception:
         return 0
-
-    secret_path = Path.cwd() / ".enact" / "secret"
-    if not secret_path.exists():
-        return 0
-
-    secret = secret_path.read_text().strip()
-    command = event.get("tool_input", {}).get("command", "")
-    payload = {"command": command, "session_id": event.get("session_id", "")}
-
-    receipt = build_receipt(
-        workflow="shell.bash",
-        user_email="claude-code@local",
-        payload=payload,
-        policy_results=[],
-        decision="PASS",
-    )
-    receipt = sign_receipt(receipt, secret)
-    write_receipt(receipt, "receipts")
-    return 0
 
 
 def main() -> int:
@@ -493,6 +556,36 @@ class TestCmdPre:
         with patch.object(sys, "stdin", stdin):
             assert cmd_pre() == 0
 
+    def test_no_policies_file_passes_through(self, tmp_path, monkeypatch):
+        """No .enact/policies.py → empty policies list → silent allow."""
+        monkeypatch.chdir(tmp_path)  # do NOT call cmd_init
+        stdin = io.StringIO(json.dumps({
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls"},
+        }))
+        stdout = io.StringIO()
+        with patch.object(sys, "stdin", stdin), patch.object(sys, "stdout", stdout):
+            assert cmd_pre() == 0
+        assert stdout.getvalue() == ""
+
+    def test_broken_policies_file_fails_open(self, tmp_path, monkeypatch):
+        """Syntax-broken or import-broken policies.py → fail open silently."""
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        (tmp_path / ".enact" / "policies.py").write_text(
+            "import this_module_does_not_exist\nPOLICIES = []\n"
+        )
+        stdin = io.StringIO(json.dumps({
+            "tool_name": "Bash",
+            "tool_input": {"command": 'psql -c "DELETE FROM customers"'},
+        }))
+        stdout = io.StringIO()
+        with patch.object(sys, "stdin", stdin), patch.object(sys, "stdout", stdout):
+            assert cmd_pre() == 0
+        # Even a destructive command falls through when the hook itself is broken
+        # — we never want a buggy hook to permanently brick CC. User must fix policies.py.
+        assert stdout.getvalue() == ""
+
 
 # -- init tests --
 
@@ -513,6 +606,137 @@ class TestCmdInit:
         original_secret = (tmp_path / ".enact" / "secret").read_text()
         cmd_init()
         assert (tmp_path / ".enact" / "secret").read_text() == original_secret
+
+    def test_init_preserves_existing_unrelated_hooks(self, tmp_path, monkeypatch):
+        """Pre-existing hooks for other tools/matchers must survive cmd_init."""
+        monkeypatch.chdir(tmp_path)
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        prior = {
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Read",
+                        "hooks": [{"type": "command", "command": "some-other-tool check"}],
+                    }
+                ]
+            },
+            "theme": "dark",
+        }
+        (claude_dir / "settings.json").write_text(json.dumps(prior))
+
+        cmd_init()
+
+        settings = json.loads((claude_dir / "settings.json").read_text())
+        assert settings["theme"] == "dark"  # unrelated key preserved
+        pre_hooks = settings["hooks"]["PreToolUse"]
+        assert len(pre_hooks) == 2
+        matchers = {e["matcher"] for e in pre_hooks}
+        assert matchers == {"Read", "Bash"}
+        # The other tool's command is still present
+        all_commands = [
+            h["command"]
+            for entry in pre_hooks
+            for h in entry["hooks"]
+        ]
+        assert "some-other-tool check" in all_commands
+
+    def test_init_replaces_prior_enact_entry_no_duplicate(self, tmp_path, monkeypatch):
+        """Re-running init must not stack duplicate enact-code-hook entries."""
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        cmd_init()
+        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
+        for hook_event in ("PreToolUse", "PostToolUse"):
+            entries = settings["hooks"][hook_event]
+            enact_entries = [
+                e for e in entries
+                if any("enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
+            ]
+            assert len(enact_entries) == 1, f"{hook_event} duplicated enact entry"
+
+    def test_init_does_not_double_add_gitignore_line(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        cmd_init()
+        contents = (tmp_path / ".gitignore").read_text()
+        assert contents.count(".enact/") == 1
+
+
+# -- post-hook tests --
+
+class TestCmdPost:
+    def _run_post(self, stdin_json: dict) -> int:
+        stdin = io.StringIO(json.dumps(stdin_json))
+        with patch.object(sys, "stdin", stdin):
+            return cmd_post()
+
+    def test_writes_signed_receipt_with_action(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls -la"},
+            "tool_response": {"exit_code": 0, "stdout": "file1\nfile2\n"},
+            "session_id": "abc-123",
+        })
+        assert rc == 0
+        receipts = list((tmp_path / "receipts").glob("*.json"))
+        assert len(receipts) == 1
+        body = json.loads(receipts[0].read_text())
+        assert body["decision"] == "PASS"
+        assert body["signature"] != ""
+        assert len(body["actions_taken"]) == 1
+        action = body["actions_taken"][0]
+        assert action["action"] == "shell.bash"
+        assert action["system"] == "shell"
+        assert action["success"] is True
+        assert action["output"]["command"] == "ls -la"
+        assert action["output"]["exit_code"] == 0
+        assert action["output"]["already_done"] is False
+
+    def test_failed_bash_reflected_in_action_success(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "false"},
+            "tool_response": {"exit_code": 1, "stderr": "fail"},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text())
+        # Decision still PASS — the policy gate let it through.
+        # ActionResult.success captures the operational outcome.
+        assert body["decision"] == "PASS"
+        assert body["actions_taken"][0]["success"] is False
+        assert body["actions_taken"][0]["output"]["exit_code"] == 1
+
+    def test_interrupted_bash_marks_action_failed(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "sleep 100"},
+            "tool_response": {"exit_code": 0, "interrupted": True},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text())
+        assert body["actions_taken"][0]["success"] is False
+        assert body["actions_taken"][0]["output"]["interrupted"] is True
+
+    def test_no_secret_skips_silently(self, tmp_path, monkeypatch):
+        """If cmd_init was never run, cmd_post must not crash or write anything."""
+        monkeypatch.chdir(tmp_path)
+        rc = self._run_post({"tool_name": "Bash", "tool_input": {"command": "ls"}})
+        assert rc == 0
+        assert not (tmp_path / "receipts").exists()
+
+    def test_non_bash_tool_skipped(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({"tool_name": "Read", "tool_input": {"path": "/x"}})
+        assert rc == 0
+        assert not (tmp_path / "receipts").exists()
 
 
 # -- main dispatcher --
@@ -555,10 +779,16 @@ Keep `enact` package surface unchanged.
 | Stdin is not valid JSON | `cmd_pre` / `cmd_post` return 0 (fail open) | yes — `test_malformed_stdin_fails_open` |
 | Tool is not Bash (Read, Grep, etc.) | `cmd_pre` returns 0 silently, no policy run | yes — `test_non_bash_tool_passes_silently` |
 | Empty command string | `cmd_pre` returns 0 silently | yes — covered by `test_safe_command_passes_silently` (ls case) |
-| `.enact/policies.py` missing | `_load_policies` returns `[]`, `evaluate_all` returns `[]`, `all_passed` returns True → silent allow | yes — implicit via `cmd_pre` without `init` first |
-| `.enact/secret` missing in cmd_post | `cmd_post` returns 0 (skip receipt write); never crashes | yes — implicit, future explicit test |
-| `.claude/settings.json` already has unrelated keys | `cmd_init` preserves existing keys, only sets `hooks.PreToolUse/PostToolUse` | yes — `test_init_idempotent` partially; expand if regressions appear |
-| `.gitignore` already contains `.enact/` | `cmd_init` skips re-adding the line | yes — `test_init_idempotent` |
+| `.enact/policies.py` missing | `_load_policies` returns `[]`, silent allow | yes — `test_no_policies_file_passes_through` |
+| `.enact/policies.py` is broken (ImportError, SyntaxError) | Outer try/except in `cmd_pre` catches; fail open | yes — `test_broken_policies_file_fails_open` |
+| `.enact/secret` missing in `cmd_post` | `cmd_post` returns 0 (skip receipt write); never crashes | yes — `test_no_secret_skips_silently` |
+| `.claude/settings.json` already has unrelated hooks for other tools | `cmd_init` MERGES — keeps existing entries, replaces only prior enact entries | yes — `test_init_preserves_existing_unrelated_hooks` |
+| Re-running `cmd_init` with a prior enact entry already present | `cmd_init` removes the prior enact entry before appending the new one (no duplicates) | yes — `test_init_replaces_prior_enact_entry_no_duplicate` |
+| `.gitignore` already contains `.enact/` | `cmd_init` skips re-adding the line | yes — `test_init_does_not_double_add_gitignore_line` |
+| Bash command exited non-zero | `cmd_post` reflects `exit_code` in `ActionResult.success`; receipt `decision` stays `PASS` | yes — `test_failed_bash_reflected_in_action_success` |
+| Bash command was interrupted (Ctrl-C) | `cmd_post` marks `ActionResult.success=False`, records `interrupted=True` in output | yes — `test_interrupted_bash_marks_action_failed` |
+| Heredoc SQL (`psql <<EOF\nDELETE FROM x;\nEOF`) | NOT parsed by `_PSQL_C_RE` for v1; `block_ddl` still catches DROP/TRUNCATE etc. via `payload["sql"]` content scan; documented limitation | manual — v1 acceptable, fix in v1.1 |
+| SQL with embedded escaped quotes (`-c "DELETE FROM x WHERE name = \"foo\""`) | NOT parsed correctly by `_PSQL_C_RE` for v1; falls through to other policies (e.g. `protect_tables` won't fire) | manual — v1 acceptable, fix in v1.1 |
 | psql command with single quotes vs double | `_PSQL_C_RE` handles both quote styles | yes — `test_psql_delete_extracts_where_clause` |
 | Multi-statement SQL (`SELECT 1; DELETE FROM x`) | `_TABLE_RE` matches first DELETE/UPDATE/etc. found; `block_ddl` covers DROP/TRUNCATE/etc. via word-boundary regex | yes — `test_drop_table_extracts_table_and_sql` |
 | Force-push variants (`-f`, `--force`, `--force-with-lease`) | Existing `dont_force_push` policy already handles all three | yes — `test_force_push_blocks` covers `--force` |
@@ -599,19 +829,20 @@ ones because they break the development environment.
 `tests/test_code_hook.py` (parser tests)
 **Commit:** `feat(code): bash command parser extracts SQL/table/where for policies`
 
-### Cycle 2: `cmd_init` writes settings + bootstraps `.enact/`
+### Cycle 2: `cmd_init` writes settings + bootstraps `.enact/` (with merge logic)
 
-**Goal:** one command stands up the hook config in any repo.
+**Goal:** one command stands up the hook config in any repo, preserving any
+pre-existing user hooks and idempotent on repeat runs.
 
 | Phase | Action |
 |---|---|
-| RED | Write `TestCmdInit::test_writes_settings_and_creates_dirs` |
-| GREEN | Implement `cmd_init` with `Path` operations |
-| REFACTOR | Extract `DEFAULT_POLICIES_PY` constant |
-| VERIFY | `pytest tests/test_code_hook.py::TestCmdInit -v` |
+| RED | Write `test_writes_settings_and_creates_dirs`, `test_init_preserves_existing_unrelated_hooks`, `test_init_replaces_prior_enact_entry_no_duplicate`, `test_init_does_not_double_add_gitignore_line`, `test_init_idempotent` |
+| GREEN | Implement `cmd_init` + `_is_enact_hook_entry` helper. Merge logic: filter out prior enact entries from existing list, append new entries. |
+| REFACTOR | Extract `DEFAULT_POLICIES_PY` constant; ensure `_is_enact_hook_entry` is well-named |
+| VERIFY | `pytest tests/test_code_hook.py::TestCmdInit -v` (5 tests pass) |
 
-**Files changed:** `enact/cli/code_hook.py` (+cmd_init), `tests/test_code_hook.py` (+TestCmdInit)
-**Commit:** `feat(code): enact-code-hook init bootstraps .claude + .enact config`
+**Files changed:** `enact/cli/code_hook.py` (+cmd_init, +_is_enact_hook_entry), `tests/test_code_hook.py` (+TestCmdInit, 5 tests)
+**Commit:** `feat(code): enact-code-hook init bootstraps .claude + .enact config (merge-safe)`
 
 ### Cycle 3: `cmd_pre` allow path (silent pass on safe commands)
 
@@ -641,33 +872,38 @@ ones because they break the development environment.
 **Files changed:** `enact/cli/code_hook.py` (cmd_pre deny path), `tests/test_code_hook.py` (deny tests)
 **Commit:** `feat(code): pre-hook emits permissionDecision deny JSON on policy block`
 
-### Cycle 5: cover remaining deny scenarios + fail-open
+### Cycle 5: cover remaining deny scenarios + fail-open paths
 
-**Goal:** force-push, code freeze, malformed input all behave correctly.
-
-| Phase | Action |
-|---|---|
-| RED | Write `test_force_push_blocks`, `test_freeze_blocks`, `test_malformed_stdin_fails_open` |
-| GREEN | No new code expected — cycles 3-4 should already cover these |
-| REFACTOR | If any test required code changes, simplify |
-| VERIFY | `pytest tests/test_code_hook.py::TestCmdPre -v` (all green) |
-
-**Files changed:** `tests/test_code_hook.py` only (likely)
-**Commit:** `test(code): cover force-push, code-freeze, fail-open paths`
-
-### Cycle 6: `cmd_post` writes signed Receipt
-
-**Goal:** every successful Bash call leaves an audit trail.
+**Goal:** force-push, code freeze, malformed input, missing policies file, and
+broken policies file all behave correctly. Verifies the broader try/except
+wrapper in `cmd_pre` actually catches non-JSON errors.
 
 | Phase | Action |
 |---|---|
-| RED | Write `TestCmdPost::test_post_writes_receipt` (verify file exists in `receipts/`) |
-| GREEN | Implement `cmd_post` using `build_receipt` + `sign_receipt` + `write_receipt` |
-| REFACTOR | Confirm receipt fields match the existing Receipt schema |
-| VERIFY | `pytest tests/test_code_hook.py -v` |
+| RED | Write `test_force_push_blocks`, `test_freeze_blocks`, `test_malformed_stdin_fails_open`, `test_no_policies_file_passes_through`, `test_broken_policies_file_fails_open` |
+| GREEN | Wrap entire `cmd_pre` body in outer try/except (return 0 on any exception). Confirm `_load_policies` reload-on-each-call works. |
+| REFACTOR | Confirm the docstring on `cmd_pre` calls out fail-open behaviour |
+| VERIFY | `pytest tests/test_code_hook.py::TestCmdPre -v` (8 tests pass) |
 
-**Files changed:** `enact/cli/code_hook.py` (+cmd_post), `tests/test_code_hook.py` (+TestCmdPost)
-**Commit:** `feat(code): post-hook writes signed Receipt to receipts/`
+**Files changed:** `enact/cli/code_hook.py` (cmd_pre outer try/except), `tests/test_code_hook.py` (+5 tests)
+**Commit:** `test(code): cover force-push, code-freeze, fail-open, broken-policies paths`
+
+### Cycle 6: `cmd_post` writes signed Receipt with `actions_taken`
+
+**Goal:** every executed Bash call leaves a signed audit trail with the
+command, exit code, and interrupt status. Receipt decision stays "PASS"
+because the policy gate allowed it; bash exit status lives in the
+`ActionResult` so audit retains the operational outcome separately.
+
+| Phase | Action |
+|---|---|
+| RED | Write `test_writes_signed_receipt_with_action`, `test_failed_bash_reflected_in_action_success`, `test_interrupted_bash_marks_action_failed`, `test_no_secret_skips_silently`, `test_non_bash_tool_skipped` |
+| GREEN | Implement `cmd_post`: read `tool_response`, build ActionResult with success=`(exit_code == 0 and not interrupted)`, attach to receipt via `actions_taken=[action_result]`, sign + write |
+| REFACTOR | Confirm receipt fields match Receipt schema; `already_done: False` is present in action output |
+| VERIFY | `pytest tests/test_code_hook.py::TestCmdPost -v` (5 tests pass) |
+
+**Files changed:** `enact/cli/code_hook.py` (+cmd_post), `tests/test_code_hook.py` (+TestCmdPost class, 5 tests)
+**Commit:** `feat(code): post-hook writes signed Receipt with ActionResult and exit_code`
 
 ### Cycle 7: `main` dispatcher + `pyproject.toml` entry point
 
@@ -729,8 +965,12 @@ pytest -v
 - [ ] `cmd_post` writes a signed Receipt to `receipts/`
 - [ ] `main` dispatches to all three subcommands and rejects unknown ones
 - [ ] `pip install -e .` exposes `enact-code-hook` on PATH
+- [ ] `cmd_post` writes a Receipt with non-empty `actions_taken` containing the command and exit_code
+- [ ] `cmd_post` reflects bash exit status in `ActionResult.success` (PASS decision regardless)
+- [ ] Re-running `cmd_init` does NOT duplicate enact entries in `.claude/settings.json`
+- [ ] `cmd_init` preserves user's pre-existing hooks for other tools/matchers
 - [ ] All existing 530+ tests still pass
-- [ ] At least 15 new tests in `tests/test_code_hook.py` (parser × 5, pre × 6, init × 2, main × 2)
+- [ ] At least 23 new tests in `tests/test_code_hook.py` (parser × 5, pre × 8, init × 5, post × 5, main × 2)
 
 ## A.9 Cleanup & Handoff
 
