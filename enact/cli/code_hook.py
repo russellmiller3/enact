@@ -275,3 +275,22 @@ def cmd_post() -> int:
         return 0
     except Exception:
         return 0
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("Usage: enact-code-hook {init|pre|post}", file=sys.stderr)
+        return 1
+    cmd = sys.argv[1]
+    if cmd == "init":
+        return cmd_init()
+    if cmd == "pre":
+        return cmd_pre()
+    if cmd == "post":
+        return cmd_post()
+    print(f"Unknown subcommand: {cmd}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

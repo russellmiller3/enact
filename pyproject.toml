@@ -30,6 +30,9 @@ dev = [
     "httpx>=0.28.0",
 ]
 
+[project.scripts]
+enact-code-hook = "enact.cli.code_hook:main"
+
 
 [tool.setuptools]
 license-files = []

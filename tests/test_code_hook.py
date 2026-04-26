@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from enact.cli.code_hook import parse_bash_command, cmd_init, cmd_pre, cmd_post
+from enact.cli.code_hook import parse_bash_command, cmd_init, cmd_pre, cmd_post, main
 
 
 # -- parser tests --
@@ -282,3 +282,15 @@ class TestCmdPost:
         rc = self._run_post({"tool_name": "Read", "tool_input": {"path": "/x"}})
         assert rc == 0
         assert not (tmp_path / "receipts").exists()
+
+
+# -- main dispatcher --
+
+class TestMain:
+    def test_unknown_subcommand_returns_1(self):
+        with patch.object(sys, "argv", ["enact-code-hook", "bogus"]):
+            assert main() == 1
+
+    def test_no_subcommand_returns_1(self):
+        with patch.object(sys, "argv", ["enact-code-hook"]):
+            assert main() == 1
