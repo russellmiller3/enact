@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from enact.cli.code_hook import parse_bash_command
+from enact.cli.code_hook import parse_bash_command, cmd_init
 
 
 # -- parser tests --
@@ -43,3 +43,76 @@ class TestParseBashCommand:
     def test_force_push_args_visible(self):
         p = parse_bash_command("git push --force origin main")
         assert "--force" in p["args"]
+
+
+# -- init tests --
+
+class TestCmdInit:
+    def test_writes_settings_and_creates_dirs(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        rc = cmd_init()
+        assert rc == 0
+        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
+        assert "PreToolUse" in settings["hooks"]
+        assert (tmp_path / ".enact" / "policies.py").exists()
+        assert (tmp_path / ".enact" / "secret").exists()
+        assert ".enact/" in (tmp_path / ".gitignore").read_text()
+
+    def test_init_idempotent(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        original_secret = (tmp_path / ".enact" / "secret").read_text()
+        cmd_init()
+        assert (tmp_path / ".enact" / "secret").read_text() == original_secret
+
+    def test_init_preserves_existing_unrelated_hooks(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        claude_dir = tmp_path / ".claude"
+        claude_dir.mkdir()
+        prior = {
+            "hooks": {
+                "PreToolUse": [
+                    {
+                        "matcher": "Read",
+                        "hooks": [{"type": "command", "command": "some-other-tool check"}],
+                    }
+                ]
+            },
+            "theme": "dark",
+        }
+        (claude_dir / "settings.json").write_text(json.dumps(prior))
+
+        cmd_init()
+
+        settings = json.loads((claude_dir / "settings.json").read_text())
+        assert settings["theme"] == "dark"
+        pre_hooks = settings["hooks"]["PreToolUse"]
+        assert len(pre_hooks) == 2
+        matchers = {e["matcher"] for e in pre_hooks}
+        assert matchers == {"Read", "Bash"}
+        all_commands = [
+            h["command"]
+            for entry in pre_hooks
+            for h in entry["hooks"]
+        ]
+        assert "some-other-tool check" in all_commands
+
+    def test_init_replaces_prior_enact_entry_no_duplicate(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        cmd_init()
+        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
+        for hook_event in ("PreToolUse", "PostToolUse"):
+            entries = settings["hooks"][hook_event]
+            enact_entries = [
+                e for e in entries
+                if any("enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
+            ]
+            assert len(enact_entries) == 1, f"{hook_event} duplicated enact entry"
+
+    def test_init_does_not_double_add_gitignore_line(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        cmd_init()
+        contents = (tmp_path / ".gitignore").read_text()
+        assert contents.count(".enact/") == 1
