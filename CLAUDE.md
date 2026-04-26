@@ -79,6 +79,29 @@ Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 
 - **`already_done` flag:** Every mutating connector action MUST include `"already_done"` in its output dict. `False` for fresh actions, a descriptive string for idempotent noops (`"created"`, `"deleted"`, `"merged"`, `"sent"`, etc.). Callers check `if result.output.get("already_done"):` — strings are truthy, `False` is falsy. See `enact/connectors/github.py` docstring for the reference implementation.
 
+## Working Style: Think 5 Steps Ahead
+
+After completing any task, anticipate the next 3-5 things Russell is likely to
+need and either do them or stage them. Don't wait to be asked. Tail every
+"done" message with a tight "next likely needs" list and offer to prep them.
+
+Bias toward **doing** rather than asking — but flag risky-or-irreversible ones
+(destructive operations, things that affect shared state, billing changes,
+public-facing publishes) for confirmation first. Reversible local work
+(plans, drafts, code on a feature branch, tests) — just do it.
+
+Examples:
+- Just shipped a feature → README update, landing page card, Loom demo
+  script, cold email template, version bump.
+- Wrote a plan → red-team, then implement, then test, then commit + push,
+  then update Handoff.
+- Hit a paying-customer milestone → onboarding doc, Slack channel, case
+  study draft, social-proof update.
+
+One short tail line per "done" message: 3-5 items, then "want any prepped?" —
+Russell picks or skips. Don't bloat the message; the look-ahead is a tail,
+not a section.
+
 ## Communication Style (Russell Miller, b. 1978, SF)
 
 **Vibe:** Smart friend at a coffee shop. Blunt. No corporate BS.
