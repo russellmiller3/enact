@@ -86,6 +86,57 @@ class TestCmdPre:
         assert result["hookSpecificOutput"]["hookEventName"] == "PreToolUse"
         assert "customers" in result["hookSpecificOutput"]["permissionDecisionReason"]
 
+    def test_force_push_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Bash",
+            "tool_input": {"command": "git push --force origin main"},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "force" in result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+    def test_freeze_blocks(self, in_tmp_with_init, monkeypatch):
+        monkeypatch.setenv("ENACT_FREEZE", "1")
+        rc, out = _run_pre({"tool_name": "Bash", "tool_input": {"command": "ls"}})
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "freeze" in result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+    def test_malformed_stdin_fails_open(self, in_tmp_with_init):
+        stdin = io.StringIO("not json{{{")
+        with patch.object(sys, "stdin", stdin):
+            assert cmd_pre() == 0
+
+    def test_no_policies_file_passes_through(self, tmp_path, monkeypatch):
+        """No .enact/policies.py → empty policies list → silent allow."""
+        monkeypatch.chdir(tmp_path)  # do NOT call cmd_init
+        stdin = io.StringIO(json.dumps({
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls"},
+        }))
+        stdout = io.StringIO()
+        with patch.object(sys, "stdin", stdin), patch.object(sys, "stdout", stdout):
+            assert cmd_pre() == 0
+        assert stdout.getvalue() == ""
+
+    def test_broken_policies_file_fails_open(self, tmp_path, monkeypatch):
+        """Syntax-broken or import-broken policies.py → fail open silently."""
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        (tmp_path / ".enact" / "policies.py").write_text(
+            "import this_module_does_not_exist\nPOLICIES = []\n"
+        )
+        stdin = io.StringIO(json.dumps({
+            "tool_name": "Bash",
+            "tool_input": {"command": 'psql -c "DELETE FROM customers"'},
+        }))
+        stdout = io.StringIO()
+        with patch.object(sys, "stdin", stdin), patch.object(sys, "stdout", stdout):
+            assert cmd_pre() == 0
+        assert stdout.getvalue() == ""
+
 
 # -- init tests --
 
