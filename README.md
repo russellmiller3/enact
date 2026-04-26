@@ -84,6 +84,36 @@ python examples/quickstart.py
 
 Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts. No credentials needed.
 
+### Enact Code — guardrails for Claude Code
+
+Drop-in Claude Code hook that blocks dangerous Bash commands before they fire.
+
+```bash
+pip install enact-sdk
+cd /your/repo
+enact-code-hook init
+```
+
+That's it. Open Claude Code in the repo; every Bash call now flows through
+the policy engine via PreToolUse. Default policies block destructive SQL on
+protected tables, force-pushes, API keys in commits, code freezes (set
+`ENACT_FREEZE=1`), and DDL statements (DROP/TRUNCATE/ALTER/CREATE).
+
+**Demo path** — the Replit incident, blocked:
+
+```text
+You: clean up old rows in the customers table
+CC:  psql -c "DELETE FROM customers WHERE created_at < '2024-01-01'"
+     ↓ PreToolUse hook fires
+     ↓ ENACT BLOCKED (1 policy):
+     ↓   protect_tables: Table 'customers' is protected
+     ↓ → CC sees deny, tells you, doesn't run the SQL
+```
+
+Customize the rules in `.enact/policies.py` (auto-created by `init`).
+Every successful Bash call writes a signed Receipt to `receipts/` so you
+have a full audit trail. Receipts work with the existing `enact-ui` browser.
+
 ### Generic Actions
 
 Wrap any Python function — no connector class needed:

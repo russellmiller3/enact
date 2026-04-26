@@ -29,18 +29,61 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ## Current Handoff
 
-**Date:** 2026-03-19 (session 8)
+**Date:** 2026-04-26 (session 10)
 **Project:** Enact — action firewall for AI agents (`pip install enact-sdk`)
 
 ### Git State
 
-- Branch: `feature/generic-actions` (merging to `master`)
+- Branch: `claude/add-guardrails-ai-tools-Mk20f` (feature → merge to `master`)
 - Remote: `origin` + `backup` (D drive)
 - Vercel: `www.enact.cloud` — deployed
-- PyPI: `enact-sdk 0.5.1` — published
-- Working tree: **clean after this commit**
+- PyPI: `enact-sdk 0.5.1` — published (next bump: 0.6.0 after merge)
+- Working tree: **dirty during cleanup; clean after final commit**
 
-### What Was Done (session 8–9)
+### What Was Done (session 10) — Enact Code (CC hook)
+
+**Shipped `enact-code-hook` binary** — drop-in Claude Code PreToolUse/PostToolUse hook
+that runs every Bash call through enact's policy engine before execution.
+
+- `enact/cli/code_hook.py` (NEW, ~250 lines) — three subcommands:
+  - `enact-code-hook init` — writes `.claude/settings.json` (merge-safe — preserves
+    existing user hooks for other tools), bootstraps `.enact/policies.py`,
+    generates 32-byte HMAC secret with 0600 perms, gitignores `.enact/`
+  - `enact-code-hook pre` — reads PreToolUse JSON from stdin; runs `parse_bash_command`
+    + `evaluate_all`; emits deny JSON or exits 0 silently. Outer try/except = fail-open
+    on any unexpected error (broken policies.py, ImportError, etc).
+  - `enact-code-hook post` — writes signed Receipt with `actions_taken[0]`
+    containing command + exit_code + interrupted flag. Decision="PASS" reflects
+    policy gate; ActionResult.success reflects bash exit status.
+- `enact/cli/__init__.py` (NEW) — package marker
+- `pyproject.toml` — added `[project.scripts]` registering `enact-code-hook`
+- `tests/test_code_hook.py` (NEW) — 25 tests:
+  - parser × 5 (table/where/sql/args extraction from psql + git push)
+  - cmd_pre × 8 (allow + deny + force-push + freeze + fail-open + missing/broken policies)
+  - cmd_init × 5 (writes settings, idempotent, preserves existing hooks, no duplicate
+    enact entry, no double gitignore)
+  - cmd_post × 5 (signed receipt + ActionResult shape, exit_code, interrupted, no-secret skip, non-Bash skip)
+  - main × 2 (unknown subcommand, no subcommand)
+
+**Plan + red-team trail:**
+- `plans/2026-04-26-enact-code-hook.md` — Template A plan + applied red-team fixes
+  (merge-safe init, actions_taken in cmd_post, broader try/except, missing tests added)
+
+**Smoke-tested end-to-end:**
+- `enact-code-hook init` → bootstraps cleanly
+- `psql DELETE FROM customers` → blocked by `protect_tables`
+- `git push --force` → blocked by `dont_force_push`
+- `ls -la` → silent allow
+- `enact-code-hook post` → writes valid signed Receipt with HMAC-SHA256 sig
+
+**Design fix discovered during TDD (cycle 3):**
+Removed `dont_delete_without_where` from default policy pack — that policy
+treats every payload without `where` as a delete-all attempt, which means in
+shell context it would block every non-SQL bash command. `protect_tables` +
+`block_ddl` still cover the demo case (DELETE/DROP customers blocked).
+Documented in DEFAULT_POLICIES_PY comment.
+
+### Earlier Sessions (8–9)
 
 **Generic actions feature** — `@action` decorator + `run_action()` (566 tests, 0 failures):
 - `enact/action.py` (NEW) — `@action("system.name")` decorator, `Action` dataclass, `execute_action()` with return normalization, `rollback_with()` pairing, module-level registry
@@ -59,7 +102,24 @@ Keep it tight — the goal is to get the next Claude session oriented in under 6
 
 ### Next Step
 
-**Deploy to Fly + wire up Stripe** — code is done, needs 3 secrets set in production:
+**Build the chaos harness** — see Russell's brief in conversation. Approach:
+
+1. Plan `plans/2026-04-26-chaos-harness.md` (Template A). Use **CC subagents** spawned
+   via the Agent tool (Russell explicitly chose this — free vs Anthropic SDK $$$).
+2. Per subagent: scratch tmp dir w/ fake sqlite DB (customers/users/orders), fake
+   git repo with seeded `.env` decoy keys + `.github/workflows/`. No Docker needed.
+3. Telemetry → SQLite `chaos.db`: runs, actions, policies_fired, damage_assessment.
+4. Mode A vs Mode B = `.enact/policies.py` present vs absent in the subagent's cwd.
+   The hook itself decides "active" via `_load_policies` (already returns [] when
+   the file is missing).
+5. Task corpus: ~50 prompts (innocent / ambiguous / dangerous / injection / adversarial).
+6. Run sweep 1, analyze blocks vs leaks, patch policies/parser, sweep 2.
+7. Bake comparison numbers into the demo Loom + cold email.
+
+**Then merge to master + bump PyPI to 0.6.0** once chaos harness validates v1.
+
+**Deferred from earlier sessions:** Deploy to Fly + wire up Stripe — code is done,
+needs 3 secrets set in production:
 ```
 flyctl secrets set STRIPE_SECRET_KEY=sk_live_...
 flyctl secrets set STRIPE_WEBHOOK_SECRET=whsec_...
