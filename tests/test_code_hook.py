@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from enact.cli.code_hook import parse_bash_command, cmd_init, cmd_pre
+from enact.cli.code_hook import parse_bash_command, cmd_init, cmd_pre, cmd_post
 
 
 # -- parser tests --
@@ -209,3 +209,76 @@ class TestCmdInit:
         cmd_init()
         contents = (tmp_path / ".gitignore").read_text()
         assert contents.count(".enact/") == 1
+
+
+# -- post-hook tests --
+
+class TestCmdPost:
+    def _run_post(self, stdin_json: dict) -> int:
+        stdin = io.StringIO(json.dumps(stdin_json))
+        with patch.object(sys, "stdin", stdin):
+            return cmd_post()
+
+    def test_writes_signed_receipt_with_action(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls -la"},
+            "tool_response": {"exit_code": 0, "stdout": "file1\nfile2\n"},
+            "session_id": "abc-123",
+        })
+        assert rc == 0
+        receipts = list((tmp_path / "receipts").glob("*.json"))
+        assert len(receipts) == 1
+        body = json.loads(receipts[0].read_text())
+        assert body["decision"] == "PASS"
+        assert body["signature"] != ""
+        assert len(body["actions_taken"]) == 1
+        action = body["actions_taken"][0]
+        assert action["action"] == "shell.bash"
+        assert action["system"] == "shell"
+        assert action["success"] is True
+        assert action["output"]["command"] == "ls -la"
+        assert action["output"]["exit_code"] == 0
+        assert action["output"]["already_done"] is False
+
+    def test_failed_bash_reflected_in_action_success(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "false"},
+            "tool_response": {"exit_code": 1, "stderr": "fail"},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text())
+        assert body["decision"] == "PASS"
+        assert body["actions_taken"][0]["success"] is False
+        assert body["actions_taken"][0]["output"]["exit_code"] == 1
+
+    def test_interrupted_bash_marks_action_failed(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "sleep 100"},
+            "tool_response": {"exit_code": 0, "interrupted": True},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text())
+        assert body["actions_taken"][0]["success"] is False
+        assert body["actions_taken"][0]["output"]["interrupted"] is True
+
+    def test_no_secret_skips_silently(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        rc = self._run_post({"tool_name": "Bash", "tool_input": {"command": "ls"}})
+        assert rc == 0
+        assert not (tmp_path / "receipts").exists()
+
+    def test_non_bash_tool_skipped(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({"tool_name": "Read", "tool_input": {"path": "/x"}})
+        assert rc == 0
+        assert not (tmp_path / "receipts").exists()

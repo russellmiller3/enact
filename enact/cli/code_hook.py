@@ -19,8 +19,9 @@ import secrets as secrets_module
 import sys
 from pathlib import Path
 
-from enact.models import WorkflowContext
+from enact.models import WorkflowContext, ActionResult
 from enact.policy import evaluate_all, all_passed
+from enact.receipt import build_receipt, sign_receipt, write_receipt
 
 
 DEFAULT_POLICIES_PY = '''\
@@ -211,4 +212,66 @@ def cmd_pre() -> int:
         return 0
     except Exception:
         # Fail open — broken policies, import errors, bad policy logic.
+        return 0
+
+
+def cmd_post() -> int:
+    """PostToolUse handler. Write a signed Receipt for the executed action.
+
+    Receipt always carries decision="PASS" — we only reach PostToolUse if the
+    PreToolUse policy gate allowed the call. Whether the bash command itself
+    succeeded operationally is recorded in actions_taken[0].success and the
+    exit_code in its output dict. The receipt records what was attempted and
+    its outcome; the policy decision is separate.
+    """
+    try:
+        try:
+            event = json.loads(sys.stdin.read() or "{}")
+        except json.JSONDecodeError:
+            return 0
+
+        if event.get("tool_name") != "Bash":
+            return 0
+
+        secret_path = Path.cwd() / ".enact" / "secret"
+        if not secret_path.exists():
+            return 0  # not initialized — skip silently
+
+        secret = secret_path.read_text().strip()
+        command = event.get("tool_input", {}).get("command", "")
+        tool_response = event.get("tool_response") or {}
+
+        exit_code = tool_response.get("exit_code", 0)
+        interrupted = tool_response.get("interrupted", False) is True
+        bash_succeeded = (exit_code == 0) and not interrupted
+
+        action_result = ActionResult(
+            action="shell.bash",
+            system="shell",
+            success=bash_succeeded,
+            output={
+                "command": command,
+                "exit_code": exit_code,
+                "interrupted": interrupted,
+                "already_done": False,
+            },
+        )
+
+        payload = {
+            "command": command,
+            "session_id": event.get("session_id", ""),
+        }
+
+        receipt = build_receipt(
+            workflow="shell.bash",
+            user_email="claude-code@local",
+            payload=payload,
+            policy_results=[],
+            decision="PASS",
+            actions_taken=[action_result],
+        )
+        receipt = sign_receipt(receipt, secret)
+        write_receipt(receipt, "receipts")
+        return 0
+    except Exception:
         return 0
