@@ -19,23 +19,25 @@ import secrets as secrets_module
 import sys
 from pathlib import Path
 
+from enact.models import WorkflowContext
+from enact.policy import evaluate_all, all_passed
+
 
 DEFAULT_POLICIES_PY = '''\
 """Enact Code policies — edit to customize what gets blocked."""
 from enact.policies.git import dont_force_push, dont_commit_api_keys
-from enact.policies.db import (
-    protect_tables,
-    dont_delete_without_where,
-    block_ddl,
-)
+from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
 
+# These defaults are tuned for the shell-command context. Add
+# dont_delete_without_where only if your workflow populates payload["where"]
+# explicitly — in shell context it would block every non-SQL command since
+# it treats a missing where field as a "delete everything" attempt.
 POLICIES = [
     code_freeze_active,
     block_ddl,
     dont_force_push,
     dont_commit_api_keys,
-    dont_delete_without_where,
     protect_tables(["users", "customers", "orders", "payments", "audit_log"]),
 ]
 '''
@@ -148,3 +150,65 @@ def cmd_init() -> int:
     print(f"  - {settings_path}", file=sys.stderr)
     print(f"  - {policies_path}  (edit to customize policies)", file=sys.stderr)
     return 0
+
+
+def _load_policies() -> list:
+    """Import .enact/policies.py from cwd and return its POLICIES list."""
+    policies_path = Path.cwd() / ".enact" / "policies.py"
+    if not policies_path.exists():
+        return []
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("enact_user_policies", policies_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return getattr(mod, "POLICIES", [])
+
+
+def cmd_pre() -> int:
+    """PreToolUse handler. Emit deny JSON to stdout if any policy blocks.
+
+    Wraps the entire body in try/except so any unexpected error (broken
+    .enact/policies.py, ImportError, policy bug) results in fail-open
+    behaviour. A buggy hook must NEVER permanently brick CC.
+    """
+    try:
+        try:
+            event = json.loads(sys.stdin.read() or "{}")
+        except json.JSONDecodeError:
+            return 0  # fail open on malformed stdin
+
+        if event.get("tool_name") != "Bash":
+            return 0  # only Bash for v1
+
+        command = event.get("tool_input", {}).get("command", "")
+        if not command:
+            return 0
+
+        payload = parse_bash_command(command)
+        context = WorkflowContext(
+            workflow="shell.bash",
+            user_email="claude-code@local",
+            payload=payload,
+        )
+        results = evaluate_all(context, _load_policies())
+
+        if all_passed(results):
+            return 0  # silent allow
+
+        failed = [r for r in results if not r.passed]
+        reasons = "; ".join(f"{r.policy}: {r.reason}" for r in failed)
+        plural = "y" if len(failed) == 1 else "ies"
+        output = {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": (
+                    f"Enact blocked ({len(failed)} polic{plural}): {reasons}"
+                ),
+            }
+        }
+        print(json.dumps(output))
+        return 0
+    except Exception:
+        # Fail open — broken policies, import errors, bad policy logic.
+        return 0

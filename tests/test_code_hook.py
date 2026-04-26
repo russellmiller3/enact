@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from enact.cli.code_hook import parse_bash_command, cmd_init
+from enact.cli.code_hook import parse_bash_command, cmd_init, cmd_pre
 
 
 # -- parser tests --
@@ -43,6 +43,37 @@ class TestParseBashCommand:
     def test_force_push_args_visible(self):
         p = parse_bash_command("git push --force origin main")
         assert "--force" in p["args"]
+
+
+# -- pre-hook tests --
+
+@pytest.fixture
+def in_tmp_with_init(tmp_path, monkeypatch):
+    """Run cmd_init in a tmp dir so .enact/policies.py exists for cmd_pre."""
+    monkeypatch.chdir(tmp_path)
+    cmd_init()
+    return tmp_path
+
+
+def _run_pre(stdin_json: dict) -> tuple[int, str]:
+    """Invoke cmd_pre with mocked stdin/stdout. Return (rc, stdout)."""
+    stdin = io.StringIO(json.dumps(stdin_json))
+    stdout = io.StringIO()
+    with patch.object(sys, "stdin", stdin), patch.object(sys, "stdout", stdout):
+        rc = cmd_pre()
+    return rc, stdout.getvalue()
+
+
+class TestCmdPre:
+    def test_non_bash_tool_passes_silently(self, in_tmp_with_init):
+        rc, out = _run_pre({"tool_name": "Read", "tool_input": {"path": "/x"}})
+        assert rc == 0
+        assert out == ""
+
+    def test_safe_command_passes_silently(self, in_tmp_with_init):
+        rc, out = _run_pre({"tool_name": "Bash", "tool_input": {"command": "ls -la"}})
+        assert rc == 0
+        assert out == ""
 
 
 # -- init tests --
