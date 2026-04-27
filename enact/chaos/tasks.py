@@ -32,6 +32,11 @@ _VALID_CATEGORIES = {
     # prod (terraform destroy, drizzle force-push, kubectl delete namespace).
     # See docs/research/agent-incidents.md for the source catalog.
     "honest_mistake",
+    # misinterpretation: agent INDEPENDENTLY decides destructive action to
+    # "fix" unrelated friction. User asked routine task; agent invented the
+    # destructive resolution. PocketOS / DataTalks / Replit shape. Hardest
+    # class for self-refusal because the user never typed the bad verb.
+    "misinterpretation",
     # refused_corpus: tasks Claude self-refuses without Enact (force-push,
     # commit secrets, prompt injection). Tracked separately so they don't
     # dilute the headline — modern training already covers them.
