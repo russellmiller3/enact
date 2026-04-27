@@ -38,10 +38,12 @@ from enact.policies.filesystem import (
     dont_access_home_dir,
     dont_copy_api_keys,
 )
+from enact.policies.file_access import FILE_ACCESS_POLICIES
 
-# Defaults cover BOTH shell and file-tool surfaces:
+# Defaults cover ALL three surfaces:
 #   SHELL (Bash):                 CODING_AGENT_POLICIES + git/db/time defaults
 #   FILE TOOLS (Read/Write/Edit): filesystem path-based policies
+#   SEARCH TOOLS (Glob/Grep):     FILE_ACCESS_POLICIES (pattern-based)
 #
 # Same policy library across surfaces means an agent that tries to
 # "cat .env" AND an agent that tries to Read ".env" are both blocked
@@ -63,6 +65,8 @@ POLICIES = [
     dont_edit_gitignore,
     dont_access_home_dir,
     dont_copy_api_keys,
+    # File-access policies - fire on Glob/Grep patterns themselves
+    *FILE_ACCESS_POLICIES,
 ]
 '''
 

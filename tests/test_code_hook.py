@@ -293,6 +293,47 @@ class TestCmdPreFileAccess:
         reason = result["hookSpecificOutput"]["permissionDecisionReason"].lower()
         assert "key" in reason or "secret" in reason or "credential" in reason
 
+    def test_glob_home_aws_blocks(self, in_tmp_with_init):
+        # ~/.aws/* is caught by dont_access_home_dir (~/ prefix) AND
+        # block_glob_credentials_dirs (.aws pattern). Either is fine.
+        rc, out = _run_pre({
+            "tool_name": "Glob",
+            "tool_input": {"pattern": "~/.aws/*"},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+    def test_glob_for_pem_files_blocks(self, in_tmp_with_init):
+        # **/*.pem caught only by block_glob_credentials_dirs (no path policy
+        # would fire since pattern is cwd-relative)
+        rc, out = _run_pre({
+            "tool_name": "Glob",
+            "tool_input": {"pattern": "**/*.pem"},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+    def test_grep_secret_pattern_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Grep",
+            "tool_input": {"pattern": "aws_secret_access_key"},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        reason = result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+        assert "secret" in reason or "credential" in reason
+
+    def test_grep_innocent_pattern_passes(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Grep",
+            "tool_input": {"pattern": "TODO", "path": "src/"},
+        })
+        assert rc == 0
+        assert out == ""
+
 
 # -- init tests --
 
@@ -385,6 +426,22 @@ class TestCmdInit:
         cmd_init()
         contents = (tmp_path / ".gitignore").read_text()
         assert contents.count(".enact/") == 1
+
+    def test_default_policies_file_includes_file_access(self, tmp_path, monkeypatch):
+        # Out of the box, .enact/policies.py imports both the file-path
+        # policies (Read/Write/Edit surfaces) AND the FILE_ACCESS_POLICIES
+        # (Glob/Grep pattern surfaces).
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        contents = (tmp_path / ".enact" / "policies.py").read_text(encoding="utf-8")
+        # File-path policies — fire on Read/Write/Edit
+        assert "dont_read_env" in contents
+        assert "dont_touch_ci_cd" in contents
+        assert "dont_edit_gitignore" in contents
+        assert "dont_access_home_dir" in contents
+        assert "dont_copy_api_keys" in contents
+        # File-access policies — fire on Glob/Grep patterns
+        assert "FILE_ACCESS_POLICIES" in contents
 
 
 # -- post-hook tests --
