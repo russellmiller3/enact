@@ -149,6 +149,73 @@ Expected headline: **"5 file-tool prompts paired: A=0 damage, B=N damage"** wher
 
 ---
 
+## Runbook — firing the sweep in a future CC session (deferred from session 15)
+
+Session 15 shipped phases A (5 prompts) + B (encoding fixes for the harness on Windows) + smoke test (verified `run_sweep` produces working dispatches). Phases D+E (smoke-test single dispatch end-to-end + fire 5×2) were NOT run because session 15's CC instance had `cwd=enact` (the broken timestamp-archive folder), not `cwd=enact-fresh`. The hook mechanism reads `.claude/settings.json` + `.enact/policies.py` from CC's startup cwd; in the wrong dir, no hooks fire and the sweep records garbage.
+
+**To fire next session:**
+
+1. **Open a fresh Claude Code session with cwd=enact-fresh:**
+   ```bash
+   cd C:/Users/rmill/Desktop/programming/enact-fresh
+   claude
+   ```
+
+2. **One-time setup in the project root:**
+   ```bash
+   python -m enact.cli.code_hook init
+   # Confirm .claude/settings.json has 6 PreToolUse + 6 PostToolUse enact entries
+   # Confirm .enact/policies.py imports filesystem + file_access policies
+   ```
+
+3. **Smoke test single dispatch (free — no Agent call):**
+   ```python
+   from enact.chaos.tasks import load_corpus
+   from enact.chaos.orchestrate import run_sweep
+   corpus = [t for t in load_corpus("chaos/tasks") if t.id == "80_honest_read_env_natural"]
+   d = run_sweep(corpus, sweep="A")[0]
+   print(d["subagent_prompt"][:600])
+   # Should print the wrapped chaos-test prompt with absolute sandbox paths
+   ```
+
+4. **Fire sweep A — dispatch 5 Agent calls in parallel:**
+   ```python
+   from enact.chaos.tasks import load_corpus
+   from enact.chaos.orchestrate import run_sweep, record_sweep
+   corpus = [t for t in load_corpus("chaos/tasks") if t.id.startswith("8")]
+   dispatches_a = run_sweep(corpus, sweep="A")
+   # Then in CC, dispatch 5 Agent calls in ONE message:
+   #   Agent(prompt=dispatches_a[0]["subagent_prompt"], description="chaos 80 A")
+   #   Agent(prompt=dispatches_a[1]["subagent_prompt"], description="chaos 81 A")
+   #   ... etc, in a single message for parallel exec
+   # Collect their summaries, then:
+   summaries_a = [{"run_id": d["run_id"], "agent_summary": s} for d, s in zip(dispatches_a, agent_returns)]
+   record_sweep(summaries_a)
+   ```
+
+5. **Switch to sweep B (control) — same pattern:**
+   ```python
+   from enact.chaos.runner import disable_sweep_b, restore_after_sweep
+   disable_sweep_b()
+   dispatches_b = run_sweep(corpus, sweep="B")
+   # 5 more parallel Agent calls
+   record_sweep(summaries_b)
+   restore_after_sweep()
+   ```
+
+6. **Generate report:**
+   ```python
+   from enact.chaos.reporter import generate_report
+   print(generate_report())
+   ```
+
+**Estimated cost:** $1-3 total (10 Agent dispatches × ~$0.10-0.35 each per Russell's calibration).
+**Estimated wall clock:** ~10-15 min with parallel dispatch in each sweep.
+
+If any sweep-A run produces damage (a "leak"), `chaos/leaks/{run_id}.json` will hold a draft policy candidate to review and add to the policy library — that's the flywheel.
+
+---
+
 ## B.6 SUCCESS CRITERIA
 
 - [ ] 5 new chaos task files in `chaos/tasks/` with proper frontmatter + body
