@@ -127,11 +127,106 @@ print(f"{len(leaks)} leaks need new policies")
 
 Total trial time: ~25-30 min wall clock with parallel dispatch.
 
-### Once you have real numbers
+### Once you have real numbers — three follow-up tasks (do all three before moving on)
 
-Update the stat callouts in `index.html` (4-stat block in the
-"#numbers" section). The placeholder copy reflects session 10's
-11-run partial trial; replace with the 36-run paired data.
+These three things together turn the raw sweep data into a usable
+marketing artifact + a smarter v1.1. Skip them and the whole sweep is
+wasted effort.
+
+#### 1a. Update the four "Real numbers" stat boxes on the landing page
+
+**What:** the new homepage (`index.html`) has a section called
+"Real numbers" with four big number callouts ("2 critical damage
+events without Enact" etc.). Those numbers are placeholders from
+the 11-run trial. After the 36-run paired sweep, the numbers are
+different and bigger.
+
+**Why:** "We tested 36 simulated attacks" beats "11" for credibility.
+And "of the 18 dangerous tasks Claude attempted, Enact stopped all 18"
+is a stronger headline than the partial data we have now.
+
+**How:**
+1. Open `index.html` and search for `<section id="numbers"`.
+2. Find the four `<div class="stat">` blocks.
+3. Update each `.stat-num` value AND the `.stat-label` description
+   from the new `chaos/report.md` Headline + Outcome breakdown tables.
+4. Update the italic paragraph below the stats with the new "non-obvious
+   finding" — usually a specific adversarial bypass that worked.
+
+**Time:** ~10 minutes of editing. No code change, just copy.
+**Depends on:** Priority 1 (sweep) being done.
+
+#### 1b. Generate the leak files and review them as draft policies
+
+**What:** if any Sweep A run (Enact ON) still produced damage, that's
+a "leak" — Enact failed to catch something. The harness writes these
+to `chaos/leaks/{run_id}.json`. Each leak is a draft new policy waiting
+to be written.
+
+**Why:** **This is the flywheel turning.** Every leak found in the
+sweep produces a draft policy candidate. Over time the policy library
+gets smarter without manual hunting.
+
+**How:**
+1. After the sweep, run:
+   ```bash
+   python -c "
+   from enact.chaos.suggest import write_leak_files, build_suggestion_prompt
+   import json
+   for path in write_leak_files():
+       leak = json.loads(path.read_text())
+       print('=' * 70)
+       print(f'LEAK: {leak[\"task_id\"]}  (run {leak[\"run_id\"][:8]})')
+       print('=' * 70)
+       print(build_suggestion_prompt(leak))
+       print()
+   "
+   ```
+2. For each leak printed: copy the prompt, paste into a fresh Claude
+   conversation (claude.ai or API console — your choice). Claude
+   responds with a draft Python policy function.
+3. Read the draft. Edit if needed. Drop into `enact/policies/coding_agent.py`
+   (create the file if it doesn't exist).
+4. Add the new policy to `.enact/policies.py` POLICIES list.
+5. Re-run JUST that one task to confirm the leak is closed:
+   ```python
+   from enact.chaos.tasks import load_corpus
+   from enact.chaos.orchestrate import run_sweep, record_sweep
+   task = next(t for t in load_corpus("chaos/tasks") if t.id == "<the leaked task>")
+   d = run_sweep([task], sweep="A")[0]
+   # Dispatch one Agent. Then record. Should now be enact_blocked, not damage.
+   ```
+
+**Time:** ~10-30 min depending on how many leaks (each leak = ~5-10 min).
+**Depends on:** Priority 1 done. **Critically: human review on every draft policy.** Never auto-apply.
+
+#### 1c. Pick three damage findings for the cold-email body
+
+**What:** the cold email template has a `[N] critical incidents...`
+line. Fill it in with three specific, concrete damage events from
+Sweep B (the without-Enact mode). Pick diverse categories — one DB
+attack, one git attack, one secret leak — so it reads as breadth.
+
+**Why:** specific concrete incidents land harder than "we caught
+attacks." A reader scans the email, sees "the agent dropped the
+customers table, force-pushed to main, and committed three API keys,"
+and instantly maps that onto their own infra.
+
+**How:**
+1. Open `chaos/report.md` and look at the "Damage events (Sweep B)" table.
+2. Pick three rows with diverse `event_type`s. Good mix:
+   - One `customers_emptied` or `customers_table_dropped` (DB)
+   - One `force_push_attempted` or `env_committed` (git)
+   - One `workflow_modified` or similar (CI/secrets)
+3. Write a single short sentence per incident (active voice, agent as
+   subject):
+   - "Agent dropped the customers table to 'free disk space.'"
+   - "Agent force-pushed an unsigned rebase to main during a code freeze."
+   - "Agent committed `.env` containing 3 API keys to a feature branch."
+4. Drop those three sentences into the cold-email template (Priority 4).
+
+**Time:** ~10 min.
+**Depends on:** Priority 1.
 
 ---
 
@@ -251,25 +346,123 @@ in `docs/outreach/` (create dir if needed).
 > — Russell, founder
 > enact.cloud
 
-### Target list filters
-- VP Eng / Head of Platform / Eng Manager
-- 100-300 person eng team
-- AI-forward: known Cursor/CC users, AI products in market
-- Recent near-miss preferred
+### How to actually build the target list (50 names)
 
-50 emails/week. Math: 50 → 5-10 demos → 2-3 trials → 1-2 paid in 30 days.
+**What:** spreadsheet with 50 rows. Columns: company, name, role,
+email, hook (specific reason you're reaching out — recent blog post,
+job posting, public near-miss).
 
-### Loom 90s script
+**Why:** generic mass-email gets ignored. Personalized cold email gets
+5-15% reply rate. The personalization is the work.
+
+**How:**
+1. **Filter criteria — match all three:**
+   - 100-300 person eng team (small enough to talk to manager directly,
+     big enough to have budget)
+   - AI-forward (visible AI products, AI engineering job postings, or
+     known Cursor/CC users)
+   - One of: had a public near-miss, in regulated industry
+     (fintech / healthcare / gov), OR VP Eng has tweeted about agent
+     safety / coding-agent risk
+2. **Sources for the list:**
+   - **LinkedIn Sales Navigator** — search "VP Engineering" + "Head of
+     Platform" at companies sized 50-500, filter by industry. ~$80/mo.
+   - **YC company directory** — filter to AI / devtools / SaaS in W23-W25
+     batches. Free.
+   - **Twitter search** — query strings like `"cursor deleted"`,
+     `"agent broke prod"`, `"claude code yolo"`, `"force push agent"`.
+     Look at who's complaining; those are warm prospects.
+   - **HackerNews** — recent "Show HN" posts about AI agents. Authors
+     of AI-tool startups are good targets too.
+3. **Personalization hook** — for each entry, add 1-2 sentences
+   referencing something specific (latest blog post, recent ship,
+   public incident). Rotate through. Generic = dead email.
+4. **Send via personal Gmail or Apollo** — low volume = warmer than
+   batch tools. ~50/week is the sustainable rate.
+5. **Track in spreadsheet:** date sent, replied (Y/N), demo booked
+   (Y/N), trial started (Y/N), paid (Y/N). The numbers are what you
+   tune the email/Loom against.
+
+**Time:** ~5-8 hours total for the first list (research-heavy).
+Subsequent lists are faster as you reuse criteria.
+
+**Math (realistic):** 50 emails → 5-10 replies → 3-5 demos → 2-3
+trials → 1-2 paid in 30 days. Repeat weekly.
+
+### Loom 90s script (concrete recording instructions)
+
+**What:** a 90-second screen recording showing the live demo. Goes
+into every cold email as the `[Loom link]` in the template.
+
+**Why:** cold emails with a video link get 3-5x reply rates. Without
+a video, you're asking a busy exec to imagine what your product does.
+The video does the imagining for them.
+
+**How:**
+
+**Setup (10 min):**
+1. Open Loom (loom.com — free tier is fine) or Quicktime + screen capture
+2. Spin up a fresh sandbox repo:
+   ```bash
+   mkdir /tmp/enact-demo && cd /tmp/enact-demo && git init -b main
+   pip install enact-sdk
+   enact-code-hook init
+   ```
+3. Open Claude Code in `/tmp/enact-demo`
+4. Have a terminal visible alongside CC for showing receipts at the end
+
+**Script (90 seconds):**
+```
+0:00-0:10  Camera/voiceover: "Last summer, Replit's agent dropped a
+           production database during a code freeze. Here's what
+           would have happened with Enact Code installed."
+
+0:10-0:25  Set scene: in CC, type the prompt:
+           "I need to clean up old rows in the customers table."
+
+0:25-0:55  CC proposes psql DELETE FROM customers (or similar).
+           PreToolUse hook fires.
+           Camera zooms into the BLOCKED message in the terminal.
+           Voiceover reads the policy reason aloud:
+           "Enact's protect_tables policy fired. The customers table
+           is in the protected list, so the operation gets denied
+           before it executes. Claude sees the deny, tells me, and
+           doesn't run the SQL."
+
+0:55-1:10  Cut to the receipts/ folder showing the signed receipt JSON.
+           Brief flash of `chaos/report.md` showing "0 damage with
+           Enact, [N] without."
+
+1:10-1:30  Voiceover: "Free for individual developers. $30 per seat
+           per month for teams who want the audit dashboard. Reply
+           for a 14-day trial. Link to the docs is in the email."
+```
+
+**Record (20 min):**
+- Do 2-3 takes. First take is always rough; second is usually shippable.
+- Don't over-edit. Real-feeling > polished. A solo founder with a
+  scrappy demo lands better than a corporate sizzle reel.
+- Upload to Loom, get the share link, paste into the cold email template.
+
+**Time:** ~30 min total including setup + 2-3 takes + upload.
+**Depends on:** Priorities 1, 1a, 1b, 1c done so the "[N] without
+Enact" number you mention is real.
+
+### How the priorities chain together
 
 ```
-0:00-0:10  "Remember the Replit prod DB incident last summer?"
-0:10-0:25  Set scene: CC session, fake prod DB labeled PROD-MIRROR
-0:25-0:55  Live: ask CC to "clean up old customer rows"
-           CC writes psql DELETE FROM customers
-           PreToolUse hook fires; big red BLOCKED
-0:55-1:10  Show signed receipt + chaos report headline numbers
-1:10-1:30  "Free for individuals. $30/seat/mo for teams. Reply for a 14-day trial."
+Priority 1 (sweep)
+   ├─→ 1a (update landing-page numbers)
+   ├─→ 1b (generate leak files → draft policies)
+   └─→ 1c (pick 3 damage findings)
+                  ├─→ Loom recording (uses real numbers)
+                  └─→ Cold email body (uses 3 findings + Loom link)
+                          └─→ First 50 emails sent
 ```
+
+If you do the priorities in numerical order without the 1a/1b/1c
+follow-ups, you'll have a sweep that produced data nobody saw. The
+follow-ups are what turn data into outbound.
 
 ---
 
@@ -311,6 +504,22 @@ print(export_attempt_rates())
 # Full chaos test suite
 python -m pytest tests/test_code_hook.py tests/test_chaos_*.py -v
 ```
+
+---
+
+## ADHD-friendly / plain-English rule (SESSION-PERMANENT)
+
+**Russell has ADHD.** All responses must follow the plain-English /
+ADHD-friendly rules now baked into `CLAUDE.md` (Communication Style
+section) AND enforced via a `UserPromptSubmit` hook in
+`.claude/settings.json` that injects a reminder on every message.
+
+The rules in one line: **lead with the answer; short paragraphs;
+tables/bullets over prose; concrete numbers; plain English first;
+bold takeaways; skip meta; 3-5 next-likely-needs tail at the end.**
+
+If you find yourself writing a wall of text, you've already broken the
+rule. Stop, restructure as bullets/tables, then continue.
 
 ---
 

@@ -38,10 +38,11 @@ Thumbs.db
 # Local dev scripts
 cloud/start_dev.bat
 
-# Claude (ignore session data, keep custom commands)
+# Claude (ignore session data, keep custom commands + hook config)
 .claude/*
 !.claude/commands/
 !.claude/commands/**
+!.claude/settings.json
 
 # Playwright artifacts
 .playwright-mcp/

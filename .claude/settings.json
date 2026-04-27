@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "enact-code-hook pre"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "enact-code-hook post"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf 'PLAIN-ENGLISH RULE (Russell has ADHD): lead with the answer; short paragraphs (2-3 sentences); tables/bullets over prose; concrete numbers not vague adjectives; plain English first then jargon in parens; bold the key takeaway; skip meta narration; tail every \"done\" message with a 3-5 item likely-next-needs list.'"
+          }
+        ]
+      }
+    ]
+  }
+}
