@@ -392,7 +392,9 @@ class TestCmdPost:
         assert body["signature"] != ""
         assert len(body["actions_taken"]) == 1
         action = body["actions_taken"][0]
-        assert action["action"] == "shell.bash"
+        # action follows the new tool.<lower> convention; system stays "shell"
+        # for Bash so audit dashboards can group shell vs file-tool ops.
+        assert action["action"] == "tool.bash"
         assert action["system"] == "shell"
         assert action["success"] is True
         assert action["output"]["command"] == "ls -la"
@@ -432,10 +434,11 @@ class TestCmdPost:
         assert rc == 0
         assert not (tmp_path / "receipts").exists()
 
-    def test_non_bash_tool_skipped(self, tmp_path, monkeypatch):
+    def test_unsupported_tool_skipped(self, tmp_path, monkeypatch):
+        # WebFetch isn't in SUPPORTED_TOOLS — no receipt
         monkeypatch.chdir(tmp_path)
         cmd_init()
-        rc = self._run_post({"tool_name": "Read", "tool_input": {"path": "/x"}})
+        rc = self._run_post({"tool_name": "WebFetch", "tool_input": {"url": "https://x.com"}})
         assert rc == 0
         assert not (tmp_path / "receipts").exists()
 
@@ -480,6 +483,84 @@ class TestCmdPost:
         assert rc == 0
         receipts = list((tmp_path / "receipts").glob("*.json"))
         assert len(receipts) == 1
+
+
+class TestCmdPostMultiTool:
+    """cmd_post writes signed receipts for every supported tool, with
+    action.system reflecting the actual tool surface so audit dashboards
+    can filter by tool type."""
+
+    def _run_post(self, stdin_json: dict) -> int:
+        stdin = io.StringIO(json.dumps(stdin_json))
+        with patch.object(sys, "stdin", stdin):
+            return cmd_post()
+
+    def test_read_writes_receipt_with_read_action(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Read",
+            "tool_input": {"file_path": "src/main.py"},
+            "tool_response": {"file": {"contents": "print('hi')"}},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text(encoding="utf-8"))
+        assert body["decision"] == "PASS"
+        assert body["actions_taken"][0]["system"] == "read"
+        assert body["actions_taken"][0]["action"] == "tool.read"
+        assert body["actions_taken"][0]["output"]["path"] == "src/main.py"
+        assert body["actions_taken"][0]["success"] is True
+
+    def test_write_failure_in_response_marks_action_failed(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Write",
+            "tool_input": {"file_path": "x.txt", "content": "hi"},
+            "tool_response": {"error": "permission denied"},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text(encoding="utf-8"))
+        assert body["actions_taken"][0]["system"] == "write"
+        assert body["actions_taken"][0]["success"] is False
+        assert body["actions_taken"][0]["output"]["error"] == "permission denied"
+
+    def test_edit_writes_receipt_with_edit_action(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "x.py", "old_string": "a", "new_string": "b"},
+            "tool_response": {"file": {"contents": "b"}},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text(encoding="utf-8"))
+        assert body["actions_taken"][0]["system"] == "edit"
+        assert body["actions_taken"][0]["action"] == "tool.edit"
+
+    def test_glob_writes_receipt_with_glob_action(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Glob",
+            "tool_input": {"pattern": "src/**/*.py"},
+            "tool_response": {"files": ["src/main.py"]},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text(encoding="utf-8"))
+        assert body["actions_taken"][0]["system"] == "glob"
+
+    def test_grep_writes_receipt_with_grep_action(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        rc = self._run_post({
+            "tool_name": "Grep",
+            "tool_input": {"pattern": "TODO", "path": "src/"},
+            "tool_response": {"matches": []},
+        })
+        assert rc == 0
+        body = json.loads(list((tmp_path / "receipts").glob("*.json"))[0].read_text(encoding="utf-8"))
+        assert body["actions_taken"][0]["system"] == "grep"
 
 
 # -- main dispatcher --

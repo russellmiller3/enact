@@ -395,40 +395,59 @@ def cmd_post() -> int:
         except json.JSONDecodeError:
             return 0
 
-        if event.get("tool_name") != "Bash":
+        tool_name = event.get("tool_name", "")
+        if tool_name not in SUPPORTED_TOOLS:
             return 0
 
         secret_path = Path.cwd() / ".enact" / "secret"
         if not secret_path.exists():
-            return 0  # not initialized — skip silently
+            return 0  # not initialized - skip silently
 
         secret = secret_path.read_text(encoding="utf-8").strip()
-        command = event.get("tool_input", {}).get("command", "")
+        tool_input = event.get("tool_input", {}) or {}
         tool_response = event.get("tool_response") or {}
+        parsed = parse_tool_input(tool_name, tool_input) or {}
+        command = parsed.get("command", "")
+        workflow = f"tool.{tool_name.lower()}"
 
-        exit_code = tool_response.get("exit_code", 0)
-        interrupted = tool_response.get("interrupted", False) is True
-        bash_succeeded = (exit_code == 0) and not interrupted
-
-        action_result = ActionResult(
-            action="shell.bash",
-            system="shell",
-            success=bash_succeeded,
-            output={
+        if tool_name == "Bash":
+            # Bash uses the existing exit_code / interrupted signals
+            exit_code = tool_response.get("exit_code", 0)
+            interrupted = tool_response.get("interrupted", False) is True
+            success = (exit_code == 0) and not interrupted
+            action_output = {
                 "command": command,
                 "exit_code": exit_code,
                 "interrupted": interrupted,
                 "already_done": False,
-            },
+            }
+        else:
+            # File/search tools: success unless tool_response carries an error
+            success = "error" not in tool_response
+            action_output = {
+                "command": command,
+                "path": parsed.get("path", ""),
+                "already_done": False,
+            }
+            if "error" in tool_response:
+                action_output["error"] = tool_response["error"]
+
+        system_name = "shell" if tool_name == "Bash" else tool_name.lower()
+        action_result = ActionResult(
+            action=workflow,
+            system=system_name,
+            success=success,
+            output=action_output,
         )
 
         payload = {
             "command": command,
+            "tool_name": tool_name,
             "session_id": event.get("session_id", ""),
         }
 
         receipt = build_receipt(
-            workflow="shell.bash",
+            workflow=workflow,
             user_email="claude-code@local",
             payload=payload,
             policy_results=[],
