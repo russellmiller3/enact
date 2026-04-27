@@ -39,19 +39,23 @@ from enact.policies.filesystem import (
     dont_copy_api_keys,
 )
 from enact.policies.file_access import FILE_ACCESS_POLICIES
+from enact.policies.url import URL_POLICIES
+from enact.policies.credential import CREDENTIAL_POLICIES
 
-# Defaults cover ALL three surfaces:
+# Defaults cover ALL four surfaces:
 #   SHELL (Bash):                 CODING_AGENT_POLICIES + git/db/time defaults
 #   FILE TOOLS (Read/Write/Edit): filesystem path-based policies
 #   SEARCH TOOLS (Glob/Grep):     FILE_ACCESS_POLICIES (pattern-based)
+#   WEB FETCH (WebFetch):         URL_POLICIES (exfil/TLD/IP/https checks)
+#   CREDENTIAL SCOPE:             CREDENTIAL_POLICIES (PocketOS-class catch)
 #
 # Same policy library across surfaces means an agent that tries to
 # "cat .env" AND an agent that tries to Read ".env" are both blocked
 # by the same dont_read_env policy - defense in depth, no surface gaps.
 #
-# CODING_AGENT_POLICIES blocks 23 documented real-world incident patterns
+# CODING_AGENT_POLICIES blocks 24 documented real-world incident patterns
 # (terraform destroy, drizzle force, aws s3 rm --recursive, kubectl delete
-# namespace, etc.). See docs/research/agent-incidents.md for sources.
+# namespace, rename-then-drop bypass, etc.). See docs/research/agent-incidents.md.
 POLICIES = [
     code_freeze_active,
     block_ddl,
@@ -67,6 +71,10 @@ POLICIES = [
     dont_copy_api_keys,
     # File-access policies - fire on Glob/Grep patterns themselves
     *FILE_ACCESS_POLICIES,
+    # URL policies - fire on WebFetch tool calls
+    *URL_POLICIES,
+    # Credential-scope policies - PocketOS-class catch
+    *CREDENTIAL_POLICIES,
 ]
 '''
 
