@@ -130,7 +130,7 @@ def parse_bash_command(command: str) -> dict:
     return payload
 
 
-SUPPORTED_TOOLS = ("Bash", "Read", "Write", "Edit", "Glob", "Grep")
+SUPPORTED_TOOLS = ("Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch")
 
 
 def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
@@ -142,12 +142,13 @@ def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
     invariant.
 
     Each tool's payload is shaped so existing policies fire correctly:
-      Bash  -> command/args/diff/content (+ sql/table/where if psql)
-      Read  -> path + rendered command for shell-pattern policies
-      Write -> path + content (so dont_copy_api_keys catches keys in content)
-      Edit  -> path + diff (old->new) so dont_commit_api_keys catches diff secrets
-      Glob  -> path=pattern (so dont_access_home_dir fires) + glob_pattern
-      Grep  -> grep_pattern (for block_grep_secret_patterns) + path
+      Bash     -> command/args/diff/content (+ sql/table/where if psql)
+      Read     -> path + rendered command for shell-pattern policies
+      Write    -> path + content (so dont_copy_api_keys catches keys in content)
+      Edit     -> path + diff (old->new) so dont_commit_api_keys catches diff secrets
+      Glob     -> path=pattern (so dont_access_home_dir fires) + glob_pattern
+      Grep     -> grep_pattern (for block_grep_secret_patterns) + path
+      WebFetch -> url + prompt (URL_POLICIES read context.payload["url"])
     """
     if tool_name == "Bash":
         command = tool_input.get("command") or ""
@@ -214,6 +215,19 @@ def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
             "path": path,
             "grep_pattern": pattern,
             "command": f"Grep {pattern}" + (f" {path}" if path else ""),
+            "diff": "",
+            "content": "",
+        }
+
+    if tool_name == "WebFetch":
+        url = tool_input.get("url") or ""
+        if not url:
+            return None
+        prompt = tool_input.get("prompt") or ""
+        return {
+            "url": url,
+            "prompt": prompt,
+            "command": f"WebFetch {url}",
             "diff": "",
             "content": "",
         }

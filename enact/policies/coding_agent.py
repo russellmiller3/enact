@@ -519,6 +519,99 @@ def block_curl_pipe_shell(context: WorkflowContext) -> PolicyResult:
                         reason="No curl-pipe-shell detected")
 
 
+# --- block_rename_then_drop -------------------------------------------------
+#
+# Catches the rename-then-drop bypass: agent renames a protected table to a
+# non-protected name, then drops the renamed alias. Naive protect_tables only
+# matches the literal protected name and misses this two-step pattern.
+#
+# State: per-session dict mapping session_id → {alias_name: original_name}.
+# Lives in module scope. session_id is read from context.payload["session_id"]
+# (Claude Code provides this in PreToolUse events). Falls back to "default" if
+# missing — single-session callers still get coverage, just without isolation.
+#
+# WHAT (public): blocks DROP/TRUNCATE/DELETE on a name that was earlier
+# RENAMED-FROM a protected table within the same session.
+# HOW (moat — eventually moves to enact-pro): the regex set, the exact
+# protected-table list, the multi-statement semicolon parser.
+
+_PROTECTED_TABLES_DEFAULT = ("customers", "users", "orders", "payments", "audit_log")
+
+# ALTER TABLE <old> RENAME TO <new> — captures both names.
+_RENAME_RE = re.compile(
+    r"\bALTER\s+TABLE\s+(\w+)\s+RENAME\s+TO\s+(\w+)\b",
+    re.IGNORECASE,
+)
+# Destructive verbs against a single table name.
+_DESTRUCTIVE_RE = re.compile(
+    r"\b(?:DROP\s+TABLE|TRUNCATE(?:\s+TABLE)?|DELETE\s+FROM)\s+(\w+)\b",
+    re.IGNORECASE,
+)
+
+# Module-level: {session_id: {alias_lower: original_lower}}.
+# Reset between tests via the test fixture; in production a long-lived hook
+# process accumulates aliases per session for the lifetime of that session.
+_RENAME_TRACKER: dict[str, dict[str, str]] = {}
+
+
+def block_rename_then_drop(context: WorkflowContext) -> PolicyResult:
+    """Block the rename-then-drop adversarial bypass of protect_tables.
+
+    Pattern: agent runs `ALTER TABLE customers RENAME TO archived`, then
+    `DROP TABLE archived`. Naive protect_tables catches DROP TABLE customers
+    but not DROP TABLE archived because the name no longer matches the
+    protected list.
+
+    This policy tracks ALTER ... RENAME pairs per session_id. When a
+    DROP/TRUNCATE/DELETE hits a name that was earlier renamed FROM a
+    protected table, the operation is blocked.
+
+    Reads `context.payload["command"]` and `context.payload["session_id"]`.
+    Pass-through if no command is present.
+    """
+    cmd = _scan(context)
+    if not cmd:
+        return PolicyResult(
+            policy="block_rename_then_drop",
+            passed=True,
+            reason="No command in payload",
+        )
+    session_id = context.payload.get("session_id") or "default"
+    aliases = _RENAME_TRACKER.setdefault(session_id, {})
+
+    # 1. Update the alias map for any RENAME we see in this command.
+    for match in _RENAME_RE.finditer(cmd):
+        original = match.group(1).lower()
+        new_name = match.group(2).lower()
+        if original in _PROTECTED_TABLES_DEFAULT:
+            aliases[new_name] = original
+            # Also chain: if `original` is itself an alias, we don't currently
+            # transitively re-track. Keep this simple — single-hop is enough
+            # for the documented bypass shape.
+
+    # 2. For any DROP/TRUNCATE/DELETE in the same command, check if its
+    # target is a protected-table alias in this session.
+    for match in _DESTRUCTIVE_RE.finditer(cmd):
+        target = match.group(1).lower()
+        if target in aliases:
+            original = aliases[target]
+            return PolicyResult(
+                policy="block_rename_then_drop",
+                passed=False,
+                reason=(
+                    f"Destructive op on '{target}' blocked — "
+                    f"that name was renamed from protected table '{original}' "
+                    f"earlier in this session. Bypass attempt detected."
+                ),
+            )
+
+    return PolicyResult(
+        policy="block_rename_then_drop",
+        passed=True,
+        reason="No rename-then-drop pattern detected in this session",
+    )
+
+
 # All policies in one list, importable from .enact/policies.py
 CODING_AGENT_POLICIES = [
     block_terraform_destroy,
@@ -546,4 +639,6 @@ CODING_AGENT_POLICIES = [
     block_aws_creds_read,
     block_email_bulk_send,
     block_curl_pipe_shell,
+    # Session 16 — adversarial bypass coverage
+    block_rename_then_drop,
 ]
