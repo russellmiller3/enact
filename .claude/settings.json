@@ -6,7 +6,52 @@
         "hooks": [
           {
             "type": "command",
-            "command": "enact-code-hook pre"
+            "command": "python -m enact.cli.code_hook pre"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook pre"
+          }
+        ]
+      },
+      {
+        "matcher": "Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook pre"
+          }
+        ]
+      },
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook pre"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook pre"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook pre"
           }
         ]
       }
@@ -17,7 +62,52 @@
         "hooks": [
           {
             "type": "command",
-            "command": "enact-code-hook post"
+            "command": "python -m enact.cli.code_hook post"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook post"
+          }
+        ]
+      },
+      {
+        "matcher": "Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook post"
+          }
+        ]
+      },
+      {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook post"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook post"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m enact.cli.code_hook post"
           }
         ]
       }
