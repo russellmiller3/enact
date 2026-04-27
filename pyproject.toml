@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "enact-sdk"
-version = "0.5.1"
+version = "1.0.0"
 description = "Enact — the Agent Firewall for AI coding tools and production agents"
 readme = "README.md"
 license = {text = "Elastic License 2.0"}
