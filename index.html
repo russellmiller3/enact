@@ -189,9 +189,12 @@
 <!-- HERO -->
 <section class="hero">
     <div class="container">
-        <h1>Two days ago, an AI coding agent <span class="highlight">wiped a production database in 9 seconds</span> while trying to "fix" an unrelated bug.</h1>
+        <h1>An AI coding agent <span class="highlight">wiped a production database in 9 seconds</span> while trying to "fix" an unrelated bug.</h1>
         <p class="sub">
-            April 25, 2026. PocketOS founder Jer Crane asked Cursor (running Claude Opus 4.6) to handle a routine staging task. The agent hit a credential mismatch and <strong>independently decided</strong> to delete a Railway volume to "fix" it. Found a token created for adding domain names; used it to delete what it thought was a staging volume. It was production. Three months of customer data gone — for a SaaS serving rental car businesses. The agent's own confession enumerated the safety rules it was breaking, in writing, while breaking them. Enact is the Agent Firewall that runs every tool call through deterministic policies BEFORE execution — regardless of whether the user asked for it or the agent invented it.
+            April 25, 2026. PocketOS founder Jer Crane asked Cursor (Claude Opus 4.6) to handle a routine staging task. The agent hit a credential mismatch and <strong>independently decided</strong> to delete a Railway volume to "fix" it. Used a token created for unrelated domain ops. Thought scope was staging — was production. Three months of customer data gone in 9 seconds. The agent's confession enumerated the safety rules it was breaking <em>in writing while breaking them</em>.
+        </p>
+        <p class="sub" style="margin-top: 1.25rem; font-size: 1.1rem;">
+            <strong>Enact is the Agent Firewall</strong> — a deterministic policy gate between your AI agent and every tool call it tries to make. Bash, Read, Write, Edit, Glob, Grep. Same engine across every surface. Allow, deny, or pause-for-human, with a signed receipt either way. Runs locally. No LLM in the decision loop.
         </p>
         <div class="cta-row">
             <a href="#try" class="btn btn-primary">Install in 30 seconds →</a>
@@ -280,10 +283,49 @@
     </div>
 </section>
 
-<!-- HOW IT WORKS / DEMO -->
-<section id="how">
+<!-- WHAT ENACT IS — solution introduction -->
+<section id="what" class="centered">
     <div class="container">
-        <div class="section-label">How it works</div>
+        <div class="section-label">What Enact is</div>
+        <h2>A deterministic policy gate between your AI agent and every tool call.</h2>
+        <p class="section-sub">
+            Vendor-side guardrails (Cursor Plan Mode, Claude Code system prompts, Anthropic's opt-in sandbox) keep failing because the agent reasons its way around them. Enact moves enforcement OUT of the agent's discretion and INTO the integration layer — same place SOC2 and your auditor expect it.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 980px; margin: 48px auto 0; text-align: left;">
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 28px;">
+                <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 12px;">1. INSPECT</div>
+                <h3 style="font-size: 17px; margin-bottom: 10px;">Every tool call. Before execution.</h3>
+                <p style="font-size: 14px; color: var(--muted); line-height: 1.65;">
+                    Hooks into Claude Code's <code>PreToolUse</code> event for Bash, Read, Write, Edit, Glob, and Grep. Synthesizes each tool input into a structured payload. Sub-50ms overhead.
+                </p>
+            </div>
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 28px;">
+                <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 12px;">2. DECIDE</div>
+                <h3 style="font-size: 17px; margin-bottom: 10px;">Deterministic Python policies.</h3>
+                <p style="font-size: 14px; color: var(--muted); line-height: 1.65;">
+                    No LLM in the decision loop. 28 incident-derived defaults out of the box; add your own protected tables, deploy windows, and forbidden ops in five minutes. Same policies fire on Bash AND file tools — agent can't bypass by switching surfaces.
+                </p>
+            </div>
+            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 28px;">
+                <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 12px;">3. RECEIPT</div>
+                <h3 style="font-size: 17px; margin-bottom: 10px;">Allow, deny, or pause-for-human.</h3>
+                <p style="font-size: 14px; color: var(--muted); line-height: 1.65;">
+                    Every action writes an HMAC-SHA256-signed JSON receipt — pass, block, or partial. Tamper-evident, exportable, the artifact your auditor actually wants. Optional one-call rollback reverses the entire run.
+                </p>
+            </div>
+        </div>
+
+        <p style="margin-top: 40px; max-width: 720px; margin-left: auto; margin-right: auto; font-size: 15px; color: var(--text); line-height: 1.7;">
+            <strong>Key invariant:</strong> the policy decision does not depend on the agent's good intentions. The agent can decide to do anything; the gate either lets it through or doesn't. <strong>Code does not drift with model versions; agent good intentions do.</strong>
+        </p>
+    </div>
+</section>
+
+<!-- HOW IT WORKS / DEMO -->
+<section id="how" class="alt">
+    <div class="container">
+        <div class="section-label">How it works under the hood</div>
         <h2>Every agent action flows through a policy engine first.</h2>
         <p class="section-sub">
             Claude Code emits a PreToolUse hook on every tool call — Bash, Read, Write, Edit, Glob, Grep. Enact is a tiny binary on that hook. Synthesizes each tool input into a structured payload, runs it through deterministic Python policies, returns deny JSON if any policy blocks. Sub-50ms overhead. No LLMs in the decision path.
