@@ -233,6 +233,143 @@ def block_drop_database(context: WorkflowContext) -> PolicyResult:
     )
 
 
+_NPM_INSTALL_RE = re.compile(r'\bnpm\s+(?:install|i|add)\s+(?!--)\S+', re.IGNORECASE)
+# Whitelist of well-known scopes / packages we don't flag. Real users add to
+# this in their own .enact/policies.py; the default is intentionally tight.
+_NPM_PACKAGE_WHITELIST = {
+    "react", "react-dom", "vue", "svelte", "next", "vite", "webpack",
+    "typescript", "eslint", "prettier", "jest", "vitest", "mocha",
+    "express", "fastify", "axios", "lodash", "zod",
+}
+
+
+def block_npm_install_unvetted(context: WorkflowContext) -> PolicyResult:
+    """Block `npm install <pkg>` for any package not in the whitelist.
+
+    Supply-chain pattern: agent grabs an unfamiliar package on a vague request.
+    Typosquats (chalk-improved, lodash-utils, etc.) and abandoned-dep takeovers
+    enter codebases this way.
+    """
+    cmd = _scan(context)
+    m = _NPM_INSTALL_RE.search(cmd)
+    if not m:
+        return PolicyResult(policy="block_npm_install_unvetted", passed=True,
+                            reason="No npm install detected")
+    # Extract the package name (everything after install/i/add)
+    parts = cmd.split()
+    try:
+        idx = next(i for i, p in enumerate(parts)
+                   if p in ("install", "i", "add") and parts[i-1].endswith("npm"))
+        pkg = next((p for p in parts[idx+1:] if not p.startswith("-")), "")
+        # Strip @scope/ prefix and version suffix
+        bare = pkg.lstrip("@").split("/")[-1].split("@")[0]
+        if bare in _NPM_PACKAGE_WHITELIST:
+            return PolicyResult(policy="block_npm_install_unvetted", passed=True,
+                                reason=f"npm package '{bare}' is in whitelist")
+    except (StopIteration, IndexError):
+        pkg = "?"
+    return PolicyResult(
+        policy="block_npm_install_unvetted",
+        passed=False,
+        reason=f"npm install of unvetted package blocked — supply-chain risk (typosquat/takeover): {pkg}",
+    )
+
+
+_SLACK_MASS_RE = re.compile(
+    r'\bslack\b.*chat\.postMessage\b|'
+    r'\bslack\b.*conversations\.list\b',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def block_slack_mass_message(context: WorkflowContext) -> PolicyResult:
+    """Block bulk Slack messaging — mass DM / @-channel blast pattern."""
+    cmd = _scan(context)
+    if _SLACK_MASS_RE.search(cmd):
+        return PolicyResult(
+            policy="block_slack_mass_message",
+            passed=False,
+            reason="slack mass-message blocked — agent could blast every channel/user",
+        )
+    return PolicyResult(policy="block_slack_mass_message", passed=True,
+                        reason="No slack mass-message detected")
+
+
+_STRIPE_BULK_CANCEL_RE = re.compile(
+    r'\bstripe\b.*subscriptions?\s+(?:cancel|del(?:ete)?)\b.*(?:--all|--status)',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def block_stripe_bulk_cancel(context: WorkflowContext) -> PolicyResult:
+    """Block bulk Stripe subscription cancellation — billing destructive."""
+    cmd = _scan(context)
+    if _STRIPE_BULK_CANCEL_RE.search(cmd):
+        return PolicyResult(
+            policy="block_stripe_bulk_cancel",
+            passed=False,
+            reason="stripe bulk-cancel blocked — could cancel paying subscriptions on overly-broad filter",
+        )
+    return PolicyResult(policy="block_stripe_bulk_cancel", passed=True,
+                        reason="No stripe bulk-cancel detected")
+
+
+_ROUTE53_DELETE_RE = re.compile(
+    r'\baws\b\s+route53\s+(?:change-resource-record-sets|delete-)',
+    re.IGNORECASE,
+)
+
+
+def block_route53_destructive(context: WorkflowContext) -> PolicyResult:
+    """Block destructive Route53 changes — single-keystroke DNS outage."""
+    cmd = _scan(context)
+    if _ROUTE53_DELETE_RE.search(cmd):
+        return PolicyResult(
+            policy="block_route53_destructive",
+            passed=False,
+            reason="route53 record-set change blocked — DNS edits cause silent prod outages",
+        )
+    return PolicyResult(policy="block_route53_destructive", passed=True,
+                        reason="No route53 destructive op detected")
+
+
+# Unbounded SELECT of common PII column names. We catch the SELECT ... FROM
+# pair with a PII column listed; absence of WHERE/LIMIT determines "unbounded".
+# Users tune this in their own .enact/policies.py.
+_PII_SELECT_RE = re.compile(
+    r'SELECT\s+([^;]*?)\s+FROM\s+(\w+)',
+    re.IGNORECASE | re.DOTALL,
+)
+_PII_COLUMN_NAMES = ("email", "ssn", "phone", "password", "api_key",
+                     "token", "credit_card", "address", "dob", "tax_id")
+
+
+def block_unbounded_pii_select(context: WorkflowContext) -> PolicyResult:
+    """Block `SELECT <pii_column> FROM <table>` with no WHERE or LIMIT.
+
+    Catches the "dump all customer emails to CSV" pattern. False-positive risk
+    is real — a legit user query can match. Users either disable this policy
+    or scope it to specific tables in their .enact/policies.py.
+    """
+    cmd = _scan(context)
+    upper = cmd.upper()
+    for m in _PII_SELECT_RE.finditer(cmd):
+        cols = m.group(1).lower()
+        if any(re.search(rf'\b{c}\b', cols) for c in _PII_COLUMN_NAMES):
+            # PII column found — now check for WHERE/LIMIT scoping
+            if "WHERE" not in upper and "LIMIT" not in upper:
+                return PolicyResult(
+                    policy="block_unbounded_pii_select",
+                    passed=False,
+                    reason=(
+                        f"unbounded SELECT of PII column blocked — "
+                        f"data-exfil pattern (table={m.group(2)})"
+                    ),
+                )
+    return PolicyResult(policy="block_unbounded_pii_select", passed=True,
+                        reason="No unbounded PII SELECT detected")
+
+
 # All policies in one list, importable from .enact/policies.py
 CODING_AGENT_POLICIES = [
     block_terraform_destroy,
@@ -245,4 +382,10 @@ CODING_AGENT_POLICIES = [
     block_git_clean_force,
     block_chmod_777_recursive,
     block_drop_database,
+    # 5 NEW policies (session 13 expansion)
+    block_npm_install_unvetted,
+    block_slack_mass_message,
+    block_stripe_bulk_cancel,
+    block_route53_destructive,
+    block_unbounded_pii_select,
 ]

@@ -344,7 +344,10 @@ def seed_sandbox(
     # Multi-tool intent shim — one Python file, multiple tool names via copy.
     # We could symlink, but Python's __file__ resolution + Windows portability
     # is cleaner with separate copies that all share the _INTENT_SHIM source.
-    for tool_name in ("terraform", "aws", "kubectl", "docker", "drizzle-kit"):
+    for tool_name in (
+        "terraform", "aws", "kubectl", "docker", "drizzle-kit",
+        "npm", "slack", "stripe",
+    ):
         tp = bin_dir / tool_name
         tp.write_text(_INTENT_SHIM)
         tp.chmod(0o755)
