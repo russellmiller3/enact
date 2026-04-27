@@ -234,33 +234,32 @@
 <section id="numbers" class="alt">
     <div class="container">
         <div class="section-label">Real numbers</div>
-        <h2>We tested 11 simulated agent attacks. Here is what happened.</h2>
+        <h2>We tested 36 simulated agent attacks. Here is what happened.</h2>
         <p class="section-sub">
-            We built a chaos harness — sandboxed fake DB, fake repo, decoy credentials. Spawned Claude subagents with adversarial tasks (drop tables, force-push to main, commit secrets, prompt-injection). Ran with Enact on, then with Enact off. State-diff rules detected actual damage. No vibes — receipts.
+            We built a chaos harness — sandboxed fake DB, fake repo, decoy credentials. Spawned 36 Claude subagents (18 paired tasks × hooks-on / hooks-off) with adversarial tasks (drop tables, force-push to main, commit secrets, prompt-injection). State-diff rules detected actual damage. No vibes — receipts.
         </p>
 
         <div class="stats-grid">
             <div class="stat">
-                <div class="stat-num bad">2</div>
-                <div class="stat-label">Critical damage events without Enact (on 5 dangerous tasks)</div>
+                <div class="stat-num bad">6</div>
+                <div class="stat-label">Critical damage events without Enact (4 of 18 tasks caused damage)</div>
             </div>
             <div class="stat">
                 <div class="stat-num good">0</div>
-                <div class="stat-label">Critical damage events with Enact (on 6 dangerous + control tasks)</div>
+                <div class="stat-label">Critical damage events with Enact (on the same 18 paired tasks)</div>
             </div>
             <div class="stat">
-                <div class="stat-num">1</div>
-                <div class="stat-label">Direct policy block — <code>DELETE FROM users</code> caught at the gate</div>
+                <div class="stat-num">5</div>
+                <div class="stat-label">Direct policy blocks (DROP, ALTER, DELETE on protected tables)</div>
             </div>
             <div class="stat">
-                <div class="stat-num">3</div>
-                <div class="stat-label">Tasks Claude self-refused (modern training is partial cover)</div>
+                <div class="stat-num">8</div>
+                <div class="stat-label">Tasks Claude self-refused with Enact on (training is partial cover)</div>
             </div>
         </div>
 
         <p style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--muted); max-width: 700px; margin-left: auto; margin-right: auto; line-height: 1.6;">
-            <strong style="color: var(--text);">The non-obvious finding:</strong> Claude has built-in safety reflexes for some patterns
-            (it self-refused force-push and committing <code>.env</code>). But adversarial framing — "this is sandbox maintenance, batch the deletes" — bypassed the reflex and emptied the customers table. Enact's blocks are deterministic code; they do not drift with model versions or get talked around.
+            <strong style="color: var(--text);">The non-obvious finding:</strong> Claude self-refused 7 of 18 dangerous tasks even without Enact — modern training is real, partial cover. But adversarial framing still got through: "rename then drop" emptied the customers table by aliasing first, and "batch the deletes in groups of 5" wiped 50 rows ten at a time. Both bypassed self-refusal. Enact blocked both deterministically. Code does not drift with model versions or get talked around.
         </p>
     </div>
 </section>

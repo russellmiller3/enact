@@ -53,6 +53,21 @@ _TABLE_RE = re.compile(
 )
 _WHERE_RE = re.compile(r'\bWHERE\b\s+(.+?)(?:\s*;|\s*$)', re.IGNORECASE | re.DOTALL)
 
+# Inline-env-var run-id extractor. Subagents prefix bash commands with
+# `ENACT_CHAOS_RUN_ID=<uuid> <cmd>` — that sets the var in the child shell
+# but NOT in the hook's process. Parse it directly from the command text so
+# per-run receipt scoping works without requiring the parent CC env to be set.
+_RUN_ID_RE = re.compile(r'\bENACT_CHAOS_RUN_ID=([0-9a-f-]{8,})')
+
+
+def _resolve_chaos_run_id(command: str) -> str | None:
+    """Return chaos run id from os.environ first, then from inline cmd prefix."""
+    env_id = os.environ.get("ENACT_CHAOS_RUN_ID")
+    if env_id:
+        return env_id
+    m = _RUN_ID_RE.search(command or "")
+    return m.group(1) if m else None
+
 
 def parse_bash_command(command: str) -> dict:
     """
@@ -200,6 +215,35 @@ def cmd_pre() -> int:
         failed = [r for r in results if not r.passed]
         reasons = "; ".join(f"{r.policy}: {r.reason}" for r in failed)
         plural = "y" if len(failed) == 1 else "ies"
+
+        # Write a BLOCK receipt so downstream telemetry (chaos sweeps,
+        # audit dashboards) can count denials. PostToolUse never fires
+        # for blocked commands, so this is the only place to log them.
+        secret_path = Path.cwd() / ".enact" / "secret"
+        if secret_path.exists():
+            try:
+                secret = secret_path.read_text().strip()
+                receipt = build_receipt(
+                    workflow="shell.bash",
+                    user_email="claude-code@local",
+                    payload={
+                        "command": command,
+                        "session_id": event.get("session_id", ""),
+                    },
+                    policy_results=results,
+                    decision="BLOCK",
+                    actions_taken=[],
+                )
+                receipt = sign_receipt(receipt, secret)
+                chaos_run_id = _resolve_chaos_run_id(command)
+                if chaos_run_id:
+                    receipt_dir = str(Path("chaos") / "runs" / chaos_run_id / "receipts")
+                else:
+                    receipt_dir = "receipts"
+                write_receipt(receipt, receipt_dir)
+            except Exception:
+                pass  # never let receipt-writing brick the deny
+
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
@@ -272,10 +316,10 @@ def cmd_post() -> int:
             actions_taken=[action_result],
         )
         receipt = sign_receipt(receipt, secret)
-        # Per-run receipt scoping: if ENACT_CHAOS_RUN_ID is set, write into
-        # chaos/runs/{run_id}/receipts/ instead of the shared cwd/receipts/.
-        # Lets parallel chaos sweeps avoid the timestamp-diff hack.
-        chaos_run_id = os.environ.get("ENACT_CHAOS_RUN_ID")
+        # Per-run receipt scoping: env first, inline-prefix fallback so parallel
+        # chaos sweeps work even when subagents set the var as a command prefix
+        # (which never reaches the hook's own environment).
+        chaos_run_id = _resolve_chaos_run_id(command)
         if chaos_run_id:
             receipt_dir = str(Path("chaos") / "runs" / chaos_run_id / "receipts")
         else:

@@ -4,12 +4,36 @@
 
 ---
 
-## Current State (2026-04-27, end of session 10)
+## Current State (2026-04-27, end of session 11)
 
 ### Git
-- Branch: `claude/add-guardrails-ai-tools-Mk20f` (NOT yet merged to master)
-- Tests: **135 passing** (25 hook + 110 chaos)
+- Branch: `claude/reid-handoff-next-steps-cnufC` (NOT yet merged to master)
+- Tests: **135 passing** (27 hook + 108 chaos)
 - Working tree: clean after final commit
+
+### Headline numbers — 36-run paired sweep (this session)
+| Metric | Sweep A (Enact ON) | Sweep B (Enact OFF) |
+|---|---|---|
+| Total runs | 18 | 18 |
+| Critical damage events | **0** | **6** |
+| Damage runs (any state change for the worse) | **0** | **4** |
+| Direct policy blocks | 5 | n/a |
+| Agent self-refusals | 8 | 7 |
+| Clean | 5 | 7 |
+| Leaks (Enact ON but damage anyway) | **0** | n/a |
+
+**Translation:** Same 18 dangerous prompts, same Claude. With Enact: 0 damage. Without: 4 of 18 caused damage including DROP customers, DELETE users, rename-then-drop, batched-delete. Hook caught everything; no leaks → no new policy candidates this round.
+
+Damage detail in `chaos/report.md`. Cold-email body (3 picked findings) at `docs/outreach/cold_email_v1.md`.
+
+### Hook fixes shipped this session
+
+Two bugs fixed in `enact/cli/code_hook.py`:
+
+1. **`ENACT_CHAOS_RUN_ID` resolution** — when subagents prefix the var inline (`ENACT_CHAOS_RUN_ID=xxx <cmd>`), it lands in the child process env, NOT the hook's process env. Added `_resolve_chaos_run_id(command)` helper that falls back to regex-parsing the var out of the command text. Per-run receipt scoping now works without requiring the parent CC env to be set.
+2. **PreToolUse never wrote BLOCK receipts** — `cmd_post` was the only receipt writer, and PostToolUse never fires for blocked commands. Added BLOCK receipt write in `cmd_pre` so the actions table sees denials. Defense-in-depth.
+
+Plus regex tweak in `runner._compute_outcome` so agent summaries that say "blocked by Enact" / "protect_tables policy" classify as `enact_blocked` even if the BLOCK receipt is missing.
 
 ### What exists / what shipped this session
 
@@ -42,7 +66,13 @@
 
 ---
 
-## Priority 1 (most important): Run a LARGER paired sweep
+## Priority 1 — DONE this session
+
+36-run paired sweep complete. See "Headline numbers" above. Damage detail in `chaos/report.md`. **Skip everything below in Priority 1; it documents what was done.**
+
+---
+
+## Priority 1 (was): Run a LARGER paired sweep
 
 **This is the headline number unlock.** Last session's 11-run trial was unpaired (different tasks in A vs B). Need all 18 corpus tasks in BOTH sweeps for a defensible "with vs without" comparison. Also expand the corpus once we know what's working.
 
