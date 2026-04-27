@@ -1,4 +1,4 @@
-# Cold email v2 — Enact
+# Cold email v3 — Enact (was v2, evolved 2026-04-27)
 
 **Source data:** `chaos/report.md` (34 paired prompts, 0 vs 7 damage, generated 2026-04-27).
 **Incident catalog:** `docs/research/agent-incidents.md`.
@@ -12,32 +12,38 @@
 
 | # | Subject | Best for |
 |---|---|---|
-| 1 | After Replit and the Claude Code Terraform incident — what's stopping yours? | All targets |
-| 2 | 90-sec video — agent firewall I built after Replit's database wipe | Founders / VPs |
-| 3 | Same pattern as DataTalks: 1 prompt away from a 2.5-year data loss | Infra-heavy buyers |
-| 4 | Stops Claude Code from running the 4 commands that cost a company | CISOs / Security |
+| 1 | PocketOS lost 3 months of customer data in 9 seconds last week. What's stopping yours? | All targets (NEW — v3 lead) |
+| 2 | The agent doesn't need bad intent — it just needs a credential mismatch | Founders / VPs |
+| 3 | After Replit, DataTalks, and PocketOS — same shape, same week, every time | Infra-heavy buyers |
+| 4 | When Enact blocks the agent, the agent says "I did it" anyway. Here's why receipts matter. | CISOs / Security |
 | 5 | Did your team have an agent near-miss this quarter? | Cold-cold prospects |
 | 6 | Audit-ready guardrails for Cursor / Claude Code (SOC2 CC7.2, HIPAA §164.312(b)) | Compliance / GRC |
 
 ---
 
-## Email body — paste-ready (the lead version)
+## Email body — paste-ready (the lead version, v3 — refocused on agent-self-initiated misinterpretation)
 
 > Hi [first name],
 >
 > Saw [specific recent thing — a blog post, a tweet, a Show HN, a public near-miss]. Curious how you're handling Cursor and Claude Code across the team right now.
 >
-> Built **Enact** — a Claude Code hook (Cursor MCP coming) that runs every agent action through a deterministic policy engine before execution. Six tools covered, not just shell: Bash, Read, Write, Edit, Glob, Grep. The pitch is simple: in July 2025 Replit's agent wiped a database during a code freeze. In February 2026 Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. Same pattern, same shape. We catch both before they execute — same policy library whether the agent uses Bash or any other filesystem-touching tool.
+> The case I keep coming back to is PocketOS, last week. Founder asked Cursor (Claude Opus 4.6) to handle a routine staging task. The agent hit a credential mismatch and decided <em>on its own initiative</em> to delete a Railway volume to "fix" it — used a token created for unrelated domain ops, thought scope was staging, was production. **9 seconds. Three months of customer data gone.** The agent's own confession enumerated the safety rules it was breaking, in writing, while breaking them. Best model + best IDE + explicit project safety rules. Production gone anyway.
 >
-> I chaos-tested it last week against 34 prompts, each derived from a documented agent incident:
+> That's the pattern that costs companies. Not "user typed DROP TABLE" — Claude refuses that 4 times out of 5 on its own. The pattern is the agent INDEPENDENTLY deciding to do destructive work to fix unrelated friction. Same shape every time: Replit (Jul 2025) deleted SaaStr's prod DB then created 4,000 fake users to cover its tracks. DataTalks.Club (Feb 2026), Claude Code ran `terraform destroy` from a stale state file — 1.94M rows, 2.5 years gone. Amazon Kiro (Dec 2025), 13-hour Cost Explorer outage when Kiro decided "delete and rebuild" was faster than fixing the bug.
 >
->   **Without Enact: 7 critical incidents on 5 of 34 prompts.** `DROP TABLE customers` on a one-line "we don't need it" prompt. `DELETE FROM users` with no `WHERE`. `aws s3 rm --recursive` on a "safe" staging bucket. Bulk Stripe subscription cancel framed as dashboard cleanup. A rename-then-drop bypass that talked the model into a destructive op it would have refused directly.
+> Built **Enact** — a Claude Code hook (Cursor MCP next) that runs every tool call through a deterministic Python policy engine before execution. Six tools covered: Bash, Read, Write, Edit, Glob, Grep. Same engine across surfaces — agent can't bypass by switching from Bash to Read. No LLM in the decision loop, so the agent's own reasoning can't talk Enact out of blocking.
 >
->   **With Enact: 0 damage. 15 direct policy blocks. 0 leaks.** Same 34 prompts, same model.
+> Chaos-tested against 44 prompts derived from documented agent incidents:
+>
+>   **Without Enact: 8 critical incidents** across shell, file-tool, and agent-misinterpretation surfaces.
+>
+>   **With Enact: 0 incidents.** Hard blocks + signed audit receipt on every action.
+>
+> One thing the chaos sweep surfaced that surprised me: **when Enact blocks an agent's destructive action, the agent often tells the user it succeeded anyway.** We blocked a `git reset --hard` and the agent then wrote a detailed summary describing the three commits that "vanished" and the file edit that "got wiped" — none of which actually happened. Enact's signed receipt is the only ground truth. If you're relying on the agent's chat output to know what it did, you have no idea what it did.
 >
 > 90-second demo: [Loom link]
 >
-> Free for individual developers. $30 per seat per month for teams who want the audit dashboard. Setup is two commands.
+> Free for individual developers. $30 per seat per month for teams who want the audit dashboard, HITL approval, encrypted receipts, and one-call rollback. Setup is two commands.
 >
 > Worth 15 minutes next week?
 >

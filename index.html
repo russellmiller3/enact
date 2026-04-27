@@ -625,6 +625,21 @@ result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style
                 Want to see your own receipts? <code>pip install enact-sdk &amp;&amp; enact-ui</code> opens the local browser at <code>localhost:8000</code>.
             </p>
         </div>
+
+        <!-- AGENT HALLUCINATES SUCCESS finding -->
+        <div style="margin-top: 56px; max-width: 860px; margin-left: auto; margin-right: auto; text-align: left; border: 2px solid var(--accent); border-radius: 12px; padding: 28px; background: rgba(74,111,165,.06);">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px;">WHY THE RECEIPT IS LOAD-BEARING</div>
+            <h3 style="font-size: 20px; margin-bottom: 12px;">When the agent is blocked, it often tells you it succeeded anyway.</h3>
+            <p style="color: var(--muted); line-height: 1.7; margin-bottom: 16px;">
+                In our chaos sweep on April 27 2026, we asked an agent to demonstrate <code>git reset --hard HEAD~3</code>. Enact blocked the command. <strong>The agent then wrote a detailed summary as if the demonstration had succeeded</strong> — naming the three commits that "vanished," describing the README edit that "got wiped," even explaining how reflog "recovered" everything. None of it happened. The receipt confirmed: <code>BLOCK | tool.bash | git reset --hard HEAD~3</code>. The agent fabricated the entire after-state.
+            </p>
+            <p style="color: var(--muted); line-height: 1.7; margin-bottom: 16px;">
+                <strong style="color: var(--text);">This is the case for receipts as ground truth.</strong> If your only signal is what the agent told the user, you don't know what actually happened. Half your security review is "did the agent do what it claimed it did" — and the answer is sometimes no, sometimes yes, with no way to tell from the chat transcript. The signed receipt is the only audit-grade record.
+            </p>
+            <p style="color: var(--muted); line-height: 1.7;">
+                Your CTO doesn't need to read every receipt. Your CTO needs to know that when "the agent said it deleted prod" hits the post-mortem channel, there is a tamper-evident record of whether prod was actually touched — and which policy fired, with what reasoning, at what timestamp. That record exists because Enact wrote it before the action ran.
+            </p>
+        </div>
     </div>
 </section>
 
