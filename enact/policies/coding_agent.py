@@ -370,6 +370,155 @@ def block_unbounded_pii_select(context: WorkflowContext) -> PolicyResult:
                         reason="No unbounded PII SELECT detected")
 
 
+# ----- Round 3 (session 14): 8 more from the connector-policy survey -----
+
+_READ_ENV_RE = re.compile(
+    r'\b(?:cat|less|more|tail|head|xxd|od|hexdump|bat)\b\s+\S*\.env(?:\b|/)',
+    re.IGNORECASE,
+)
+
+
+def block_read_env_file(context: WorkflowContext) -> PolicyResult:
+    """Block reading .env files (cat .env, xxd .env, etc.) — secret exfil."""
+    cmd = _scan(context)
+    if _READ_ENV_RE.search(cmd):
+        return PolicyResult(
+            policy="block_read_env_file", passed=False,
+            reason="reading .env files blocked — secret exfil pattern",
+        )
+    return PolicyResult(policy="block_read_env_file", passed=True,
+                        reason="No .env read detected")
+
+
+_WORKFLOW_WRITE_RE = re.compile(
+    r'(?:>|>>|tee|sed\s+-i|cp\s+\S+|mv\s+\S+|cat\s+>)\s*\S*'
+    r'(?:\.github/workflows/|gitlab-ci\.yml|circleci/config\.yml|Dockerfile|Jenkinsfile|bitbucket-pipelines\.yml)',
+    re.IGNORECASE,
+)
+
+
+def block_workflow_file_write(context: WorkflowContext) -> PolicyResult:
+    """Block writes to CI/CD config files — supply-chain takeover surface."""
+    cmd = _scan(context)
+    if _WORKFLOW_WRITE_RE.search(cmd):
+        return PolicyResult(
+            policy="block_workflow_file_write", passed=False,
+            reason="CI/CD config write blocked — supply-chain takeover risk (workflows, Dockerfile, Jenkinsfile)",
+        )
+    return PolicyResult(policy="block_workflow_file_write", passed=True,
+                        reason="No CI/CD config write detected")
+
+
+_HOME_DIR_DESTRUCTIVE_RE = re.compile(
+    r'\b(?:rm|chmod|chown|mv)\b\s+(?:-[a-zA-Z]+\s+)*(?:~|\$HOME)(?:/|\s|$)',
+    re.IGNORECASE,
+)
+
+
+def block_home_dir_destructive(context: WorkflowContext) -> PolicyResult:
+    """Block destructive ops that target ~ or $HOME — the rm -rf ~/ pattern."""
+    cmd = _scan(context)
+    if _HOME_DIR_DESTRUCTIVE_RE.search(cmd):
+        return PolicyResult(
+            policy="block_home_dir_destructive", passed=False,
+            reason="destructive op against $HOME blocked — rm -rf ~/ firmware-incident pattern",
+        )
+    return PolicyResult(policy="block_home_dir_destructive", passed=True,
+                        reason="No $HOME destructive op detected")
+
+
+_GITIGNORE_EDIT_RE = re.compile(
+    r'(?:>>|sed\s+-i|tee\s+-a)\s*\S*\.gitignore\b',
+    re.IGNORECASE,
+)
+
+
+def block_gitignore_edit(context: WorkflowContext) -> PolicyResult:
+    """Block edits to .gitignore — agents add `.env` then commit secrets."""
+    cmd = _scan(context)
+    if _GITIGNORE_EDIT_RE.search(cmd):
+        return PolicyResult(
+            policy="block_gitignore_edit", passed=False,
+            reason=".gitignore edit blocked — agents bypass secret guards by editing the ignore file",
+        )
+    return PolicyResult(policy="block_gitignore_edit", passed=True,
+                        reason="No .gitignore edit detected")
+
+
+_SSH_KEY_READ_RE = re.compile(
+    r'\b(?:cat|less|tail|head|xxd|cp|tar|scp|rsync)\b\s+\S*~?/?\.ssh/(?:id_|authorized_keys)',
+    re.IGNORECASE,
+)
+
+
+def block_ssh_key_read(context: WorkflowContext) -> PolicyResult:
+    """Block reading SSH private keys."""
+    cmd = _scan(context)
+    if _SSH_KEY_READ_RE.search(cmd):
+        return PolicyResult(
+            policy="block_ssh_key_read", passed=False,
+            reason="SSH key read blocked — private keys in ~/.ssh/ never leave the host",
+        )
+    return PolicyResult(policy="block_ssh_key_read", passed=True,
+                        reason="No SSH key read detected")
+
+
+_AWS_CREDS_READ_RE = re.compile(
+    r'\b(?:cat|less|tail|head|xxd|cp|tar|scp)\b\s+\S*~?/?\.aws/(?:credentials|config)|'
+    r'\baws\s+configure\s+get\b',
+    re.IGNORECASE,
+)
+
+
+def block_aws_creds_read(context: WorkflowContext) -> PolicyResult:
+    """Block reading ~/.aws/credentials or `aws configure get`."""
+    cmd = _scan(context)
+    if _AWS_CREDS_READ_RE.search(cmd):
+        return PolicyResult(
+            policy="block_aws_creds_read", passed=False,
+            reason="AWS credentials read blocked — root creds in ~/.aws/credentials never leave the host",
+        )
+    return PolicyResult(policy="block_aws_creds_read", passed=True,
+                        reason="No AWS credentials read detected")
+
+
+_EMAIL_BULK_RE = re.compile(
+    r'\b(?:aws\s+ses\s+send-bulk|sendmail\b|swaks\b|mailgun\b|mail\s+-s.*<.*\.txt|'
+    r'mailx\s+.*<.*\.csv)',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def block_email_bulk_send(context: WorkflowContext) -> PolicyResult:
+    """Block bulk email send — accidental customer-list blast."""
+    cmd = _scan(context)
+    if _EMAIL_BULK_RE.search(cmd):
+        return PolicyResult(
+            policy="block_email_bulk_send", passed=False,
+            reason="bulk email send blocked — accidental customer-list blast pattern",
+        )
+    return PolicyResult(policy="block_email_bulk_send", passed=True,
+                        reason="No bulk email send detected")
+
+
+_CURL_PIPE_SHELL_RE = re.compile(
+    r'(?:curl|wget|fetch)\b[^|;&]*\|\s*(?:bash|sh|zsh|fish|python3?|perl|ruby|node)\b',
+    re.IGNORECASE,
+)
+
+
+def block_curl_pipe_shell(context: WorkflowContext) -> PolicyResult:
+    """Block `curl ... | sh` — supply-chain attack pattern (run remote code unsigned)."""
+    cmd = _scan(context)
+    if _CURL_PIPE_SHELL_RE.search(cmd):
+        return PolicyResult(
+            policy="block_curl_pipe_shell", passed=False,
+            reason="curl | sh pattern blocked — runs remote unsigned code (supply-chain attack vector)",
+        )
+    return PolicyResult(policy="block_curl_pipe_shell", passed=True,
+                        reason="No curl-pipe-shell detected")
+
+
 # All policies in one list, importable from .enact/policies.py
 CODING_AGENT_POLICIES = [
     block_terraform_destroy,
@@ -382,10 +531,19 @@ CODING_AGENT_POLICIES = [
     block_git_clean_force,
     block_chmod_777_recursive,
     block_drop_database,
-    # 5 NEW policies (session 13 expansion)
+    # Round 2 (session 13)
     block_npm_install_unvetted,
     block_slack_mass_message,
     block_stripe_bulk_cancel,
     block_route53_destructive,
     block_unbounded_pii_select,
+    # Round 3 (session 14): 8 from the connector-policy survey
+    block_read_env_file,
+    block_workflow_file_write,
+    block_home_dir_destructive,
+    block_gitignore_edit,
+    block_ssh_key_read,
+    block_aws_creds_read,
+    block_email_bulk_send,
+    block_curl_pipe_shell,
 ]

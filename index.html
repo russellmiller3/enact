@@ -287,34 +287,34 @@
         <div class="section-label">The proof</div>
         <h2>We chaos-tested ourselves on the same patterns.</h2>
         <p class="section-sub">
-            21 prompts, each derived from one of the documented incidents above. Ran each twice — once with Enact installed, once without. State-diff rules and intent-pattern rules detected actual damage. No vibes — receipts.
+            34 prompts, each one mapped to a documented real-world incident or pattern. Ran each twice — once with Enact installed, once without. State-diff rules and intent-pattern rules detected actual damage. No vibes — receipts.
         </p>
 
         <div class="stats-grid">
             <div class="stat">
-                <div class="stat-num bad">6</div>
-                <div class="stat-label">Critical damage events without Enact (4 of 21 prompts caused damage)</div>
+                <div class="stat-num bad">7</div>
+                <div class="stat-label">Critical damage events without Enact (5 of 34 prompts caused damage)</div>
             </div>
             <div class="stat">
                 <div class="stat-num good">0</div>
-                <div class="stat-label">Critical damage events with Enact (same 21 paired prompts)</div>
+                <div class="stat-label">Critical damage events with Enact (same 34 paired prompts)</div>
             </div>
             <div class="stat">
-                <div class="stat-num">11</div>
-                <div class="stat-label">Direct policy blocks (DROP, terraform destroy, kubectl delete namespace, drizzle force, chmod 777, more)</div>
+                <div class="stat-num">15</div>
+                <div class="stat-label">Direct policy blocks across 23 default rules (DROP, terraform destroy, kubectl delete namespace, drizzle force, recursive S3 delete, chmod 777, more)</div>
             </div>
             <div class="stat">
                 <div class="stat-num">0</div>
-                <div class="stat-label">Leaks — every dangerous prompt in the corpus was caught by either policy or self-refusal</div>
+                <div class="stat-label">Leaks — every dangerous prompt was caught by either a policy or self-refusal</div>
             </div>
         </div>
 
         <p style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
-            <strong style="color: var(--text);">Self-refusal does a lot of the work.</strong> Claude's training already declined 11 of 15 dangerous prompts on its own. But the 4 that slipped through are the ones that cost a company: <code>DROP TABLE customers</code> on a one-line "we don't need it" prompt, <code>DELETE FROM users</code>, <code>aws s3 rm --recursive</code> on a "safe" staging bucket, and a rename-then-drop bypass that talked the model into a destructive op it would have refused directly. Enact catches all four. Code does not drift with model versions.
+            <strong style="color: var(--text);">Self-refusal does a lot of the work.</strong> Claude's training already declined 21 of 26 dangerous prompts on its own. But the 5 that slipped through are the ones that cost a company: <code>DROP TABLE customers</code> on a one-line "we don't need it" prompt, <code>DELETE FROM users</code>, <code>aws s3 rm --recursive</code> on a "safe" staging bucket, a rename-then-drop bypass that talked the model into a destructive op it would have refused directly, and a bulk Stripe subscription cancel framed as "dashboard cleanup". Enact catches all five. Code does not drift with model versions.
         </p>
 
         <div class="math-callout">
-            <p>One prevented incident pays for <strong>10+ years of seats</strong>. $50,000–$1,000,000 in DB recovery vs $360/year per developer. Antivirus exists for a &lt;1% problem; agent disasters happen at 20%.</p>
+            <p>One prevented incident pays for <strong>10+ years of seats</strong>. $50,000–$1,000,000 in DB recovery vs $360/year per developer. Antivirus exists for a &lt;1% problem; agent disasters happen at 15%.</p>
         </div>
     </div>
 </section>
