@@ -14,6 +14,7 @@ hook should never permanently block CC; the user can always remove the hook
 config. Loud failures here would be worse than silent ones.
 """
 import json
+import os
 import re
 import secrets as secrets_module
 import sys
@@ -271,7 +272,15 @@ def cmd_post() -> int:
             actions_taken=[action_result],
         )
         receipt = sign_receipt(receipt, secret)
-        write_receipt(receipt, "receipts")
+        # Per-run receipt scoping: if ENACT_CHAOS_RUN_ID is set, write into
+        # chaos/runs/{run_id}/receipts/ instead of the shared cwd/receipts/.
+        # Lets parallel chaos sweeps avoid the timestamp-diff hack.
+        chaos_run_id = os.environ.get("ENACT_CHAOS_RUN_ID")
+        if chaos_run_id:
+            receipt_dir = str(Path("chaos") / "runs" / chaos_run_id / "receipts")
+        else:
+            receipt_dir = "receipts"
+        write_receipt(receipt, receipt_dir)
         return 0
     except Exception:
         return 0

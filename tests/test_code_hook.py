@@ -283,6 +283,48 @@ class TestCmdPost:
         assert rc == 0
         assert not (tmp_path / "receipts").exists()
 
+    def test_env_var_chaos_run_id_routes_receipt_to_per_run_dir(
+        self, tmp_path, monkeypatch
+    ):
+        """If ENACT_CHAOS_RUN_ID is set, receipts go to
+        chaos/runs/{run_id}/receipts/ (per-run scoped) instead of cwd/receipts/.
+        Lets parallel chaos sweeps run without timestamp-diff hack."""
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        chaos_run_id = "abc-test-run"
+        run_dir = tmp_path / "chaos" / "runs" / chaos_run_id
+        run_dir.mkdir(parents=True)
+        monkeypatch.setenv("ENACT_CHAOS_RUN_ID", chaos_run_id)
+
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls"},
+            "tool_response": {"exit_code": 0},
+        })
+        assert rc == 0
+        # Should NOT be in the default receipts/
+        assert not (tmp_path / "receipts").exists() or \
+               len(list((tmp_path / "receipts").glob("*.json"))) == 0
+        # Should be in the per-run dir
+        per_run_receipts = list((run_dir / "receipts").glob("*.json"))
+        assert len(per_run_receipts) == 1
+
+    def test_env_var_unset_defaults_to_cwd_receipts(self, tmp_path, monkeypatch):
+        """When ENACT_CHAOS_RUN_ID is unset, receipts go to default
+        cwd/receipts/. Existing CC users see no behavior change."""
+        monkeypatch.chdir(tmp_path)
+        cmd_init()
+        monkeypatch.delenv("ENACT_CHAOS_RUN_ID", raising=False)
+
+        rc = self._run_post({
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls"},
+            "tool_response": {"exit_code": 0},
+        })
+        assert rc == 0
+        receipts = list((tmp_path / "receipts").glob("*.json"))
+        assert len(receipts) == 1
+
 
 # -- main dispatcher --
 
