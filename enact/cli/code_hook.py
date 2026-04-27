@@ -129,7 +129,7 @@ def cmd_init() -> int:
     enact_dir.mkdir(exist_ok=True)
 
     settings_path = claude_dir / "settings.json"
-    settings = json.loads(settings_path.read_text()) if settings_path.exists() else {}
+    settings = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
     settings.setdefault("hooks", {})
 
     pre_entry = {
@@ -151,25 +151,29 @@ def cmd_init() -> int:
     settings["hooks"]["PostToolUse"] = (
         [e for e in existing_post if not _is_enact_hook_entry(e)] + [post_entry]
     )
-    settings_path.write_text(json.dumps(settings, indent=2))
+    settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
 
     policies_path = enact_dir / "policies.py"
     if not policies_path.exists():
-        policies_path.write_text(DEFAULT_POLICIES_PY)
+        # utf-8 explicit so non-ASCII chars in the docstring (em dashes etc.)
+        # round-trip cleanly on Windows where the system default is cp1252.
+        # Without this, the import in cmd_pre fails with SyntaxError and the
+        # hook silently fail-opens — the bug is invisible until policies stop firing.
+        policies_path.write_text(DEFAULT_POLICIES_PY, encoding="utf-8")
 
     secret_path = enact_dir / "secret"
     if not secret_path.exists():
-        secret_path.write_text(secrets_module.token_hex(32))
+        secret_path.write_text(secrets_module.token_hex(32), encoding="utf-8")
         secret_path.chmod(0o600)
 
     gitignore = cwd / ".gitignore"
     line = ".enact/\n"
     if gitignore.exists():
-        contents = gitignore.read_text()
+        contents = gitignore.read_text(encoding="utf-8")
         if ".enact/" not in contents:
-            gitignore.write_text(contents.rstrip() + "\n" + line)
+            gitignore.write_text(contents.rstrip() + "\n" + line, encoding="utf-8")
     else:
-        gitignore.write_text(line)
+        gitignore.write_text(line, encoding="utf-8")
 
     print("Enact Code initialized.", file=sys.stderr)
     print(f"  - {settings_path}", file=sys.stderr)
@@ -230,7 +234,7 @@ def cmd_pre() -> int:
         secret_path = Path.cwd() / ".enact" / "secret"
         if secret_path.exists():
             try:
-                secret = secret_path.read_text().strip()
+                secret = secret_path.read_text(encoding="utf-8").strip()
                 receipt = build_receipt(
                     workflow="shell.bash",
                     user_email="claude-code@local",
@@ -290,7 +294,7 @@ def cmd_post() -> int:
         if not secret_path.exists():
             return 0  # not initialized — skip silently
 
-        secret = secret_path.read_text().strip()
+        secret = secret_path.read_text(encoding="utf-8").strip()
         command = event.get("tool_input", {}).get("command", "")
         tool_response = event.get("tool_response") or {}
 
