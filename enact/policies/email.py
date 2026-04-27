@@ -83,7 +83,15 @@ def no_repeat_emails(
     Returns:
         callable — (WorkflowContext) -> PolicyResult
     """
-    from cloud.db import db
+    try:
+        from cloud.db import db
+    except ImportError as e:
+        raise ImportError(
+            "no_repeat_emails requires Enact Cloud (cloud.db). The "
+            "deduplication check queries the cloud receipts table. Contact "
+            "russell@enact.cloud for access, or use no_mass_emails for "
+            "single-call recipient-count limits without history."
+        ) from e
 
     def _policy(context: WorkflowContext) -> PolicyResult:
         to = context.payload.get("to")

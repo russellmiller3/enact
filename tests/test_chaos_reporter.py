@@ -52,7 +52,7 @@ def test_generate_report_creates_markdown_file(tmp_path):
     out = tmp_path / "report.md"
     text = generate_report(db_path=db, output_path=out)
     assert out.exists()
-    assert text == out.read_text()
+    assert text == out.read_text(encoding="utf-8")
 
 
 def test_generate_report_includes_headline_table(tmp_path):
