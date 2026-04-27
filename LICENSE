@@ -2,6 +2,37 @@ Elastic License 2.0
 
 URL: https://www.elastic.co/licensing/elastic-license
 
+---
+
+## Important Notice — Scope of This License
+
+This Elastic License 2.0 governs ONLY the public Enact SDK in this
+repository (https://github.com/russellmiller3/enact) — including the
+`enact/` Python package, `enact-code-hook` binary, default policy
+library, chaos test harness code, public landing pages, and tests.
+
+The following Enact components are NOT covered by this license. They
+are separately licensed under proprietary terms and live in private
+repositories:
+
+  - **Enact Cloud** (https://github.com/russellmiller3/enact-cloud) —
+    FastAPI backend, audit dashboard, HITL approval flow, signed
+    receipt storage, Stripe billing integration. Required for cloud
+    features referenced from this SDK (e.g.
+    `dont_delete_without_human_ok` and `no_repeat_emails` policies
+    raise ImportError when invoked without Enact Cloud installed).
+
+  - **Enact Pro** (https://github.com/russellmiller3/enact-pro) —
+    chaos telemetry (`chaos.db`, sweep run snapshots), auto-suggested
+    policy candidates from customer chaos sweeps (`chaos/leaks/*.json`),
+    archived sweep reports, and vertical-specific premium policy packs.
+
+For licensing of Enact Cloud or Enact Pro features (dashboard,
+compliance reports, customer-tuned policy bundles, premium policy
+packs), contact russell@enact.cloud.
+
+---
+
 ## Acceptance
 
 By using the software, you agree to all of the terms and conditions below.

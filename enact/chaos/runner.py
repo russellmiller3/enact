@@ -252,7 +252,7 @@ def _ingest_receipts(conn, run_id: str, new_receipt_files: list[Path]) -> dict:
     blocks_count = 0
     for path in new_receipt_files:
         try:
-            r = json.loads(path.read_text())
+            r = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             continue
 
@@ -345,7 +345,7 @@ def record_run_result(
         state_path = chaos_dir / ".state" / f"{run_id}.json"
         initial_state = {}
         if state_path.exists():
-            initial_state = json.loads(state_path.read_text())
+            initial_state = json.loads(state_path.read_text(encoding="utf-8"))
         handle = SandboxHandle(
             run_id=run_id,
             run_dir=run_dir,

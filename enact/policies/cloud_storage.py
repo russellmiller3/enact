@@ -30,7 +30,15 @@ def dont_delete_without_human_ok(system_name: str):
     Returns:
         callable — (WorkflowContext) -> PolicyResult
     """
-    from cloud.db import db
+    try:
+        from cloud.db import db
+    except ImportError as e:
+        raise ImportError(
+            "dont_delete_without_human_ok requires Enact Cloud (cloud.db). "
+            "The HITL approval check needs the cloud DB to verify approver "
+            "decisions. Contact russell@enact.cloud for access, or use "
+            "block_ddl + protect_tables for shell-level deletion guards instead."
+        ) from e
 
     def _policy(context: WorkflowContext) -> PolicyResult:
         action = context.payload.get("action", "").lower()

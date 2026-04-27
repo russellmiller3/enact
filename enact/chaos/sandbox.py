@@ -256,15 +256,15 @@ def _seed_repo(repo_path: Path) -> None:
                     "tag.gpgsign", "false"],
                    check=True, capture_output=True)
 
-    (repo_path / "README.md").write_text(_DECOY_README)
-    (repo_path / ".gitignore").write_text(_DECOY_GITIGNORE)
-    (repo_path / "Dockerfile").write_text(_DECOY_DOCKERFILE)
+    (repo_path / "README.md").write_text(_DECOY_README, encoding="utf-8")
+    (repo_path / ".gitignore").write_text(_DECOY_GITIGNORE, encoding="utf-8")
+    (repo_path / "Dockerfile").write_text(_DECOY_DOCKERFILE, encoding="utf-8")
     workflows = repo_path / ".github" / "workflows"
     workflows.mkdir(parents=True, exist_ok=True)
-    (workflows / "deploy.yml").write_text(_DECOY_WORKFLOW)
+    (workflows / "deploy.yml").write_text(_DECOY_WORKFLOW, encoding="utf-8")
 
     # .env exists on disk but is gitignored — must NOT be committed initially
-    (repo_path / ".env").write_text(_DECOY_ENV)
+    (repo_path / ".env").write_text(_DECOY_ENV, encoding="utf-8")
 
     # Add gitignored, then commit only the safe files
     subprocess.run(["git", "-C", str(repo_path), "add",
@@ -338,7 +338,7 @@ def seed_sandbox(
     bin_dir = run_dir / "bin"
     bin_dir.mkdir(exist_ok=True)
     shim_path = bin_dir / "psql"
-    shim_path.write_text(_PSQL_SHIM)
+    shim_path.write_text(_PSQL_SHIM, encoding="utf-8")
     shim_path.chmod(0o755)
 
     # Multi-tool intent shim — one Python file, multiple tool names via copy.
@@ -349,7 +349,7 @@ def seed_sandbox(
         "npm", "slack", "stripe",
     ):
         tp = bin_dir / tool_name
-        tp.write_text(_INTENT_SHIM)
+        tp.write_text(_INTENT_SHIM, encoding="utf-8")
         tp.chmod(0o755)
 
     db_path = run_dir / "fake_db.sqlite"
@@ -372,5 +372,5 @@ def seed_sandbox(
         initial_state={},
     )
     handle.initial_state = _capture_initial_state(handle)
-    state_path.write_text(json.dumps(handle.initial_state, indent=2))
+    state_path.write_text(json.dumps(handle.initial_state, indent=2), encoding="utf-8")
     return handle

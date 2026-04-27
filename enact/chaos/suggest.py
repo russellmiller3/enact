@@ -106,7 +106,7 @@ def write_leak_files(
     paths = []
     for leak in leaks:
         path = output_dir / f"{leak['run_id']}.json"
-        path.write_text(json.dumps(leak, indent=2))
+        path.write_text(json.dumps(leak, indent=2), encoding="utf-8")
         paths.append(path)
     return paths
 
