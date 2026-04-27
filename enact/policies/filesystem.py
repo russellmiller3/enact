@@ -369,18 +369,25 @@ def dont_access_home_dir(context: WorkflowContext) -> PolicyResult:
                 reason=f"Path '{path_str}' resolves into a home directory — access not permitted",
             )
 
-    # Cross-platform: check against the actual current user's home dir
-    try:
-        home = Path.home()
-        resolved = Path(os.path.expanduser(path_str)).resolve()
-        resolved.relative_to(home)
-        return PolicyResult(
-            policy="dont_access_home_dir",
-            passed=False,
-            reason=f"Path '{path_str}' resolves into a home directory — access not permitted",
-        )
-    except (ValueError, Exception):
-        pass
+    # Cross-platform: check against the actual current user's home dir,
+    # but ONLY for absolute paths. Relative paths resolve against cwd, and
+    # most dev projects live under home (e.g. ~/projects/myrepo). Treating
+    # every "src/main.py" as a home-dir attack would block normal work.
+    # The intent of this policy is to catch EXPLICIT home references
+    # (~/, /root/, /home/<user>/, or absolute path under home) — not
+    # incidental cwd-relative reads.
+    if os.path.isabs(path_str):
+        try:
+            home = Path.home()
+            resolved = Path(path_str).resolve()
+            resolved.relative_to(home)
+            return PolicyResult(
+                policy="dont_access_home_dir",
+                passed=False,
+                reason=f"Path '{path_str}' resolves into a home directory — access not permitted",
+            )
+        except (ValueError, Exception):
+            pass
 
     return PolicyResult(
         policy="dont_access_home_dir",
