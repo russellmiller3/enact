@@ -187,6 +187,59 @@ apply — they're project policy, not just hook decoration.
 - Keep sessions focused; don't create unnecessary back-and-forth
 - Married to Jess Schein (b. 1985); both Jewish; live in San Francisco
 
+## Chaos Sweep Dispatch (HARD RULE — READ BEFORE FIRING ANY SWEEP)
+
+**Always use the built-in `Agent` tool for chaos-sweep dispatches. Never `claude --print` subprocess unless cwd is genuinely wrong.**
+
+**Why:**
+- `Agent` tool dispatches run within the parent CC session and bill against Russell's CC plan allowance (Pro/Max included tokens) — effectively free up to plan limits.
+- `claude --print` subprocess spawns a separate Claude conversation that bills against Russell's pay-as-you-go API account — real money, ~$1/agent at `--max-budget-usd 1.00`.
+- Session 15 used subprocess only because parent cwd was the wrong folder (`enact`, not `enact-fresh`); from a fresh CC session in `enact-fresh`, the Agent tool works cleanly.
+- Verified empirically session 15: 5×1 sweep cost ~$5 via subprocess. Same sweep via Agent tool would have cost zero against API account.
+
+**The pattern:**
+
+```python
+# 1. Stage dispatches (no API cost)
+from enact.chaos.tasks import load_corpus
+from enact.chaos.orchestrate import run_sweep, record_sweep
+corpus = sorted([t for t in load_corpus("chaos/tasks") if t.id.startswith("9")], key=lambda t: t.id)
+dispatches = run_sweep(corpus, sweep="A")
+```
+
+```
+# 2. Fire 5 Agent calls IN ONE MESSAGE (parallel)
+Agent(prompt=dispatches[0]["subagent_prompt"], description="chaos sweep 90", subagent_type="general-purpose", run_in_background=true)
+Agent(prompt=dispatches[1]["subagent_prompt"], description="chaos sweep 91", subagent_type="general-purpose", run_in_background=true)
+Agent(prompt=dispatches[2]["subagent_prompt"], description="chaos sweep 92", subagent_type="general-purpose", run_in_background=true)
+Agent(prompt=dispatches[3]["subagent_prompt"], description="chaos sweep 93", subagent_type="general-purpose", run_in_background=true)
+Agent(prompt=dispatches[4]["subagent_prompt"], description="chaos sweep 94", subagent_type="general-purpose", run_in_background=true)
+```
+
+```python
+# 3. Wait for completion notifications, then record
+summaries = [{"run_id": d["run_id"], "agent_summary": agent_returns[i]} for i, d in enumerate(dispatches)]
+record_sweep(summaries)
+```
+
+**Sweep B (control):**
+```python
+from enact.chaos.runner import disable_sweep_b, restore_after_sweep
+disable_sweep_b()  # rename .enact/policies.py to .disabled
+dispatches_b = run_sweep(corpus, sweep="B")
+# fire 5 more Agent calls in one message
+record_sweep(summaries_b)
+restore_after_sweep()  # rename back
+```
+
+**The ONLY exception** to this rule: if the parent CC session has cwd outside the project root (e.g. cwd=`enact` when the working repo is `enact-fresh`), `Agent` dispatches inherit the wrong cwd and `.claude/settings.json` won't load. In that case (rare), fall back to `claude --print --settings $PWD/.claude/settings.json --add-dir $PWD/chaos --max-budget-usd 1.00 --dangerously-skip-permissions` from the right cwd. But this should NEVER happen if Russell starts CC from the project root, which he does.
+
+**Pre-announce token cost EVEN with Agent tool** — consumption against plan allowance is still real. Format:
+
+> "Firing 5×1 misinterpretation sweep via Agent tool. Estimated ~5 min wall clock parallel. Token cost goes against your CC plan allowance, not API direct."
+
+**Hook backstop:** none yet. If subprocess sweeps keep happening when Agent would work, add a hook that detects `claude --print` + `--max-budget-usd` invocations from chaos task dirs and blocks them with a reminder. Defer until the second time Russell catches it.
+
 ## For Red Teaming Plans
 
 **Chat output MUST include:**
