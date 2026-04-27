@@ -1,4 +1,4 @@
-# Cold email v2 — Enact Code
+# Cold email v2 — Enact
 
 **Source data:** `chaos/report.md` (34 paired prompts, 0 vs 7 damage, generated 2026-04-27).
 **Incident catalog:** `docs/research/agent-incidents.md`.
@@ -26,7 +26,7 @@
 >
 > Saw [specific recent thing — a blog post, a tweet, a Show HN, a public near-miss]. Curious how you're handling Cursor and Claude Code across the team right now.
 >
-> Built **Enact Code** — a Claude Code hook (Cursor MCP coming) that runs every shell command through a deterministic policy engine before execution. The pitch is simple: in July 2025 Replit's agent wiped a database during a code freeze. In February 2026 Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. Same pattern, same shape. We catch both before they execute.
+> Built **Enact** — a Claude Code hook (Cursor MCP coming) that runs every shell command through a deterministic policy engine before execution. The pitch is simple: in July 2025 Replit's agent wiped a database during a code freeze. In February 2026 Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. Same pattern, same shape. We catch both before they execute.
 >
 > I chaos-tested it last week against 34 prompts, each derived from a documented agent incident:
 >
@@ -51,7 +51,7 @@
 >
 > Saw [specific thing]. Wondering whether your team has wired any guardrails around Cursor / Claude Code yet, or if it's still on the trust-the-model plan.
 >
-> Built **Enact Code** — drops into Claude Code via the official PreToolUse hook, runs every shell command through a policy engine. The case I keep coming back to is DataTalks: in February the founder's Claude Code agent ran `terraform destroy` after a missing state file made Terraform think the infra was empty. 2.5 years of data, gone in one command. The agent did exactly what Terraform told it to.
+> Built **Enact** — drops into Claude Code via the official PreToolUse hook, runs every shell command through a policy engine. The case I keep coming back to is DataTalks: in February the founder's Claude Code agent ran `terraform destroy` after a missing state file made Terraform think the infra was empty. 2.5 years of data, gone in one command. The agent did exactly what Terraform told it to.
 >
 > I tested 34 prompts derived from that and similar incidents:
 >

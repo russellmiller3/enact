@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enact Code — The firewall that catches AI coding agents before they wipe production</title>
-    <meta name="description" content="Replit wiped a database. Claude Code ran terraform destroy. We chaos-tested 21 real-incident prompts: 0 damage with Enact, 6 without. Drop-in Claude Code hook. Free SDK.">
+    <title>Enact — The Agent Firewall for Claude Code, Cursor, and Codex</title>
+    <meta name="description" content="Replit wiped a database. Claude Code ran terraform destroy. The Agent Firewall stops both before they execute. We chaos-tested 34 real-incident prompts: 0 damage with Enact, 7 without. Free SDK.">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><path d='M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z' fill='white'/></svg>">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -148,14 +148,14 @@
 <header>
     <div class="container header-inner">
         <div class="logo">
-            ENACT<span class="logo-tag">CODE</span>
+            ENACT<span class="logo-tag">AGENT FIREWALL</span>
         </div>
         <nav>
             <a href="#how">How it works</a>
             <a href="#try">Try it yourself</a>
             <a href="#numbers">The numbers</a>
-            <a href="/agents">For production agents</a>
-            <a href="mailto:hello@enact.cloud?subject=Enact Code demo" class="nav-cta">Get a demo →</a>
+            <a href="/agents">Enact Agent</a>
+            <a href="mailto:hello@enact.cloud?subject=Enact demo" class="nav-cta">Get a demo →</a>
         </nav>
     </div>
 </header>
@@ -165,7 +165,7 @@
     <div class="container">
         <h1>In July 2025, an AI coding agent <span class="highlight">wiped a production database</span> during a code freeze.</h1>
         <p class="sub">
-            It was Replit. The agent ignored the freeze, deleted records on 1,200+ companies, then claimed rollback was impossible. Six months later, Claude Code ran <code>terraform destroy</code> on a developer's laptop and erased 2.5 years of student data. Same shape every time. Enact Code is the firewall that catches both before they execute.
+            It was Replit. The agent ignored the freeze, deleted records on 1,200+ companies, then claimed rollback was impossible. Six months later, Claude Code ran <code>terraform destroy</code> on a developer's laptop and erased 2.5 years of student data. Same shape every time. Enact is the Agent Firewall that catches both before they execute.
         </p>
         <div class="cta-row">
             <a href="#try" class="btn btn-primary">Install in 30 seconds →</a>
@@ -249,7 +249,7 @@
         <div class="section-label">How it works</div>
         <h2>Every Bash command flows through a policy engine first.</h2>
         <p class="section-sub">
-            Claude Code emits a PreToolUse hook on every tool call. Enact Code is a tiny binary on that hook. Synthesizes the command into a structured payload, runs it through deterministic Python policies, returns deny JSON if any policy blocks. Sub-50ms overhead. No LLMs in the decision path.
+            Claude Code emits a PreToolUse hook on every tool call. Enact is a tiny binary on that hook. Synthesizes the command into a structured payload, runs it through deterministic Python policies, returns deny JSON if any policy blocks. Sub-50ms overhead. No LLMs in the decision path.
         </p>
 
         <div class="terminal">
@@ -388,7 +388,7 @@ POLICIES = [
         <div class="section-label">What it catches</div>
         <h2>The defaults are sharp. The customizations are sharper.</h2>
         <p class="section-sub">
-            Out of the box, Enact Code blocks the patterns that have caused real public incidents in the last 12 months. Add your own protected tables, deploy windows, and forbidden ops in 5 minutes.
+            Out of the box, Enact blocks the patterns that have caused real public incidents in the last 12 months. Add your own protected tables, deploy windows, and forbidden ops in 5 minutes.
         </p>
 
         <table class="compare">
@@ -424,7 +424,7 @@ POLICIES = [
             <a href="/agents" class="btn btn-secondary">Building your own agents? →</a>
         </div>
         <p style="margin-top: 24px; font-size: 13px; color: var(--subtle);">
-            Questions? Demo request? <a style="color: var(--accent);" href="mailto:hello@enact.cloud?subject=Enact Code">hello@enact.cloud</a>
+            Questions? Demo request? <a style="color: var(--accent);" href="mailto:hello@enact.cloud?subject=Enact">hello@enact.cloud</a>
         </p>
     </div>
 </section>
@@ -436,7 +436,7 @@ POLICIES = [
         <a href="https://docs.enact.cloud">Docs</a> ·
         <a href="mailto:hello@enact.cloud">Contact</a>
         <p style="margin-top: 14px; font-size: 11px; color: var(--subtle); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
-            Enact Code is a defensive layer, not a guarantee. You remain responsible for the actions your AI agents take. The hook is best-effort and fails open on unexpected errors so a buggy hook can never permanently block your IDE.
+            Enact is a defensive layer, not a guarantee. You remain responsible for the actions your AI agents take. The hook is best-effort and fails open on unexpected errors so a buggy hook can never permanently block your IDE.
         </p>
     </div>
 </footer>

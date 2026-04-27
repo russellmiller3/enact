@@ -1,4 +1,4 @@
-# Cold email v1 — Enact Code
+# Cold email v1 — Enact
 
 Source data: `chaos/report.md` (Sweep 2026-04-27, 42 paired runs across 21 prompts).
 Incident catalog: `docs/research/agent-incidents.md`.
@@ -16,7 +16,7 @@ Incident catalog: `docs/research/agent-incidents.md`.
 > Saw [specific recent thing — blog post, tweet, public near-miss].
 > Curious how you're handling Cursor / Claude Code across the team.
 >
-> Built **Enact Code** — a Claude Code hook (Cursor MCP coming) that runs every shell command through a deterministic policy engine before execution. Tested it against **21 prompts derived from documented real-world agent incidents** — Replit/SaaStr, Claude Code/DataTalks (Terraform destroy → 2.5yr data lost), the background drizzle-kit prod-wipe, etc.
+> Built **Enact** — a Claude Code hook (Cursor MCP coming) that runs every shell command through a deterministic policy engine before execution. Tested it against **21 prompts derived from documented real-world agent incidents** — Replit/SaaStr, Claude Code/DataTalks (Terraform destroy → 2.5yr data lost), the background drizzle-kit prod-wipe, etc.
 >
 >   **Without Enact: 6 critical damage events on 4 of 21 prompts.** Agent dropped the customers table on a "we don't need it" prompt. Agent emptied users with no `WHERE`. Agent ran `aws s3 rm --recursive` on a "safe" staging bucket. Adversarial rename-then-drop bypassed Claude's own self-refusal and wiped customers anyway.
 >

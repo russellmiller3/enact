@@ -1,10 +1,13 @@
-# Enact
+# Enact — the Agent Firewall
 
 **You just gave an LLM access to real APIs. What happens when it does something stupid?**
 
-It already has. [Replit's agent deleted a production database](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/). [Amazon Kiro caused a 13-hour AWS outage](https://awesomeagents.ai/news/amazon-kiro-ai-aws-outages/). [Claude Code ran `rm -rf` on a home directory](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/). These weren't bugs — the agents did exactly what they were told. The problem: nothing was checking _whether they should_.
+It already has. [Replit's agent deleted a production database](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/). [Claude Code ran `terraform destroy` and erased 2.5 years of student data](https://www.tomshardware.com/tech-industry/artificial-intelligence/claude-code-deletes-developers-production-setup-including-its-database-and-snapshots-2-5-years-of-records-were-nuked-in-an-instant). [Claude Code ran `rm -rf` on a home directory](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/). These weren't bugs — the agents did exactly what they were told. The problem: nothing was checking _whether they should_.
 
-Enact is the missing layer between your agent and the real world:
+**Enact is the Agent Firewall** — the missing layer between your agent and the real world. Two flavors, same engine:
+
+- **Enact** for AI coding tools (Claude Code today, Cursor next) — drops in via the official PreToolUse hook
+- **Enact Agent** for production agents you ship to your users — Python SDK with policies + receipts + rollback
 
 1. **Block dangerous actions before they fire** — Python policies run before anything executes
 2. **Execute deterministically** — plain Python workflows, not LLM-generated actions
@@ -84,9 +87,9 @@ python examples/quickstart.py
 
 Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts. No credentials needed.
 
-### Enact Code — guardrails for Claude Code
+### Enact for Claude Code — the Agent Firewall hook
 
-Drop-in Claude Code hook that blocks dangerous Bash commands before they fire.
+Drop-in Claude Code hook that intercepts every Bash command and runs it through a deterministic policy engine. 23 default policies cover real-world agent disasters (Replit/SaaStr, Claude Code/DataTalks, drizzle prod-wipe). 0 vs 7 critical damage on 34 paired chaos prompts.
 
 ```bash
 pip install enact-sdk

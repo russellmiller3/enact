@@ -1,4 +1,4 @@
-# Loom 90s demo script — Enact Code
+# Loom 90s demo script — Enact
 
 **Goal:** in 90 seconds, get the viewer to install Enact themselves.
 **Hook:** lead with the named incident (Replit + DataTalks), end with a single command.
