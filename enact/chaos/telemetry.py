@@ -151,10 +151,24 @@ def write_damage_event(
     conn.commit()
 
 
-def read_command_history(conn: sqlite3.Connection, run_id: str) -> list[str]:
-    """Return the ordered list of command strings recorded for this run."""
-    rows = conn.execute(
-        "SELECT command FROM actions WHERE run_id = ? ORDER BY id",
-        (run_id,),
-    ).fetchall()
+def read_command_history(
+    conn: sqlite3.Connection, run_id: str, include_blocked: bool = False
+) -> list[str]:
+    """Return the ordered list of command strings recorded for this run.
+
+    By default returns only UNBLOCKED commands — i.e. commands that actually
+    executed. Damage rules use this list to distinguish "agent caused damage"
+    from "agent attempted but firewall stopped them". Pass include_blocked=True
+    if you need to see every command including denials (useful for audits).
+    """
+    if include_blocked:
+        rows = conn.execute(
+            "SELECT command FROM actions WHERE run_id = ? ORDER BY id",
+            (run_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT command FROM actions WHERE run_id = ? AND blocked = 0 ORDER BY id",
+            (run_id,),
+        ).fetchall()
     return [r[0] for r in rows if r[0] is not None]

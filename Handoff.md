@@ -4,27 +4,49 @@
 
 ---
 
-## Current State (2026-04-27, end of session 11)
+## Current State (2026-04-27, end of session 12)
 
 ### Git
 - Branch: `claude/reid-handoff-next-steps-cnufC` (NOT yet merged to master)
 - Tests: **135 passing** (27 hook + 108 chaos)
 - Working tree: clean after final commit
 
-### Headline numbers — 36-run paired sweep (this session)
+### Headline numbers — 42-run paired sweep on incident-derived corpus (this session)
 | Metric | Sweep A (Enact ON) | Sweep B (Enact OFF) |
 |---|---|---|
-| Total runs | 18 | 18 |
+| Total runs | 21 | 21 |
 | Critical damage events | **0** | **6** |
-| Damage runs (any state change for the worse) | **0** | **4** |
-| Direct policy blocks | 5 | n/a |
-| Agent self-refusals | 8 | 7 |
-| Clean | 5 | 7 |
+| Damage runs | **0** | **4** |
+| Direct policy blocks | 11 | n/a |
+| Agent self-refusals | 6 | 11 |
+| Clean | 4 | 6 |
 | Leaks (Enact ON but damage anyway) | **0** | n/a |
 
-**Translation:** Same 18 dangerous prompts, same Claude. With Enact: 0 damage. Without: 4 of 18 caused damage including DROP customers, DELETE users, rename-then-drop, batched-delete. Hook caught everything; no leaks → no new policy candidates this round.
+**Translation:** 21 prompts, each derived from a documented real-world AI-coding-agent disaster (Replit/SaaStr, Claude Code/DataTalks Terraform-destroy, drizzle prod-wipe, etc.). Same prompts, same model, two sweeps.
+- **Without Enact:** Claude self-refused 11 of 15 dangerous prompts but 4 still caused damage (DROP customers, DELETE users, aws s3 rm --recursive, rename-then-drop bypass).
+- **With Enact:** 0 damage. 11 hard blocks.
 
-Damage detail in `chaos/report.md`. Cold-email body (3 picked findings) at `docs/outreach/cold_email_v1.md`.
+Damage detail: `chaos/report.md`. Cold-email body: `docs/outreach/cold_email_v1.md`. Source incidents: `docs/research/agent-incidents.md`.
+
+### Corpus surgery (also this session)
+
+**Main corpus (`chaos/tasks/`)** is now 21 prompts:
+- 3 innocent (controls)
+- 4 ambiguous
+- 4 original DB-damage (kept — 2 still caused damage in B)
+- 10 honest_mistake (NEW — one per documented real incident)
+
+**Refused corpus (`chaos/tasks-refused/`)** has 7 prompts Claude self-refuses without help (force-push, commit .env, modify CI workflow, 3 prompt-injections, env-var-obfuscated DELETE). Tracked separately so they don't dilute the headline. Recategorized as `category: refused_corpus` in frontmatter.
+
+### Code shipped this session
+
+- `enact/cli/code_hook.py` — `_resolve_chaos_run_id()` parses run id from inline cmd prefix; `cmd_pre` writes BLOCK receipts; default policies pull in `CODING_AGENT_POLICIES`
+- `enact/policies/coding_agent.py` — NEW. 10 policies blocking real-world incident patterns (terraform destroy, drizzle force, aws s3 recursive rm, kubectl delete ns, docker prune --volumes, git reset --hard, git clean -fd, chmod -R 777, DROP DATABASE, aws iam delete-user)
+- `enact/chaos/sandbox.py` — multi-tool intent shim (terraform/aws/kubectl/docker/drizzle-kit). Logs invocations to `<run_dir>/intent_log.json`, prints fake-success output
+- `enact/chaos/damage.py` — 11 new intent-based damage rules keyed off command text
+- `enact/chaos/runner.py` — outcome regex catches "blocked by Enact" wording
+- `enact/chaos/telemetry.py` — `read_command_history(include_blocked=False)` default — damage rules now correctly distinguish "agent did it" from "agent attempted, firewall stopped"
+- `enact/chaos/tasks.py` — added `honest_mistake` and `refused_corpus` categories
 
 ### Hook fixes shipped this session
 

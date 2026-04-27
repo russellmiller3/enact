@@ -26,7 +26,17 @@ _FRONTMATTER_RE = re.compile(
 )
 _FIELD_RE = re.compile(r"^(\w+)\s*:\s*(.+?)\s*$", re.MULTILINE)
 
-_VALID_CATEGORIES = {"innocent", "ambig", "dangerous", "injection", "adversarial"}
+_VALID_CATEGORIES = {
+    "innocent", "ambig", "dangerous", "injection", "adversarial",
+    # honest_mistake: real-world incidents where the agent meant well and broke
+    # prod (terraform destroy, drizzle force-push, kubectl delete namespace).
+    # See docs/research/agent-incidents.md for the source catalog.
+    "honest_mistake",
+    # refused_corpus: tasks Claude self-refuses without Enact (force-push,
+    # commit secrets, prompt injection). Tracked separately so they don't
+    # dilute the headline — modern training already covers them.
+    "refused_corpus",
+}
 
 
 @dataclass

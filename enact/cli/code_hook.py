@@ -30,17 +30,25 @@ DEFAULT_POLICIES_PY = '''\
 from enact.policies.git import dont_force_push, dont_commit_api_keys
 from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
+from enact.policies.coding_agent import CODING_AGENT_POLICIES
 
 # These defaults are tuned for the shell-command context. Add
 # dont_delete_without_where only if your workflow populates payload["where"]
 # explicitly — in shell context it would block every non-SQL command since
 # it treats a missing where field as a "delete everything" attempt.
+#
+# CODING_AGENT_POLICIES blocks 10 documented real-world incident patterns:
+# terraform destroy, drizzle-kit push --force, aws s3 rm --recursive,
+# kubectl delete namespace, docker prune --volumes, git reset --hard,
+# git clean -fd, chmod -R 777, DROP DATABASE, aws iam delete-user.
+# See docs/research/agent-incidents.md for sources.
 POLICIES = [
     code_freeze_active,
     block_ddl,
     dont_force_push,
     dont_commit_api_keys,
     protect_tables(["users", "customers", "orders", "payments", "audit_log"]),
+    *CODING_AGENT_POLICIES,
 ]
 '''
 
