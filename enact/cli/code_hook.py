@@ -112,6 +112,97 @@ def parse_bash_command(command: str) -> dict:
     return payload
 
 
+SUPPORTED_TOOLS = ("Bash", "Read", "Write", "Edit", "Glob", "Grep")
+
+
+def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
+    """
+    Map a Claude Code tool invocation into the payload shape policies expect.
+
+    Returns None for unsupported tools or malformed input — caller should
+    treat None as "fail open" (silent allow) to preserve the never-brick-CC
+    invariant.
+
+    Each tool's payload is shaped so existing policies fire correctly:
+      Bash  -> command/args/diff/content (+ sql/table/where if psql)
+      Read  -> path + rendered command for shell-pattern policies
+      Write -> path + content (so dont_copy_api_keys catches keys in content)
+      Edit  -> path + diff (old->new) so dont_commit_api_keys catches diff secrets
+      Glob  -> path=pattern (so dont_access_home_dir fires) + glob_pattern
+      Grep  -> grep_pattern (for block_grep_secret_patterns) + path
+    """
+    if tool_name == "Bash":
+        command = tool_input.get("command") or ""
+        if not command:
+            return None
+        return parse_bash_command(command)
+
+    if tool_name == "Read":
+        path = tool_input.get("file_path") or ""
+        if not path:
+            return None
+        return {
+            "path": path,
+            "command": f"Read {path}",
+            "diff": "",
+            "content": "",
+        }
+
+    if tool_name == "Write":
+        path = tool_input.get("file_path") or ""
+        if not path:
+            return None
+        content = tool_input.get("content") or ""
+        return {
+            "path": path,
+            "content": content,
+            "command": f"Write {path}",
+            # so dont_commit_api_keys (scans diff) catches secrets in the new file
+            "diff": content,
+        }
+
+    if tool_name == "Edit":
+        path = tool_input.get("file_path") or ""
+        if not path:
+            return None
+        old = tool_input.get("old_string") or ""
+        new = tool_input.get("new_string") or ""
+        return {
+            "path": path,
+            "content": new,
+            "diff": f"{old}\n->\n{new}",
+            "command": f"Edit {path}",
+        }
+
+    if tool_name == "Glob":
+        pattern = tool_input.get("pattern") or ""
+        if not pattern:
+            return None
+        return {
+            # path=pattern so dont_access_home_dir / block_glob_credentials_dirs fire
+            "path": pattern,
+            "glob_pattern": pattern,
+            "command": f"Glob {pattern}",
+            "diff": "",
+            "content": "",
+        }
+
+    if tool_name == "Grep":
+        pattern = tool_input.get("pattern") or ""
+        if not pattern:
+            return None
+        path = tool_input.get("path") or ""
+        return {
+            "path": path,
+            "grep_pattern": pattern,
+            "command": f"Grep {pattern}" + (f" {path}" if path else ""),
+            "diff": "",
+            "content": "",
+        }
+
+    return None  # unknown tool — fail open
+
+
 def _is_enact_hook_entry(entry: dict) -> bool:
     """Detect a previously-installed enact-code-hook entry, for idempotent reinstall."""
     for h in entry.get("hooks", []):

@@ -12,6 +12,84 @@ from enact.cli.code_hook import parse_bash_command, cmd_init, cmd_pre, cmd_post,
 
 # -- parser tests --
 
+class TestParseToolInput:
+    """parse_tool_input dispatches Bash/Read/Write/Edit/Glob/Grep into a
+    payload shape that existing path-/command-based policies can consume."""
+
+    def test_bash_returns_existing_shape(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Bash", {"command": "ls -la /tmp"})
+        assert p["command"] == "ls -la /tmp"
+        assert p["args"] == ["ls", "-la", "/tmp"]
+
+    def test_read_populates_path_and_command(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Read", {"file_path": "/etc/passwd"})
+        assert p["path"] == "/etc/passwd"
+        assert "Read" in p["command"]
+        assert "/etc/passwd" in p["command"]
+
+    def test_write_populates_path_content_and_command(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Write", {
+            "file_path": ".github/workflows/deploy.yml",
+            "content": "on: push",
+        })
+        assert p["path"] == ".github/workflows/deploy.yml"
+        assert p["content"] == "on: push"
+        assert "Write" in p["command"]
+
+    def test_edit_populates_path_diff_content(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Edit", {
+            "file_path": ".gitignore",
+            "old_string": "node_modules/",
+            "new_string": "node_modules/\n!.env",
+        })
+        assert p["path"] == ".gitignore"
+        assert "node_modules/" in p["content"]
+        assert "!.env" in p["content"]
+        assert "node_modules/" in p["diff"]
+        assert "!.env" in p["diff"]
+        assert "Edit" in p["command"]
+
+    def test_glob_populates_path_with_pattern(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Glob", {"pattern": "**/.aws/*"})
+        assert p["path"] == "**/.aws/*"
+        assert p["glob_pattern"] == "**/.aws/*"
+        assert "Glob" in p["command"]
+
+    def test_grep_populates_pattern_and_path(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Grep", {
+            "pattern": "aws_secret_access_key",
+            "path": "src/",
+        })
+        assert p["grep_pattern"] == "aws_secret_access_key"
+        assert p["path"] == "src/"
+        assert "Grep" in p["command"]
+
+    def test_grep_no_path_defaults_to_empty(self):
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("Grep", {"pattern": "API_KEY"})
+        assert p["grep_pattern"] == "API_KEY"
+        assert p["path"] == ""
+
+    def test_unknown_tool_returns_none(self):
+        from enact.cli.code_hook import parse_tool_input
+        assert parse_tool_input("WebFetch", {"url": "x"}) is None
+        assert parse_tool_input("Task", {}) is None
+
+    def test_read_missing_file_path_returns_none(self):
+        from enact.cli.code_hook import parse_tool_input
+        assert parse_tool_input("Read", {}) is None
+
+    def test_glob_missing_pattern_returns_none(self):
+        from enact.cli.code_hook import parse_tool_input
+        assert parse_tool_input("Glob", {}) is None
+
+
 class TestParseBashCommand:
     def test_plain_command_populates_command_and_args(self):
         p = parse_bash_command("ls -la /tmp")
