@@ -129,6 +129,30 @@
         footer { padding: 28px 0; border-top: 1px solid var(--border); text-align: center; color: var(--subtle); font-size: 13px; }
         footer a { color: var(--muted); margin: 0 10px; }
 
+        /* Receipt tabs (lifted from /agents) */
+        .tab-row { display: flex; gap: 12px; margin: 0 auto 24px; max-width: 860px; flex-wrap: wrap; justify-content: center; }
+        .tab-btn { padding: 10px 20px; background: transparent; border: 2px solid var(--border); border-radius: 7px; color: var(--muted); font-family: var(--mono); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .2s; }
+        .tab-btn:hover { border-color: var(--accent); color: var(--text); }
+        .tab-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .receipt { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 28px; font-family: var(--mono); font-size: 13px; line-height: 1.8; max-width: 860px; margin: 0 auto; text-align: left; }
+        .receipt-hdr { border-bottom: 1px solid var(--border); padding-bottom: 14px; margin-bottom: 14px; }
+        .r-row { display: flex; margin-bottom: 6px; }
+        .r-label { color: var(--muted); width: 160px; flex-shrink: 0; }
+        .r-val { color: var(--text); word-break: break-all; }
+        .badge-approved { display: inline-block; padding: 3px 10px; background: rgba(5,150,105,.15); color: #10b981; border: 1px solid rgba(5,150,105,.3); border-radius: 5px; font-weight: 700; }
+        .badge-denied { display: inline-block; padding: 3px 10px; background: rgba(220,38,38,.15); color: #ef4444; border: 1px solid rgba(220,38,38,.3); border-radius: 5px; font-weight: 700; }
+        .r-section { margin-top: 20px; }
+        .r-section h4 { color: var(--accent); margin-bottom: 10px; font-size: 12px; letter-spacing: 0.08em; }
+        .policy-row { display: flex; align-items: flex-start; padding: 10px 12px; background: var(--surface); border-radius: 6px; margin-bottom: 8px; }
+        .pbadge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; margin-right: 12px; margin-top: 2px; }
+        .pbadge.pass { background: rgba(5,150,105,.15); color: #10b981; border: 1px solid rgba(5,150,105,.3); }
+        .pbadge.fail { background: rgba(220,38,38,.15); color: #ef4444; border: 1px solid rgba(220,38,38,.3); }
+        .policy-detail strong { display: block; font-size: 13px; }
+        .policy-detail span { font-size: 12px; color: var(--muted); }
+        .policy-detail span.err { color: #ef4444; }
+
         /* Responsive */
         @media (max-width: 768px) {
             .hero h1 { font-size: 32px; }
@@ -392,8 +416,168 @@ result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style
         <p style="margin-top: 36px; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
             <strong style="color: var(--text);">Three-party trust model.</strong> Your company runs the agents and owns the encryption key. Enact Cloud stores encrypted blobs and metadata. Your auditor independently verifies signatures. Nobody can audit themselves; nobody can audit their own cloud provider. Same independence model as Ernst &amp; Young auditing Goldman Sachs.
         </p>
+
+        <!-- RECEIPT TABS — what the dashboard shows -->
+        <div style="margin-top: 64px;">
+            <h3 style="font-size: 20px; margin-bottom: 8px;">What your auditor actually sees</h3>
+            <p style="text-align: center; color: var(--muted); margin-bottom: 28px; font-size: 14px; max-width: 680px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+                One signed JSON per agent action — pass, block, or rolled back. The dashboard renders these; <code>enact-ui</code> on your laptop renders these; your auditor exports these. Same artifact, three views.
+            </p>
+
+            <div class="tab-row">
+                <button class="tab-btn active" onclick="showReceiptTab(event, 'rt-blocked')">✗ Blocked (disaster prevented)</button>
+                <button class="tab-btn" onclick="showReceiptTab(event, 'rt-passed')">✓ Passed (safe operation)</button>
+                <button class="tab-btn" onclick="showReceiptTab(event, 'rt-rollback')">↩ Rolled back (damage undone)</button>
+            </div>
+
+            <!-- BLOCKED -->
+            <div class="tab-pane active" id="rt-blocked">
+                <div class="receipt">
+                    <div class="receipt-hdr">
+                        <div class="r-row"><div class="r-label">run_id</div><div class="r-val">a3f7c291-4d8e-4b2a-9c1f-e6d3b5a7f902</div></div>
+                        <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-04-27T03:47:22Z</div></div>
+                        <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-denied">BLOCK</span></div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>REQUEST DETAILS</h4>
+                        <div class="r-row"><div class="r-label">user_email</div><div class="r-val">claude-code@local</div></div>
+                        <div class="r-row"><div class="r-label">workflow</div><div class="r-val">tool.read</div></div>
+                        <div class="r-row"><div class="r-label">payload.tool_name</div><div class="r-val">Read</div></div>
+                        <div class="r-row"><div class="r-label">payload.command</div><div class="r-val">Read .env</div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>POLICY EVALUATION</h4>
+                        <div class="policy-row">
+                            <div class="pbadge fail">✗</div>
+                            <div class="policy-detail">
+                                <strong>dont_read_env</strong>
+                                <span class="err">BLOCKED: Accessing env file '.env' is not permitted — it may contain secrets</span>
+                            </div>
+                        </div>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail">
+                                <strong>dont_touch_ci_cd</strong>
+                                <span>Path '.env' is not a CI/CD file</span>
+                            </div>
+                        </div>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail">
+                                <strong>code_freeze_active</strong>
+                                <span>No active freeze (ENACT_FREEZE unset)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="r-section">
+                        <h4>ACTIONS EXECUTED</h4>
+                        <div class="r-row"><div class="r-label">actions_taken</div><div class="r-val">[] — no actions executed (policy blocked run)</div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>TECHNICAL LOG</h4>
+                        <div class="r-row"><div class="r-label">policy checks</div><div class="r-val">28 passed, 1 failed</div></div>
+                        <div class="r-row"><div class="r-label">actions run</div><div class="r-val">0</div></div>
+                        <div class="r-row"><div class="r-label">signature</div><div class="r-val">hmac-sha256:e3a9f1b47c2d…8a1e (covers all fields)</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASSED -->
+            <div class="tab-pane" id="rt-passed">
+                <div class="receipt">
+                    <div class="receipt-hdr">
+                        <div class="r-row"><div class="r-label">run_id</div><div class="r-val">b7d2e849-1a3c-4f6e-8d0b-c4f9a2e7d531</div></div>
+                        <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-04-27T09:14:07Z</div></div>
+                        <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-approved">PASS</span></div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>REQUEST DETAILS</h4>
+                        <div class="r-row"><div class="r-label">user_email</div><div class="r-val">claude-code@local</div></div>
+                        <div class="r-row"><div class="r-label">workflow</div><div class="r-val">tool.bash</div></div>
+                        <div class="r-row"><div class="r-label">payload.command</div><div class="r-val">git checkout -b fix/auth-bug</div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>POLICY EVALUATION</h4>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail"><strong>dont_force_push</strong><span>No --force flag detected</span></div>
+                        </div>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail"><strong>dont_commit_api_keys</strong><span>No vendor key signatures in command</span></div>
+                        </div>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail"><strong>protect_tables</strong><span>Not a SQL operation</span></div>
+                        </div>
+                    </div>
+                    <div class="r-section">
+                        <h4>ACTIONS EXECUTED</h4>
+                        <div class="r-row"><div class="r-label">shell</div><div class="r-val">tool.bash → exit_code=0, branch 'fix/auth-bug' created</div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>TECHNICAL LOG</h4>
+                        <div class="r-row"><div class="r-label">policy checks</div><div class="r-val">29 passed, 0 failed</div></div>
+                        <div class="r-row"><div class="r-label">actions run</div><div class="r-val">1 (succeeded)</div></div>
+                        <div class="r-row"><div class="r-label">signature</div><div class="r-val">hmac-sha256:f8b3c2a74e1d…9c5f (covers all fields)</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROLLBACK -->
+            <div class="tab-pane" id="rt-rollback">
+                <div class="receipt">
+                    <div class="receipt-hdr">
+                        <div class="r-row"><div class="r-label">run_id</div><div class="r-val">c9e4f7a1-2b5d-4c8e-a3f0-d7b2e9c4f618</div></div>
+                        <div class="r-row"><div class="r-label">timestamp</div><div class="r-val">2026-04-27T14:22:51Z</div></div>
+                        <div class="r-row"><div class="r-label">original_run_id</div><div class="r-val">d2b8c5e3-9a1f-4d7b-8c2e-f5a3b1d6e492</div></div>
+                        <div class="r-row"><div class="r-label">decision</div><div class="r-val"><span class="badge-approved">PASS</span></div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>ORIGINAL RUN</h4>
+                        <div class="r-row"><div class="r-label">workflow</div><div class="r-val">db_cleanup_workflow</div></div>
+                        <div class="r-row"><div class="r-label">user_email</div><div class="r-val">cleanup-agent@company.com</div></div>
+                        <div class="r-row"><div class="r-label">executed</div><div class="r-val">2026-04-27T14:19:38Z — 3 minutes ago</div></div>
+                        <div class="r-row"><div class="r-label">what happened</div><div class="r-val">delete_row removed 5 "inactive" customers — status field was wrong, they were live</div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>ROLLBACK ACTIONS (last → first)</h4>
+                        <div class="policy-row">
+                            <div class="pbadge pass">✓</div>
+                            <div class="policy-detail">
+                                <strong>postgres.delete_row → REVERSED</strong>
+                                <span>Re-inserted 5 rows into "customers" from pre-action capture. All records restored.</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="r-section">
+                        <h4>RESULT</h4>
+                        <div class="r-row"><div class="r-label">actions_reversed</div><div class="r-val">1 of 1</div></div>
+                        <div class="r-row"><div class="r-label">rows_restored</div><div class="r-val">5 customer records back in prod</div></div>
+                    </div>
+                    <div class="r-section">
+                        <h4>TECHNICAL LOG</h4>
+                        <div class="r-row"><div class="r-label">signature verified</div><div class="r-val">original receipt signature valid before rollback executed</div></div>
+                        <div class="r-row"><div class="r-label">signature</div><div class="r-val">hmac-sha256:a7d4e9c31f8b…2d6a (rollback receipt signed)</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <p style="margin-top: 28px; font-size: 13px; color: var(--muted); text-align: center;">
+                Want to see your own receipts? <code>pip install enact-sdk &amp;&amp; enact-ui</code> opens the local browser at <code>localhost:8000</code>.
+            </p>
+        </div>
     </div>
 </section>
+
+<script>
+function showReceiptTab(evt, tabId) {
+    document.querySelectorAll('#security-team .tab-pane').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('#security-team .tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+</script>
 
 <!-- COMPLIANCE / READ ENFORCEMENT -->
 <section id="compliance" class="centered">
