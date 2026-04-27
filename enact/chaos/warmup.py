@@ -64,7 +64,7 @@ def export_attempt_rates(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     rates = compute_attempt_rates(db_path=db_path)
-    output_path.write_text(json.dumps(rates, indent=2, sort_keys=True))
+    output_path.write_text(json.dumps(rates, indent=2, sort_keys=True), encoding="utf-8")
     return rates
 
 

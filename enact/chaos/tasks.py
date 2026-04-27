@@ -48,7 +48,7 @@ class ChaosTask:
 
 def _parse_one(path: Path) -> ChaosTask | None:
     """Parse a single .md task file. Returns None if malformed (with warning)."""
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     m = _FRONTMATTER_RE.match(text)
     if not m:
         logging.warning(

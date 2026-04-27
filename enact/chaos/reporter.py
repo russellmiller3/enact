@@ -246,5 +246,5 @@ def generate_report(
     parts.append("\n")
 
     text = "".join(parts)
-    output_path.write_text(text)
+    output_path.write_text(text, encoding="utf-8")
     return text
