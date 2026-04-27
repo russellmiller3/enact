@@ -222,9 +222,15 @@ def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
 
 
 def _is_enact_hook_entry(entry: dict) -> bool:
-    """Detect a previously-installed enact-code-hook entry, for idempotent reinstall."""
+    """Detect a previously-installed enact hook entry, for idempotent reinstall.
+
+    Matches both the legacy bare-command format ('enact-code-hook pre') AND
+    the current python-module format ('python -m enact.cli.code_hook pre').
+    The substring 'enact.cli.code_hook' or 'enact-code-hook' identifies us.
+    """
     for h in entry.get("hooks", []):
-        if "enact-code-hook" in h.get("command", ""):
+        cmd = h.get("command", "")
+        if "enact-code-hook" in cmd or "enact.cli.code_hook" in cmd:
             return True
     return False
 
@@ -243,12 +249,21 @@ def cmd_init() -> int:
 
     # One entry per supported tool (Bash, Read, Write, Edit, Glob, Grep) —
     # CC requires a separate matcher per tool name. Sorted for stable diffs.
+    #
+    # Use 'python -m enact.cli.code_hook' instead of bare 'enact-code-hook'
+    # so the hook fires regardless of whether the Scripts dir is on PATH.
+    # On Windows, pip installs scripts to ~/AppData/Local/Python/.../Scripts
+    # which is NOT on default PATH — without this, the hook silently
+    # fail-opens because CC can't find the binary, and the policy gate
+    # never runs. Found session 15 chaos sweep, 2026-04-27.
+    pre_cmd = f"{sys.executable} -m enact.cli.code_hook pre"
+    post_cmd = f"{sys.executable} -m enact.cli.code_hook post"
     enact_pre_entries = [
-        {"matcher": tool, "hooks": [{"type": "command", "command": "enact-code-hook pre"}]}
+        {"matcher": tool, "hooks": [{"type": "command", "command": pre_cmd}]}
         for tool in sorted(SUPPORTED_TOOLS)
     ]
     enact_post_entries = [
-        {"matcher": tool, "hooks": [{"type": "command", "command": "enact-code-hook post"}]}
+        {"matcher": tool, "hooks": [{"type": "command", "command": post_cmd}]}
         for tool in sorted(SUPPORTED_TOOLS)
     ]
 

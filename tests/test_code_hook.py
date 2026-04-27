@@ -365,7 +365,7 @@ class TestCmdInit:
             entries = settings["hooks"][hook_event]
             enact_matchers = {
                 e["matcher"] for e in entries
-                if any("enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
+                if any("enact.cli.code_hook" in h.get("command", "") or "enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
             }
             assert enact_matchers == set(SUPPORTED_TOOLS), \
                 f"{hook_event}: expected {set(SUPPORTED_TOOLS)}, got {enact_matchers}"
@@ -401,7 +401,7 @@ class TestCmdInit:
             for h in entry["hooks"]
         ]
         assert "some-other-tool check" in all_commands
-        enact_count = sum(1 for c in all_commands if "enact-code-hook pre" in c)
+        enact_count = sum(1 for c in all_commands if "enact.cli.code_hook pre" in c or "enact-code-hook pre" in c)
         assert enact_count == len(SUPPORTED_TOOLS)
 
     def test_init_replaces_prior_enact_entry_no_duplicate(self, tmp_path, monkeypatch):
@@ -415,7 +415,7 @@ class TestCmdInit:
             entries = settings["hooks"][hook_event]
             enact_entries = [
                 e for e in entries
-                if any("enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
+                if any("enact.cli.code_hook" in h.get("command", "") or "enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
             ]
             assert len(enact_entries) == len(SUPPORTED_TOOLS), \
                 f"{hook_event} expected {len(SUPPORTED_TOOLS)} enact entries, got {len(enact_entries)}"
