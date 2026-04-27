@@ -26,22 +26,30 @@ from enact.receipt import build_receipt, sign_receipt, write_receipt
 
 
 DEFAULT_POLICIES_PY = '''\
-"""Enact Code policies — edit to customize what gets blocked."""
+"""Enact policies - edit to customize what the Agent Firewall blocks."""
 from enact.policies.git import dont_force_push, dont_commit_api_keys
 from enact.policies.db import protect_tables, block_ddl
 from enact.policies.time import code_freeze_active
 from enact.policies.coding_agent import CODING_AGENT_POLICIES
+from enact.policies.filesystem import (
+    dont_read_env,
+    dont_touch_ci_cd,
+    dont_edit_gitignore,
+    dont_access_home_dir,
+    dont_copy_api_keys,
+)
 
-# These defaults are tuned for the shell-command context. Add
-# dont_delete_without_where only if your workflow populates payload["where"]
-# explicitly — in shell context it would block every non-SQL command since
-# it treats a missing where field as a "delete everything" attempt.
+# Defaults cover BOTH shell and file-tool surfaces:
+#   SHELL (Bash):                 CODING_AGENT_POLICIES + git/db/time defaults
+#   FILE TOOLS (Read/Write/Edit): filesystem path-based policies
 #
-# CODING_AGENT_POLICIES blocks 10 documented real-world incident patterns:
-# terraform destroy, drizzle-kit push --force, aws s3 rm --recursive,
-# kubectl delete namespace, docker prune --volumes, git reset --hard,
-# git clean -fd, chmod -R 777, DROP DATABASE, aws iam delete-user.
-# See docs/research/agent-incidents.md for sources.
+# Same policy library across surfaces means an agent that tries to
+# "cat .env" AND an agent that tries to Read ".env" are both blocked
+# by the same dont_read_env policy - defense in depth, no surface gaps.
+#
+# CODING_AGENT_POLICIES blocks 23 documented real-world incident patterns
+# (terraform destroy, drizzle force, aws s3 rm --recursive, kubectl delete
+# namespace, etc.). See docs/research/agent-incidents.md for sources.
 POLICIES = [
     code_freeze_active,
     block_ddl,
@@ -49,6 +57,12 @@ POLICIES = [
     dont_commit_api_keys,
     protect_tables(["users", "customers", "orders", "payments", "audit_log"]),
     *CODING_AGENT_POLICIES,
+    # File-path policies - fire on Read/Write/Edit (and Bash via diff/content)
+    dont_read_env,
+    dont_touch_ci_cd,
+    dont_edit_gitignore,
+    dont_access_home_dir,
+    dont_copy_api_keys,
 ]
 '''
 
@@ -297,16 +311,18 @@ def cmd_pre() -> int:
         except json.JSONDecodeError:
             return 0  # fail open on malformed stdin
 
-        if event.get("tool_name") != "Bash":
-            return 0  # only Bash for v1
+        tool_name = event.get("tool_name", "")
+        tool_input = event.get("tool_input", {}) or {}
+        payload = parse_tool_input(tool_name, tool_input)
+        if payload is None:
+            return 0  # unsupported tool or malformed input - fail open
 
-        command = event.get("tool_input", {}).get("command", "")
-        if not command:
-            return 0
+        # Stable command-like string for receipts even on non-Bash tools
+        command = payload.get("command", "")
+        workflow = f"tool.{tool_name.lower()}"
 
-        payload = parse_bash_command(command)
         context = WorkflowContext(
-            workflow="shell.bash",
+            workflow=workflow,
             user_email="claude-code@local",
             payload=payload,
         )
@@ -327,10 +343,11 @@ def cmd_pre() -> int:
             try:
                 secret = secret_path.read_text(encoding="utf-8").strip()
                 receipt = build_receipt(
-                    workflow="shell.bash",
+                    workflow=workflow,
                     user_email="claude-code@local",
                     payload={
                         "command": command,
+                        "tool_name": tool_name,
                         "session_id": event.get("session_id", ""),
                     },
                     policy_results=results,

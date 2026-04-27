@@ -143,8 +143,9 @@ def _run_pre(stdin_json: dict) -> tuple[int, str]:
 
 
 class TestCmdPre:
-    def test_non_bash_tool_passes_silently(self, in_tmp_with_init):
-        rc, out = _run_pre({"tool_name": "Read", "tool_input": {"path": "/x"}})
+    def test_unsupported_tool_passes_silently(self, in_tmp_with_init):
+        # WebFetch isn't in SUPPORTED_TOOLS — fail-open silently
+        rc, out = _run_pre({"tool_name": "WebFetch", "tool_input": {"url": "https://example.com"}})
         assert rc == 0
         assert out == ""
 
@@ -214,6 +215,83 @@ class TestCmdPre:
         with patch.object(sys, "stdin", stdin), patch.object(sys, "stdout", stdout):
             assert cmd_pre() == 0
         assert stdout.getvalue() == ""
+
+
+class TestCmdPreFileAccess:
+    """cmd_pre fires existing path-based policies for Read/Write/Edit
+    once the dispatcher routes those tools and the default .enact/policies.py
+    imports the filesystem policy library."""
+
+    def test_read_env_file_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Read",
+            "tool_input": {"file_path": ".env"},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "env" in result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+    def test_read_safe_file_passes_silently(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Read",
+            "tool_input": {"file_path": "src/main.py"},
+        })
+        assert rc == 0
+        assert out == ""
+
+    def test_write_to_workflow_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": ".github/workflows/deploy.yml",
+                "content": "on: push",
+            },
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        reason = result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+        assert "ci" in reason or "workflow" in reason or "pipeline" in reason
+
+    def test_edit_gitignore_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Edit",
+            "tool_input": {
+                "file_path": ".gitignore",
+                "old_string": ".env",
+                "new_string": "",
+            },
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "gitignore" in result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+    def test_read_aws_credentials_via_home_dir_blocks(self, in_tmp_with_init):
+        rc, out = _run_pre({
+            "tool_name": "Read",
+            "tool_input": {"file_path": "~/.aws/credentials"},
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        assert "home" in result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+
+    def test_write_with_api_key_in_content_blocks(self, in_tmp_with_init):
+        # AWS access key format (AKIA + 16 alphanumerics) — matches SECRET_PATTERNS
+        rc, out = _run_pre({
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": "src/config.py",
+                "content": 'AWS_KEY = "AKIAIOSFODNN7EXAMPLE"',
+            },
+        })
+        assert rc == 0
+        result = json.loads(out)
+        assert result["hookSpecificOutput"]["permissionDecision"] == "deny"
+        reason = result["hookSpecificOutput"]["permissionDecisionReason"].lower()
+        assert "key" in reason or "secret" in reason or "credential" in reason
 
 
 # -- init tests --
