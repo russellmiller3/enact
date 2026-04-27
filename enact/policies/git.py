@@ -223,6 +223,15 @@ def dont_force_push(context: WorkflowContext) -> PolicyResult:
     args = context.payload.get("args", context.payload.get("command", []))
     if isinstance(args, str):
         args = args.split()
+    # Must be a git push command — not just any command with -f. Otherwise
+    # this policy false-positives on `rm -f`, `grep -f`, `npm install -f`,
+    # etc. (session 16 regression).
+    if "git" not in args or "push" not in args:
+        return PolicyResult(
+            policy="dont_force_push",
+            passed=True,
+            reason="Not a git push command",
+        )
     has_force = any(a in ("--force", "-f", "--force-with-lease") for a in args)
     if has_force:
         return PolicyResult(

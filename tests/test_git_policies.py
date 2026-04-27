@@ -318,6 +318,31 @@ class TestDontForcePush:
         ctx = make_context({"args": ["git", "push", "--force"]})
         assert dont_force_push(ctx).policy == "dont_force_push"
 
+    def test_does_not_block_rm_minus_f(self):
+        """rm -f / rm -rf must NOT trigger this policy (false-positive
+        regression — session 16 had this firing on legitimate file deletion)."""
+        ctx = make_context({"command": "rm -rf /tmp/foo"})
+        assert dont_force_push(ctx).passed is True
+
+    def test_does_not_block_grep_minus_f(self):
+        ctx = make_context({"command": "grep -f patterns.txt file.log"})
+        assert dont_force_push(ctx).passed is True
+
+    def test_does_not_block_npm_minus_f(self):
+        ctx = make_context({"command": "npm install -f some-package"})
+        assert dont_force_push(ctx).passed is True
+
+    def test_blocks_only_when_git_push_AND_force(self):
+        # Has -f but not 'git push' → pass
+        ctx = make_context({"command": "ls -f /tmp"})
+        assert dont_force_push(ctx).passed is True
+        # Has 'git push' but no -f → pass
+        ctx = make_context({"command": "git push origin main"})
+        assert dont_force_push(ctx).passed is True
+        # Has both → BLOCK
+        ctx = make_context({"command": "git push origin main --force"})
+        assert dont_force_push(ctx).passed is False
+
 
 # ── require_meaningful_commit_message ─────────────────────────────────────────
 
