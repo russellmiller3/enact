@@ -322,6 +322,79 @@
     </div>
 </section>
 
+<!-- BUILT FOR SECURITY TEAM -->
+<section id="security-team" class="alt centered">
+    <div class="container">
+        <div class="section-label">Built for your security team</div>
+        <h2>Block it. Audit it. Approve it. Undo it.</h2>
+        <p class="section-sub">
+            The hook + open policy library is the engineer-friendly part — bottoms-up adoption, free, runs on a laptop. The cloud is what your CSO and GRC team buy: dashboard, human-in-the-loop approvals, signed receipts, one-call rollback, zero-knowledge encryption.
+        </p>
+
+        <div class="stats-grid" style="margin-top: 2.5rem;">
+            <div class="stat">
+                <div class="stat-num good">HITL</div>
+                <div class="stat-label"><strong>Human-in-the-loop approval.</strong> High-risk ops pause and email a signed approve/deny link to your designated approver. One-time use, HMAC-signed, expires on a configurable timeout. No login.</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num good">↩</div>
+                <div class="stat-label"><strong>One-call rollback.</strong> <code>enact.rollback(run_id)</code> reverses every action in the receipt. Re-inserts deleted rows, deletes created branches, closes opened PRs. Verifies the original receipt's signature first to block tampered rollbacks.</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num good">📋</div>
+                <div class="stat-label"><strong>Signed audit receipts.</strong> Every action writes an HMAC-SHA256-signed JSON receipt — pass, block, or partial. Tamper-evident. Searchable in the dashboard. Exportable for your auditor.</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num good">🔒</div>
+                <div class="stat-label"><strong>Zero-knowledge encryption.</strong> Cloud-stored receipts are AES-256-GCM encrypted with your key. We can search metadata (workflow, decision, timestamp) but literally cannot read payloads. Same model as 1Password and Proton Mail.</div>
+            </div>
+        </div>
+
+        <!-- HITL FLOW -->
+        <div style="margin-top: 56px; max-width: 980px; margin-left: auto; margin-right: auto; text-align: left;">
+            <h3 style="font-size: 18px; text-align: center; margin-bottom: 8px;">How HITL works — three steps, no login</h3>
+            <p style="text-align: center; color: var(--muted); margin-bottom: 32px; font-size: 14px;">
+                Wrap any high-risk workflow in <code>enact.run_with_hitl(...)</code>. The agent pauses. A human decides. Then the workflow resumes — or doesn't.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 16px; align-items: stretch;">
+                <div style="border: 1px solid var(--border); border-radius: 10px; padding: 20px; background: var(--bg);">
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px;">STEP 1</div>
+                    <div style="font-weight: 700; margin-bottom: 8px;">Agent calls run_with_hitl()</div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Workflow pauses before anything touches production. Enact requests approval and blocks until it gets one.</p>
+                </div>
+                <div style="display: flex; align-items: center; color: var(--accent); font-size: 24px;">→</div>
+                <div style="border: 1px solid var(--border); border-radius: 10px; padding: 20px; background: var(--bg);">
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px;">STEP 2</div>
+                    <div style="font-weight: 700; margin-bottom: 8px;">Email sent to human</div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Your ops contact gets a signed approve/deny link. No login. No account. Link expires after your configured timeout.</p>
+                </div>
+                <div style="display: flex; align-items: center; color: var(--accent); font-size: 24px;">→</div>
+                <div style="border: 1px solid var(--border); border-radius: 10px; padding: 20px; background: var(--bg);">
+                    <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px;">STEP 3</div>
+                    <div style="font-weight: 700; margin-bottom: 8px;">Workflow resumes or aborts</div>
+                    <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">Approve → workflow runs, signed PASS receipt. Deny or timeout → BLOCK receipt. Agent gets the reason either way.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROLLBACK CALLOUT -->
+        <div style="margin-top: 56px; max-width: 860px; margin-left: auto; margin-right: auto; text-align: left; border: 1px solid var(--border); border-radius: 12px; padding: 28px; background: var(--bg);">
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 10px;">DAMAGE UNDONE</div>
+            <h3 style="font-size: 20px; margin-bottom: 12px;">When prevention fails, reversal closes the loop.</h3>
+            <p style="color: var(--muted); line-height: 1.7; margin-bottom: 16px;">
+                The Replit incident wasn't blocked because there was no firewall. With Enact, even the policy that didn't catch it can still be unwound — every mutating action records pre-state. <code>enact.rollback(run_id)</code> walks the receipt in reverse: re-insert deleted rows, delete created branches, restore overwritten files. Verifies the original receipt's signature before any action runs, so tampered receipts can't trigger fake rollbacks.
+            </p>
+            <pre style="background: #0e1117; padding: 16px; border-radius: 8px; font-size: 13px; overflow-x: auto;"><code><span style="color:#7d8590;"># 5 customer rows deleted by mistake. One call to undo:</span>
+result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style="color:#a5d6ff;">"d2b8c5e3-9a1f-4d7b-8c2e-f5a3b1d6e492"</span>)
+<span style="color:#d2a8ff;">print</span>(result.success)  <span style="color:#7d8590;"># True — 5 rows restored from pre-action capture</span></code></pre>
+        </div>
+
+        <p style="margin-top: 36px; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+            <strong style="color: var(--text);">Three-party trust model.</strong> Your company runs the agents and owns the encryption key. Enact Cloud stores encrypted blobs and metadata. Your auditor independently verifies signatures. Nobody can audit themselves; nobody can audit their own cloud provider. Same independence model as Ernst &amp; Young auditing Goldman Sachs.
+        </p>
+    </div>
+</section>
+
 <!-- COMPLIANCE / READ ENFORCEMENT -->
 <section id="compliance" class="centered">
     <div class="container">
