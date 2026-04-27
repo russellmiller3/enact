@@ -56,3 +56,11 @@ SECURITY-REPORT-COMPLETE.md
 
 
 .vercel
+.enact/
+
+# Chaos harness runtime artifacts (data — code stays in repo)
+chaos.db
+chaos.db-shm
+chaos.db-wal
+chaos/runs/
+chaos/report.md
