@@ -165,6 +165,8 @@
             .terminal-body { padding: 16px; font-size: 12px; }
         }
     </style>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>document.addEventListener('DOMContentLoaded', () => lucide.createIcons());</script>
 </head>
 <body>
 
@@ -357,19 +359,19 @@
 
         <div class="stats-grid" style="margin-top: 2.5rem;">
             <div class="stat">
-                <div class="stat-num good">HITL</div>
+                <div class="stat-num good"><i data-lucide="user-check" style="width:42px;height:42px;display:inline-block;vertical-align:middle;"></i></div>
                 <div class="stat-label"><strong>Human-in-the-loop approval.</strong> High-risk ops pause and email a signed approve/deny link to your designated approver. One-time use, HMAC-signed, expires on a configurable timeout. No login.</div>
             </div>
             <div class="stat">
-                <div class="stat-num good">↩</div>
+                <div class="stat-num good"><i data-lucide="undo-2" style="width:42px;height:42px;display:inline-block;vertical-align:middle;"></i></div>
                 <div class="stat-label"><strong>One-call rollback.</strong> <code>enact.rollback(run_id)</code> reverses every action in the receipt. Re-inserts deleted rows, deletes created branches, closes opened PRs. Verifies the original receipt's signature first to block tampered rollbacks.</div>
             </div>
             <div class="stat">
-                <div class="stat-num good">📋</div>
+                <div class="stat-num good"><i data-lucide="clipboard-list" style="width:42px;height:42px;display:inline-block;vertical-align:middle;"></i></div>
                 <div class="stat-label"><strong>Signed audit receipts.</strong> Every action writes an HMAC-SHA256-signed JSON receipt — pass, block, or partial. Tamper-evident. Searchable in the dashboard. Exportable for your auditor.</div>
             </div>
             <div class="stat">
-                <div class="stat-num good">🔒</div>
+                <div class="stat-num good"><i data-lucide="lock" style="width:42px;height:42px;display:inline-block;vertical-align:middle;"></i></div>
                 <div class="stat-label"><strong>Zero-knowledge encryption.</strong> Cloud-stored receipts are AES-256-GCM encrypted with your key. We can search metadata (workflow, decision, timestamp) but literally cannot read payloads. Same model as 1Password and Proton Mail.</div>
             </div>
         </div>
@@ -425,9 +427,9 @@ result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style
             </p>
 
             <div class="tab-row">
-                <button class="tab-btn active" onclick="showReceiptTab(event, 'rt-blocked')">✗ Blocked (disaster prevented)</button>
-                <button class="tab-btn" onclick="showReceiptTab(event, 'rt-passed')">✓ Passed (safe operation)</button>
-                <button class="tab-btn" onclick="showReceiptTab(event, 'rt-rollback')">↩ Rolled back (damage undone)</button>
+                <button class="tab-btn active" onclick="showReceiptTab(event, 'rt-blocked')"><i data-lucide="x" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>Blocked (disaster prevented)</button>
+                <button class="tab-btn" onclick="showReceiptTab(event, 'rt-passed')"><i data-lucide="check" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>Passed (safe operation)</button>
+                <button class="tab-btn" onclick="showReceiptTab(event, 'rt-rollback')"><i data-lucide="undo-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:6px;"></i>Rolled back (damage undone)</button>
             </div>
 
             <!-- BLOCKED -->
@@ -448,21 +450,21 @@ result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style
                     <div class="r-section">
                         <h4>POLICY EVALUATION</h4>
                         <div class="policy-row">
-                            <div class="pbadge fail">✗</div>
+                            <div class="pbadge fail"><i data-lucide="x" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail">
                                 <strong>dont_read_env</strong>
                                 <span class="err">BLOCKED: Accessing env file '.env' is not permitted — it may contain secrets</span>
                             </div>
                         </div>
                         <div class="policy-row">
-                            <div class="pbadge pass">✓</div>
+                            <div class="pbadge pass"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail">
                                 <strong>dont_touch_ci_cd</strong>
                                 <span>Path '.env' is not a CI/CD file</span>
                             </div>
                         </div>
                         <div class="policy-row">
-                            <div class="pbadge pass">✓</div>
+                            <div class="pbadge pass"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail">
                                 <strong>code_freeze_active</strong>
                                 <span>No active freeze (ENACT_FREEZE unset)</span>
@@ -499,15 +501,15 @@ result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style
                     <div class="r-section">
                         <h4>POLICY EVALUATION</h4>
                         <div class="policy-row">
-                            <div class="pbadge pass">✓</div>
+                            <div class="pbadge pass"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail"><strong>dont_force_push</strong><span>No --force flag detected</span></div>
                         </div>
                         <div class="policy-row">
-                            <div class="pbadge pass">✓</div>
+                            <div class="pbadge pass"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail"><strong>dont_commit_api_keys</strong><span>No vendor key signatures in command</span></div>
                         </div>
                         <div class="policy-row">
-                            <div class="pbadge pass">✓</div>
+                            <div class="pbadge pass"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail"><strong>protect_tables</strong><span>Not a SQL operation</span></div>
                         </div>
                     </div>
@@ -543,7 +545,7 @@ result, receipt = enact.<span style="color:#d2a8ff;">rollback</span>(<span style
                     <div class="r-section">
                         <h4>ROLLBACK ACTIONS (last → first)</h4>
                         <div class="policy-row">
-                            <div class="pbadge pass">✓</div>
+                            <div class="pbadge pass"><i data-lucide="check" style="width:12px;height:12px;"></i></div>
                             <div class="policy-detail">
                                 <strong>postgres.delete_row → REVERSED</strong>
                                 <span>Re-inserted 5 rows into "customers" from pre-action capture. All records restored.</span>
