@@ -89,7 +89,7 @@ Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts. No cr
 
 ### Enact for Claude Code — the Agent Firewall hook
 
-Drop-in Claude Code hook that intercepts every Bash command and runs it through a deterministic policy engine. 23 default policies cover real-world agent disasters (Replit/SaaStr, Claude Code/DataTalks, drizzle prod-wipe). 0 vs 7 critical damage on 34 paired chaos prompts.
+Drop-in Claude Code hook that intercepts **six tools** — Bash, Read, Write, Edit, Glob, Grep — and runs each through a deterministic policy engine. 23 incident-derived shell policies + 5 file-path policies + 2 search-pattern policies cover both shell footguns (Replit/SaaStr, DataTalks/Terraform, drizzle prod-wipe) and file-tool exfiltration (Read `.env`, Edit CI workflow, Glob `~/.aws/*`, Grep `aws_secret_access_key`). 0 vs 7 critical damage on the 34-prompt shell sweep; file-tool sweep numbers landing in the next session.
 
 ```bash
 pip install enact-sdk
@@ -97,25 +97,33 @@ cd /your/repo
 enact-code-hook init
 ```
 
-That's it. Open Claude Code in the repo; every Bash call now flows through
-the policy engine via PreToolUse. Default policies block destructive SQL on
-protected tables, force-pushes, API keys in commits, code freezes (set
-`ENACT_FREEZE=1`), and DDL statements (DROP/TRUNCATE/ALTER/CREATE).
+That's it. Open Claude Code in the repo; every supported tool call now flows through the policy engine via PreToolUse. Default policies block destructive SQL on protected tables, force-pushes, API keys in commits, code freezes (set `ENACT_FREEZE=1`), DDL statements, AND file-tool patterns: `.env` reads, CI workflow edits, `.gitignore` modifications, home-directory access, secret-pattern Greps, credential-dir Globs.
 
-**Demo path** — the Replit incident, blocked:
+**Demo path 1** — the Replit incident, blocked at the shell:
 
 ```text
 You: clean up old rows in the customers table
 CC:  psql -c "DELETE FROM customers WHERE created_at < '2024-01-01'"
-     ↓ PreToolUse hook fires
+     ↓ PreToolUse hook fires (Bash matcher)
      ↓ ENACT BLOCKED (1 policy):
      ↓   protect_tables: Table 'customers' is protected
      ↓ → CC sees deny, tells you, doesn't run the SQL
 ```
 
-Customize the rules in `.enact/policies.py` (auto-created by `init`).
-Every successful Bash call writes a signed Receipt to `receipts/` so you
-have a full audit trail. Receipts work with the existing `enact-ui` browser.
+**Demo path 2** — the Read-tool exfil, blocked too:
+
+```text
+You: show me the env vars in this project
+CC:  Read(file_path=".env")
+     ↓ PreToolUse hook fires (Read matcher)
+     ↓ ENACT BLOCKED (1 policy):
+     ↓   dont_read_env: Accessing env file '.env' is not permitted
+     ↓ → CC sees deny, tells you, doesn't read the file
+```
+
+Same policy library, both surfaces. An agent that grasps for `cat .env` and an agent that switches to the Read tool both hit the same wall — defense in depth across every filesystem-touching tool.
+
+Customize the rules in `.enact/policies.py` (auto-created by `init`). Every successful tool call writes a signed Receipt to `receipts/` so you have a full audit trail across all six surfaces. Receipts work with the existing `enact-ui` browser.
 
 ### Generic Actions
 

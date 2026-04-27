@@ -247,9 +247,12 @@
 <section id="how">
     <div class="container">
         <div class="section-label">How it works</div>
-        <h2>Every Bash command flows through a policy engine first.</h2>
+        <h2>Every agent action flows through a policy engine first.</h2>
         <p class="section-sub">
-            Claude Code emits a PreToolUse hook on every tool call. Enact is a tiny binary on that hook. Synthesizes the command into a structured payload, runs it through deterministic Python policies, returns deny JSON if any policy blocks. Sub-50ms overhead. No LLMs in the decision path.
+            Claude Code emits a PreToolUse hook on every tool call — Bash, Read, Write, Edit, Glob, Grep. Enact is a tiny binary on that hook. Synthesizes each tool input into a structured payload, runs it through deterministic Python policies, returns deny JSON if any policy blocks. Sub-50ms overhead. No LLMs in the decision path.
+        </p>
+        <p class="section-sub" style="margin-top:0.5rem;">
+            <strong>Six tools covered today, not just shell.</strong> An agent that tries to <code>cat .env</code> AND an agent that uses Claude Code's Read tool to open <code>.env</code> are both blocked by the same policy library. Defense in depth across surfaces — no gap a buyer's red-team will find.
         </p>
 
         <div class="terminal">
@@ -319,6 +322,38 @@
     </div>
 </section>
 
+<!-- COMPLIANCE / READ ENFORCEMENT -->
+<section id="compliance" class="centered">
+    <div class="container">
+        <div class="section-label">Read access matters too</div>
+        <h2>Your agent has root on prod via every tool, not just bash.</h2>
+        <p class="section-sub">
+            Claude Code has eight tools that touch the filesystem. Most agent-firewall stories cover one — shell. Enact covers six: Bash, Read, Write, Edit, Glob, Grep. That's the difference between catching an agent that runs <code>cat .env</code> and catching the same agent when it switches to the Read tool to do the same thing.
+        </p>
+        <div class="stats-grid" style="margin-top: 2rem;">
+            <div class="stat">
+                <div class="stat-num good">6</div>
+                <div class="stat-label">Filesystem-touching tools covered (Bash, Read, Write, Edit, Glob, Grep). Industry default: 1 (Bash).</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">SOC2</div>
+                <div class="stat-label">CC7.2 — "monitor system components for indicators of attack." Read-tool exfil is an indicator. The hook fires + writes a signed receipt.</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">HIPAA</div>
+                <div class="stat-label">§164.312(b) — audit controls covering "examination of activity in information systems." Every Read of PHI-shaped paths produces audit evidence.</div>
+            </div>
+            <div class="stat">
+                <div class="stat-num">GDPR</div>
+                <div class="stat-label">Art. 32(1)(d) — "process for regularly testing… effectiveness of measures." Chaos sweeps + signed receipts ARE the testing process.</div>
+            </div>
+        </div>
+        <p style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+            Compliance frameworks don't distinguish "the agent ran a shell command that read <code>.env</code>" from "the agent used a different tool that read <code>.env</code>." Both are read access to a sensitive file. Both need an audit trail. Enact produces the same signed receipt either way — a single source of truth your auditors can grep.
+        </p>
+    </div>
+</section>
+
 <!-- TRY IT YOURSELF -->
 <section id="try">
     <div class="container">
@@ -341,7 +376,7 @@
                     </li>
                     <li>
                         <strong>3. Open Claude Code in the repo</strong>
-                        <span>That's it. Every Bash call now runs through Enact's policy engine. Try asking Claude to drop a table, force-push, or commit your <code>.env</code> — watch it get blocked with a clear reason.</span>
+                        <span>That's it. Every Bash, Read, Write, Edit, Glob, and Grep call now runs through Enact's policy engine. Try asking Claude to drop a table, force-push, read your <code>.env</code>, edit your CI workflow, or grep for AWS credentials — watch each one get blocked with a clear reason.</span>
                     </li>
                     <li>
                         <strong>4. Customize</strong>

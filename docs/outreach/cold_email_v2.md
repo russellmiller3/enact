@@ -17,6 +17,7 @@
 | 3 | Same pattern as DataTalks: 1 prompt away from a 2.5-year data loss | Infra-heavy buyers |
 | 4 | Stops Claude Code from running the 4 commands that cost a company | CISOs / Security |
 | 5 | Did your team have an agent near-miss this quarter? | Cold-cold prospects |
+| 6 | Audit-ready guardrails for Cursor / Claude Code (SOC2 CC7.2, HIPAA §164.312(b)) | Compliance / GRC |
 
 ---
 
@@ -26,7 +27,7 @@
 >
 > Saw [specific recent thing — a blog post, a tweet, a Show HN, a public near-miss]. Curious how you're handling Cursor and Claude Code across the team right now.
 >
-> Built **Enact** — a Claude Code hook (Cursor MCP coming) that runs every shell command through a deterministic policy engine before execution. The pitch is simple: in July 2025 Replit's agent wiped a database during a code freeze. In February 2026 Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. Same pattern, same shape. We catch both before they execute.
+> Built **Enact** — a Claude Code hook (Cursor MCP coming) that runs every agent action through a deterministic policy engine before execution. Six tools covered, not just shell: Bash, Read, Write, Edit, Glob, Grep. The pitch is simple: in July 2025 Replit's agent wiped a database during a code freeze. In February 2026 Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. Same pattern, same shape. We catch both before they execute — same policy library whether the agent uses Bash or any other filesystem-touching tool.
 >
 > I chaos-tested it last week against 34 prompts, each derived from a documented agent incident:
 >
@@ -69,6 +70,31 @@
 
 ---
 
+## Variant — Compliance lead (for SOC2 / HIPAA / GDPR buyers)
+
+> Hi [first name],
+>
+> Saw your team is hiring for [security / GRC / compliance role] — and that you're shipping with [Cursor / Claude Code / Copilot] across engineering. That combination puts a specific question on your auditor's desk: when an AI agent reads `.env`, your customer's PII, or `~/.aws/credentials`, where's the audit trail?
+>
+> Built **Enact** — drops into Claude Code via the official PreToolUse hook, runs every agent action through a deterministic policy engine. Most agent-firewall stories cover one tool — shell. We cover six: Bash, Read, Write, Edit, Glob, Grep. That's the difference between catching `cat .env` and catching the same agent using Claude Code's Read tool to do the same thing.
+>
+> Three concrete framework mappings:
+>
+>   **SOC2 CC7.2** — "monitor system components for indicators of attack." Read-tool exfil is an indicator. The hook fires deterministic blocks AND writes a signed receipt for every action — pass, block, or partial.
+>
+>   **HIPAA §164.312(b)** — audit controls covering "examination of activity in information systems." Every Read of a PHI-shaped path produces tamper-evident audit evidence (HMAC-SHA256-signed JSON receipts).
+>
+>   **GDPR Art. 32(1)(d)** — "process for regularly testing… effectiveness of measures." Our chaos sweeps + signed receipts are the testing process. We've got a 39-prompt corpus and the harness is open source.
+>
+> Setup is two commands. Free for individual developers. $30/seat/mo for teams. The audit dashboard surfaces all receipts with grep-friendly filters.
+>
+> Worth 15 minutes next week to walk through the receipt format with your GRC lead?
+>
+> — Russell, founder
+> enact.cloud
+
+---
+
 ## Five damage findings (in case the email lead changes)
 
 Diverse so the email reads as breadth. All from the chaos sweep.
@@ -83,11 +109,12 @@ Diverse so the email reads as breadth. All from the chaos sweep.
 
 ---
 
-## What's deliberately NOT in the headline
+## What's deliberately NOT in the headline (lead variants)
 
 - **The 21-of-26 self-refusal stat** — sounds like "Claude already pretty safe, why do I need this?" The 5 that slipped are the differentiator; lead there.
 - **Prompt injection** — Claude self-refuses the obvious ones; not a strong differentiator vs the agent-fuckup angle.
-- **Audit dashboard / SOC2 features** — save for the demo call. Cold email goal is just the meeting.
+
+**SOC2 / HIPAA / GDPR is now in the headline for the compliance variant only.** Engineering buyers (lead + DataTalks variants) still get the incident-led pitch — compliance language reads like vendor-bait to them. GRC buyers get the framework citations because that's the language they procure in.
 
 ---
 
@@ -110,14 +137,16 @@ Same as cold_email_v1.md — see that doc. Filter criteria unchanged: 100-300 pe
 
 ## What changed vs v1
 
-| v1 | v2 |
+| v1 | v2 (post session 15) |
 |---|---|
 | "We tested 36 simulated agent attacks" | "34 prompts, each derived from a documented agent incident" |
 | Stat-led intro | Incident-led intro (Replit + DataTalks named in line 2) |
 | 4-of-18 damage | 5-of-34 damage |
 | Prosaic body | Tighter, parallel-structure damage list |
-| Single subject line | 5 subject lines for testing |
-| No incident variant | DataTalks variant for infra buyers |
+| Single subject line | 6 subject lines for testing |
+| No incident variant | DataTalks + Compliance variants for verticals |
+| "Every shell command" framing | "Six tools covered: Bash, Read, Write, Edit, Glob, Grep" — Agent Firewall, not shell firewall |
+| No SOC2/HIPAA/GDPR angle | Dedicated compliance variant with framework citations (CC7.2, §164.312(b), Art. 32(1)(d)) |
 | No no-swearing rule | Clean copy throughout (rule now in CLAUDE.md) |
 
 ---
