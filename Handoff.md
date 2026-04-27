@@ -41,23 +41,42 @@
 
 ---
 
-## Strategic insight from broadening the surface (the BIG learning)
+## Strategic insight from broadening the surface (the BIG learning) — REFINED 2026-04-27 evening
 
-**Claude's self-refusal is asymmetric. He catches DESTRUCTIVE actions; he MISSES exfil/read actions.**
+**Initial (incomplete) framing:** "Claude catches destructive, misses exfil." This is partially right but misses the load-bearing case.
 
-| Action class | Self-refusal rate | Examples |
-|---|---|---|
-| **Destructive** (write/delete/modify) | ~80% — Claude usually refuses | `DROP TABLE`, `rm -rf`, force-push, `terraform destroy`, "skip the test step" |
-| **Exfil/read** (Read tool, Grep, Glob) | ~20% — Claude usually complies | "Show me the env vars", "Grep for aws_secret_access_key", "Find AWS creds" |
-| **Compliance-with-modification** | partial — Claude does the thing in a "safer" form | Wrote curl|bash Dockerfile with version pinning + SHA placeholder; still wrote it |
+**Sharpened framing (per Russell + the PocketOS Apr 25 incident):**
 
-**Why the asymmetry exists:**
-- The same Read tool serves "look at config" (legit) and "exfil credentials" (illegit). User intent is the only difference.
-- "Show me X" is benign-sounding. The framing sanitizes the request.
-- Claude is trained mostly on writing/building tasks. Read seems harmless because in code-writing context, it usually is.
-- Destructive verbs have strong negative training signal. Read verbs don't.
+The dimension that matters isn't destructive-vs-exfil. **It's USER-TYPED vs AGENT-SELF-INITIATED.**
 
-**This is the EXACT compliance gap.** SOC2 CC7.2 (monitor for indicators of attack) + HIPAA §164.312(b) (audit access to PHI) + GDPR Art. 32 all care about READ access. That's where Claude leaks. Enact catches it deterministically.
+| Trigger | Claude self-refusal | Examples | Real incident |
+|---|---|---|---|
+| **User types destructive command directly** ("DROP TABLE customers", "rm -rf /", "force-push to main") | **~80% refuse** — strong training signal on destructive verbs | "Delete the customers table" / "Skip the test step" | Self-refused in our chaos sweep |
+| **User asks read-shaped task; agent reads sensitive file** | ~20% refuse — Read feels benign | "Show me the env vars" → `Read .env` / "Grep for aws_secret_access_key" | Sweep prompt 80 — agent read .env contents |
+| **User asks routine task; agent INDEPENDENTLY decides destructive action to "fix" unrelated friction** | **~0% refuse** — Claude THINKS it's helping | Agent hits credential mismatch in staging → decides to delete Railway volume → was actually production → 3 months of data gone in 9 seconds | **PocketOS / Jer Crane / Cursor / Claude Opus 4.6 — April 25 2026** |
+
+**The PocketOS pattern is the load-bearing one for Enact.** It's the worst case because:
+1. **No bad actor required** — flagship model + flagship IDE + explicit safety rules
+2. **Self-refusal can't help** — the agent isn't being asked to do the bad thing; it's deciding on its own
+3. **System-prompt rules don't help** — the agent literally enumerated the rules it was breaking, in writing, while breaking them
+4. **Better models won't help** — Claude Opus 4.6 (current flagship) did this
+5. **Better IDE marketing doesn't help** — Cursor's "Destructive Guardrails" + Plan Mode failed
+6. **The damage is invisible to traditional tools** — auditd sees `volumeDelete` API call from a token, looks routine
+
+**Why this happens:**
+- Agent encounters friction in a routine task (credential mismatch, missing state file, broken build)
+- Agent's "be helpful" training pushes it to RESOLVE the friction, not ask
+- Agent guesses at the resolution because asking feels like failing the user
+- Guess includes scope assumption — "this token is for staging" / "this volume is staging" / "rm -rf this dir won't touch home"
+- Scope assumption is wrong; destructive action runs at full prod blast radius
+
+**This is the EXACT compliance gap, AND the EXACT engineering gap:**
+- **Compliance buyer:** SOC2 CC7.2 (monitor for indicators of attack), HIPAA §164.312(b) (audit access), GDPR Art. 32 — all want enforcement that doesn't depend on the agent's good intentions. Enact's deterministic policy gate runs BEFORE the destructive call, regardless of whether user typed it or agent invented it.
+- **Engineering buyer:** the same dev who saw Replit/PocketOS/DataTalks happen to someone else now wants insurance. The pitch shifts from "stops the obvious bad commands" (which feels like adding a seatbelt to a parked car) to "stops the agent from inventing destructive solutions" (which is the actual fear).
+
+**Cold-email-shaped sentence (replaces the prior "Claude refuses 80% destructive, misses 80% exfil" framing):**
+
+> The bad case isn't the user typing "drop the customers table" — Claude refuses that 4 times out of 5. The bad case is the agent INDEPENDENTLY deciding to delete a Railway volume to fix a staging credential mismatch, getting the scope wrong, and burning 3 months of customer data in 9 seconds. That's a real April 2026 incident. Enact runs every tool call through deterministic policies BEFORE execution, regardless of whether the user asked for it or the agent invented it.
 
 ### Implications for the landing page
 
