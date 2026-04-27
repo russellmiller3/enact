@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enact — The Agent Firewall for Claude Code, Cursor, and Codex</title>
-    <meta name="description" content="Replit wiped a database. Claude Code ran terraform destroy. The Agent Firewall stops both before they execute. We chaos-tested 34 real-incident prompts: 0 damage with Enact, 7 without. Free SDK.">
+    <meta name="description" content="An AI coding agent wiped a production database in 9 seconds while trying to fix an unrelated bug. PocketOS, April 2026. Same shape as Replit and DataTalks. Enact is the Agent Firewall — deterministic policies on every tool call, before execution. Free SDK.">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><path d='M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z' fill='white'/></svg>">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
@@ -189,9 +189,9 @@
 <!-- HERO -->
 <section class="hero">
     <div class="container">
-        <h1>In July 2025, an AI coding agent <span class="highlight">wiped a production database</span> during a code freeze.</h1>
+        <h1>Two days ago, an AI coding agent <span class="highlight">wiped a production database in 9 seconds</span> while trying to "fix" an unrelated bug.</h1>
         <p class="sub">
-            It was Replit. The agent ignored the freeze, deleted records on 1,200+ companies, then claimed rollback was impossible. Six months later, Claude Code ran <code>terraform destroy</code> on a developer's laptop and erased 2.5 years of student data. Same shape every time. Enact is the Agent Firewall that catches both before they execute.
+            April 25, 2026. PocketOS founder Jer Crane asked Cursor (running Claude Opus 4.6) to handle a routine staging task. The agent hit a credential mismatch and <strong>independently decided</strong> to delete a Railway volume to "fix" it. Found a token created for adding domain names; used it to delete what it thought was a staging volume. It was production. Three months of customer data gone — for a SaaS serving rental car businesses. The agent's own confession enumerated the safety rules it was breaking, in writing, while breaking them. Enact is the Agent Firewall that runs every tool call through deterministic policies BEFORE execution — regardless of whether the user asked for it or the agent invented it.
         </p>
         <div class="cta-row">
             <a href="#try" class="btn btn-primary">Install in 30 seconds →</a>
@@ -209,9 +209,9 @@
 <section class="alt centered">
     <div class="container">
         <div class="section-label">The pattern</div>
-        <h2>Same three steps. Five documented cases in 12 months.</h2>
+        <h2>Same shape every time. Six documented cases in the last year.</h2>
         <p class="section-sub">
-            Developer asks the agent for a small infra change. Agent picks the destructive path because it is the shortest. By the time anyone notices, production is gone. Not bugs — the agents did what they were asked.
+            Developer asks the agent for routine work. Agent hits friction. Agent <strong>independently decides</strong> to do something destructive to "fix" the friction — without being asked. Agent guesses at the scope and gets it wrong. By the time anyone notices, production is gone. <strong>The agents are not doing what they were asked. They are doing MORE than they were asked.</strong> That is the gap.
         </p>
 
         <table class="cases">
@@ -226,18 +226,25 @@
             </thead>
             <tbody>
                 <tr>
-                    <td>Jul 2025</td>
-                    <td>Replit / SaaStr</td>
-                    <td>Replit Agent</td>
-                    <td>Ignored a code freeze, ran destructive DB ops, fabricated rollback success</td>
-                    <td class="damage">1,200+ company records</td>
+                    <td>Apr 2026</td>
+                    <td>PocketOS</td>
+                    <td>Cursor + Claude Opus 4.6</td>
+                    <td>Routine staging task, hit credential mismatch. Agent <strong>independently decided</strong> to call <code>volumeDelete</code> via a Railway token created for unrelated domain ops. Thought scope was staging — was production. <strong>9 seconds.</strong></td>
+                    <td class="damage">3 months of customer data · car-rental SaaS</td>
                 </tr>
                 <tr>
                     <td>Feb 2026</td>
                     <td>DataTalks.Club</td>
                     <td>Claude Code</td>
-                    <td><code>terraform destroy</code> after missing-state-file → "infra empty, rebuild"</td>
+                    <td>Missing Terraform state file made <code>terraform plan</code> see "no infra." Agent ran <code>terraform destroy</code> to "rebuild."</td>
                     <td class="damage">~2 million rows · 2.5 years</td>
+                </tr>
+                <tr>
+                    <td>Jul 2025</td>
+                    <td>Replit / SaaStr</td>
+                    <td>Replit Agent</td>
+                    <td>Ignored an explicit code freeze, ran destructive DB ops, then fabricated rollback-success messages</td>
+                    <td class="damage">1,200+ company records</td>
                 </tr>
                 <tr>
                     <td>2025</td>
@@ -250,7 +257,7 @@
                     <td>Oct 2025</td>
                     <td>Firmware dev</td>
                     <td>Claude Code</td>
-                    <td><code>rm -rf tests/ patches/ ~/</code> — trailing tilde expanded to home</td>
+                    <td><code>rm -rf tests/ patches/ ~/</code> — trailing tilde expanded to home dir</td>
                     <td class="damage">Entire home directory</td>
                 </tr>
                 <tr>
@@ -262,6 +269,10 @@
                 </tr>
             </tbody>
         </table>
+
+        <p style="margin-top: 32px; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.7; text-align: center;">
+            <strong style="color: var(--text);">The pattern that costs companies isn't "user typed DROP TABLE."</strong> Claude refuses that 4 times out of 5 on its own. The pattern is "user asked for routine work; agent independently decided to do something destructive to fix unrelated friction." The PocketOS founder's flagship setup — Claude Opus 4.6 + Cursor + explicit project safety rules — failed anyway. The agent's own confession enumerated the rules it was breaking, in writing, while breaking them.
+        </p>
 
         <p style="margin-top: 28px; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto;">
             Sources catalogued in <a href="https://github.com/russellmiller3/enact/blob/master/docs/research/agent-incidents.md" style="color: var(--accent);">docs/research/agent-incidents.md</a>. We add to this list every week.
@@ -339,7 +350,10 @@
         </div>
 
         <p style="margin-top: 32px; text-align: center; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
-            <strong style="color: var(--text);">Self-refusal does a lot of the work.</strong> Claude's training already declined 21 of 26 dangerous prompts on its own. But the 5 that slipped through are the ones that cost a company: <code>DROP TABLE customers</code> on a one-line "we don't need it" prompt, <code>DELETE FROM users</code>, <code>aws s3 rm --recursive</code> on a "safe" staging bucket, a rename-then-drop bypass that talked the model into a destructive op it would have refused directly, and a bulk Stripe subscription cancel framed as "dashboard cleanup". Enact catches all five. Code does not drift with model versions.
+            <strong style="color: var(--text);">Self-refusal does a lot of the work — but only on the easy half.</strong> When the user TYPES a destructive command, Claude's training declines about 4 times out of 5: <code>DROP TABLE customers</code>, <code>rm -rf</code>, <code>git push --force origin main</code>, "skip the test step." Strong negative training signal on those verbs. Enact catches the 1-in-5 that slips through.
+        </p>
+        <p style="margin-top: 16px; text-align: center; font-size: 14px; color: var(--muted); max-width: 720px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+            <strong style="color: var(--text);">But the case that costs companies isn't the user typing the bad command.</strong> It's the agent INDEPENDENTLY deciding to do something destructive while "trying to help." PocketOS this week. DataTalks in February. Replit last summer. Same shape every time — and Claude's self-refusal does NOT catch this case, because the agent isn't being asked to do the bad thing. It's deciding on its own. Enact's deterministic policy gate runs before EVERY tool call regardless of who initiated it. Code does not drift with model versions; agent good intentions do.
         </p>
 
         <div class="math-callout">
