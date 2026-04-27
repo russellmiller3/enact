@@ -33,7 +33,7 @@
 >
 > Built **Enact** — a Claude Code hook (Cursor MCP next) that runs every tool call through a deterministic Python policy engine before execution. Six tools covered: Bash, Read, Write, Edit, Glob, Grep. Same engine across surfaces — agent can't bypass by switching from Bash to Read. No LLM in the decision loop, so the agent's own reasoning can't talk Enact out of blocking.
 >
-> Chaos-tested against 44 prompts derived from documented agent incidents:
+> Chaos-tested against 39 paired prompts derived from documented agent incidents:
 >
 >   **Without Enact: 8 critical incidents** across shell, file-tool, and agent-misinterpretation surfaces.
 >
