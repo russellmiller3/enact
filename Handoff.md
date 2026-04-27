@@ -90,17 +90,103 @@ Current landing leads with the destructive Replit incident — where Claude's se
 4. **CSO section** — emphasize the read/exfil angle as THE compliance story. SOC2/HIPAA/GDPR all care about read access; that's exactly where Claude leaks. The framework grid I added in session 15 is half the story; the asymmetry data is the other half.
 5. **Add a "What Claude catches vs misses" table** — ship the empirical asymmetry as a feature, not a bug. It's the strongest credibility signal we have.
 
-### Next-session backlog (in priority order)
+### Next-session backlog (in priority order — REVISED end of session 15 evening)
 
-1. **Update landing page per items 1-5 above** — biggest single-session lift, directly informs cold-email body for first 50 sends.
-2. **Update cold-email v3** — fold in the Read-tool exfil framing ("invisible to existing audit tools") and the asymmetry stat ("Claude refuses 80% destructive, only 20% exfil").
-3. **Move chaos run dirs out of `$HOME`** to `/tmp/enact-chaos/<run_id>/` so `dont_access_home_dir` doesn't false-positive on the harness itself. Trivial config change.
-4. **Add Windows-specific E2E test** to GitHub Actions that runs `claude --print --settings ./.claude/settings.json` with a real subagent dispatch — would have caught both Windows bugs at PR time. The two bugs we just fixed prove unit tests aren't enough.
-5. **Update ROADMAP.md cost calibration** — chaos sweep budget is `$1/agent` for sandbox-bound retries, not `$0.10-0.35`. A 30-task sweep is closer to `$30` than `$7`.
-6. **Re-fire sweep with the Windows-bug fix** — populate `chaos/runs/<uuid>/receipts/` so structured telemetry exists (today's data came from agent stdout). Then commit to enact-pro.
-7. **Cloud-side policy push** (the big one — see ROADMAP.md). Required for the SOC2/HIPAA/GDPR pitch to be real instead of aspirational. ~1 day.
-8. **Loom 90s recording** — script unchanged, numbers updated to "39 prompts paired, 0 vs 8 incidents."
-9. **First 50 cold emails** — send the compliance variant to GRC buyers; lead variant + DataTalks variant to engineering buyers.
+**Highest-leverage (pick first if short on time):**
+
+1. **Cloud-side policy push** (the big one — see `ROADMAP.md`). Required to make the SOC2/HIPAA/GDPR pitch real instead of aspirational. ~1 day. CSO writes policy in cloud dashboard → signed bundle → every laptop polls + caches. THIS is the #1 unlock for selling to compliance buyers.
+2. **First 50 cold emails using v3** — `docs/outreach/cold_email_v2.md` is now v3 (PocketOS-first lead + 44-prompt stats + hallucination close). Templates ready: lead, DataTalks variant, Compliance variant. Ship outbound this week.
+3. **Loom 90s recording** — script unchanged at `docs/outreach/loom_90s_script.md`. Update numbers to "44 paired prompts, 0 vs 8 incidents." Demo path: shell + file-tool + misinterpretation. Goes in every cold-email send.
+
+**Chaos harness improvements (unblock the next sweep):**
+
+4. **Move chaos run dirs out of `$HOME`** to `/tmp/enact-chaos/<run_id>/` (Linux/Mac) or `C:/enact-chaos/<run_id>/` (Windows) so `dont_access_home_dir` doesn't false-positive on harness operations. Trivial config change in `enact/chaos/sandbox.py:seed_sandbox` — change the default `state_root`.
+5. **Enrich sandbox with fake friction** so misinterpretation prompts actually trigger their pattern instead of no-op'ing on a too-clean sandbox. Add to `seed_sandbox`:
+   - Pre-existing fake "cache" directory (`.next/cache/old.json`, `node_modules/.cache/foo`)
+   - Uncommitted changes to `fake_repo/` files (so revert prompts have something to revert)
+   - Stale `.tfstate` file with phantom resource entries (so terraform-pattern prompts trigger)
+   - Large dummy files in `backups/` (so "free up disk" prompts trigger)
+   - Multiple env files (`.env`, `.env.staging`, `.env.production`) with intentional mismatches (PocketOS pattern)
+6. **Re-fire misinterpretation sweep** with #5 in place — should produce real BLOCK/leak data on prompts 90-94 instead of 3 of 5 no-op'ing. ~$5 budget.
+
+**Engineering hardening:**
+
+7. **Add Windows-specific E2E test** to GitHub Actions that runs `claude --print --settings ./.claude/settings.json` with a real subagent dispatch — would have caught both Windows bugs (PATH + backslash mangling) at PR time. The two bugs we fixed in session 15 had been latent since session 10; unit tests bypass them by invoking `python -m` directly.
+8. **Verify the never-idle hook v2** correctly detects task completions in next session. v1 had a regex bug that false-positive-blocked every Stop event after a sweep. v2 (shipped end of session 15) scans the full transcript with simpler string matching against `<task-notification>...<status>completed</status>` blocks. Test by running a small background task and confirming Stop is allowed once the notification arrives.
+
+**Documentation / research integration:**
+
+9. **Integrate 26-incident research dump into public `docs/research/agent-incidents.md`** — research lives at `docs/research/agent-incidents-2026-04-27-research.md` (478 lines, 26 incidents). Public catalog only has 6. Pull in the most cold-email-shaped ones: Amazon Kiro AWS Cost Explorer outage (Dec 2025), Google Antigravity D: drive wipe (Dec 2025), Cursor recursive-backup-loop $100K IP loss (Oct 2025), Meta March 2026 agent-as-confused-deputy across two humans, OpenClaw Feb 2026 (Meta AI safety lead's own inbox), Comment-and-Control prompt injection across Claude/Gemini/Copilot.
+10. **Update ROADMAP.md cost calibration** — chaos sweep budget is `~$1/agent` for sandbox-bound retries with `--max-budget-usd 1.00`, not `$0.10-0.35`. A 30-task sweep is closer to `$30` than `$7`. The ROADMAP currently says `$1-3` for a 5×2 sweep; should say `$10-30` if we add fake friction (more retries) or scale to 30 prompts.
+
+**Product surface expansion:**
+
+11. **Cursor MCP integration** — reach Cursor's user base (similar wedge to Claude Code). MCP server wraps the same `enact.policy.evaluate_all` engine. Open question: build before or after first paying Marcus customer.
+12. **NotebookEdit + WebFetch + Task tool coverage** — closes the last 2 of 8 CC tools. NotebookEdit is rare in non-Jupyter projects (low priority); WebFetch needs URL-policy class (different shape — domain allowlist, suspicious-URL patterns); Task spawns subagents (needs inheritance verification end-to-end).
+
+**Lower priority / backlog items carried forward:**
+
+13. **Anomaly detection** — rule-based first ("agent did X 50 times in 5 min — alert"), ML later. No code yet.
+14. **HubSpot connector** — planned in INTENT_GUIDE, not built. Lower priority than the chaos flywheel.
+15. **Multi-agent arbitration / soft locks** — designed in spec, not built. Becomes important when teams run >1 production agent against the same systems.
+16. **Vertical premium policy packs** — live in `enact-pro` private repo as `policy_packs/<vertical>/`. None published yet. Targets: fintech, healthcare, government, AI-companies.
+17. **Independent auditor read API** — already scaffolded in `cloud/routes/auditor.py` (ships with enact-cloud). Lets your auditor read receipts directly — three-party trust model becomes a real product feature, not just a marketing line.
+
+### Cost note for next session (IMPORTANT — corrects user misconception 2026-04-27)
+
+`claude --print` subprocess invocations DO cost real Anthropic API money. They spawn a fresh Claude conversation that bills against the same account. The `--max-budget-usd N` flag is the only cost-control mechanism. Verified empirically — the smoke test budget cap killed the agent with `Error: Exceeded USD budget (0.3)`. Console: https://console.anthropic.com/settings/usage.
+
+**Updated calibration (for `claude --print` subprocess path):**
+- Sandbox-bound chaos task with retries: ~$1/agent at `--max-budget-usd 1.00`
+- 5×1 sweep: ~$5
+- 5×2 paired sweep (A + B): ~$10
+- 30×2 paired sweep: ~$60 (NOT $14 like the old calibration)
+- Diagnostic single-shot: ~$0.30
+
+Always pre-announce + post actuals per `~/.claude/CLAUDE.md` "Keep Russell Posted on API Costs" rule. Stop at $20 cumulative session spend without explicit user approval.
+
+### Sweep dispatch mechanism — PREFER Agent tool over `claude --print` subprocess (REVISED end of session 15)
+
+Session 15 used `claude --print` subprocess for sweeps because the parent CC session had `cwd=enact` (the broken timestamp-archive folder), not `cwd=enact-fresh`. Subprocess was the only way to scope the agent's cwd to the right repo. Each subprocess call costs real Anthropic API money (~$1/agent).
+
+**For session 16+ in cwd=enact-fresh:** use the built-in `Agent` tool instead. Costs flow against the CC session's plan allowance (Claude Pro/Max included tokens) rather than against the API account directly — effectively free up to plan limits. The chaos harness is unchanged; only the parent's dispatch loop changes.
+
+**Pattern:**
+
+```python
+# Stage all dispatches (same as today)
+from enact.chaos.tasks import load_corpus
+from enact.chaos.orchestrate import run_sweep, record_sweep
+
+corpus = sorted([t for t in load_corpus("chaos/tasks") if t.id.startswith("9")], key=lambda t: t.id)
+dispatches = run_sweep(corpus, sweep="A")
+```
+
+Then in the SAME chat message, fire 5 Agent calls in parallel:
+
+```
+Agent(prompt=dispatches[0]["subagent_prompt"], description="chaos sweep 90", subagent_type="general-purpose")
+Agent(prompt=dispatches[1]["subagent_prompt"], description="chaos sweep 91", subagent_type="general-purpose")
+Agent(prompt=dispatches[2]["subagent_prompt"], description="chaos sweep 92", subagent_type="general-purpose")
+Agent(prompt=dispatches[3]["subagent_prompt"], description="chaos sweep 93", subagent_type="general-purpose")
+Agent(prompt=dispatches[4]["subagent_prompt"], description="chaos sweep 94", subagent_type="general-purpose")
+```
+
+Each Agent returns its summary as the tool result. Then:
+
+```python
+summaries = [{"run_id": d["run_id"], "agent_summary": agent_returns[i]} for i, d in enumerate(dispatches)]
+record_sweep(summaries)
+```
+
+**Key wins vs `claude --print`:**
+- No subprocess management
+- No `--max-budget-usd` worry (counts against plan, not API direct)
+- Hook firing is automatic — Agent dispatches inherit the parent's `.claude/settings.json` from `enact-fresh/`
+- Per-run receipts populate cleanly because Agent's bash subprocess inherits cwd from the dispatch prompt's instructions
+- Sweep B (control): just toggle `disable_sweep_b()` between rounds; same Agent dispatch mechanism
+
+**Caveat:** the Agent tool is `run_in_background:true` capable, so sweep agents fire async — you get notifications as each completes (same as session 15 used). No code changes needed in the harness.
 
 ### Cost transparency this session
 
