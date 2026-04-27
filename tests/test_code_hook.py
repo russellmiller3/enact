@@ -78,8 +78,27 @@ class TestParseToolInput:
 
     def test_unknown_tool_returns_none(self):
         from enact.cli.code_hook import parse_tool_input
-        assert parse_tool_input("WebFetch", {"url": "x"}) is None
+        # NotebookEdit + Task are still unsupported. WebFetch is now supported
+        # (session 16) — use the still-unsupported ones to verify fail-open.
+        assert parse_tool_input("NotebookEdit", {"file_path": "x.ipynb"}) is None
         assert parse_tool_input("Task", {}) is None
+
+    def test_webfetch_routes_url_into_payload(self):
+        """WebFetch input is {url, prompt}. Policies read context.payload['url']."""
+        from enact.cli.code_hook import parse_tool_input
+        p = parse_tool_input("WebFetch", {
+            "url": "https://pastebin.com/raw/abc",
+            "prompt": "summarize this",
+        })
+        assert p is not None
+        assert p["url"] == "https://pastebin.com/raw/abc"
+        assert p["prompt"] == "summarize this"
+        assert "WebFetch" in p["command"]
+
+    def test_webfetch_missing_url_returns_none(self):
+        from enact.cli.code_hook import parse_tool_input
+        assert parse_tool_input("WebFetch", {}) is None
+        assert parse_tool_input("WebFetch", {"prompt": "x"}) is None
 
     def test_read_missing_file_path_returns_none(self):
         from enact.cli.code_hook import parse_tool_input
@@ -144,8 +163,8 @@ def _run_pre(stdin_json: dict) -> tuple[int, str]:
 
 class TestCmdPre:
     def test_unsupported_tool_passes_silently(self, in_tmp_with_init):
-        # WebFetch isn't in SUPPORTED_TOOLS — fail-open silently
-        rc, out = _run_pre({"tool_name": "WebFetch", "tool_input": {"url": "https://example.com"}})
+        # NotebookEdit isn't in SUPPORTED_TOOLS — fail-open silently
+        rc, out = _run_pre({"tool_name": "NotebookEdit", "tool_input": {"file_path": "x.ipynb"}})
         assert rc == 0
         assert out == ""
 
@@ -512,10 +531,10 @@ class TestCmdPost:
         assert not (tmp_path / "receipts").exists()
 
     def test_unsupported_tool_skipped(self, tmp_path, monkeypatch):
-        # WebFetch isn't in SUPPORTED_TOOLS — no receipt
+        # NotebookEdit isn't in SUPPORTED_TOOLS — no receipt
         monkeypatch.chdir(tmp_path)
         cmd_init()
-        rc = self._run_post({"tool_name": "WebFetch", "tool_input": {"url": "https://x.com"}})
+        rc = self._run_post({"tool_name": "NotebookEdit", "tool_input": {"file_path": "x.ipynb"}})
         assert rc == 0
         assert not (tmp_path / "receipts").exists()
 

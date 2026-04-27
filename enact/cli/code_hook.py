@@ -39,19 +39,23 @@ from enact.policies.filesystem import (
     dont_copy_api_keys,
 )
 from enact.policies.file_access import FILE_ACCESS_POLICIES
+from enact.policies.url import URL_POLICIES
+from enact.policies.credential import CREDENTIAL_POLICIES
 
-# Defaults cover ALL three surfaces:
+# Defaults cover ALL four surfaces:
 #   SHELL (Bash):                 CODING_AGENT_POLICIES + git/db/time defaults
 #   FILE TOOLS (Read/Write/Edit): filesystem path-based policies
 #   SEARCH TOOLS (Glob/Grep):     FILE_ACCESS_POLICIES (pattern-based)
+#   WEB FETCH (WebFetch):         URL_POLICIES (exfil/TLD/IP/https checks)
+#   CREDENTIAL SCOPE:             CREDENTIAL_POLICIES (PocketOS-class catch)
 #
 # Same policy library across surfaces means an agent that tries to
 # "cat .env" AND an agent that tries to Read ".env" are both blocked
 # by the same dont_read_env policy - defense in depth, no surface gaps.
 #
-# CODING_AGENT_POLICIES blocks 23 documented real-world incident patterns
+# CODING_AGENT_POLICIES blocks 24 documented real-world incident patterns
 # (terraform destroy, drizzle force, aws s3 rm --recursive, kubectl delete
-# namespace, etc.). See docs/research/agent-incidents.md for sources.
+# namespace, rename-then-drop bypass, etc.). See docs/research/agent-incidents.md.
 POLICIES = [
     code_freeze_active,
     block_ddl,
@@ -67,6 +71,10 @@ POLICIES = [
     dont_copy_api_keys,
     # File-access policies - fire on Glob/Grep patterns themselves
     *FILE_ACCESS_POLICIES,
+    # URL policies - fire on WebFetch tool calls
+    *URL_POLICIES,
+    # Credential-scope policies - PocketOS-class catch
+    *CREDENTIAL_POLICIES,
 ]
 '''
 
@@ -130,7 +138,7 @@ def parse_bash_command(command: str) -> dict:
     return payload
 
 
-SUPPORTED_TOOLS = ("Bash", "Read", "Write", "Edit", "Glob", "Grep")
+SUPPORTED_TOOLS = ("Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch")
 
 
 def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
@@ -142,12 +150,13 @@ def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
     invariant.
 
     Each tool's payload is shaped so existing policies fire correctly:
-      Bash  -> command/args/diff/content (+ sql/table/where if psql)
-      Read  -> path + rendered command for shell-pattern policies
-      Write -> path + content (so dont_copy_api_keys catches keys in content)
-      Edit  -> path + diff (old->new) so dont_commit_api_keys catches diff secrets
-      Glob  -> path=pattern (so dont_access_home_dir fires) + glob_pattern
-      Grep  -> grep_pattern (for block_grep_secret_patterns) + path
+      Bash     -> command/args/diff/content (+ sql/table/where if psql)
+      Read     -> path + rendered command for shell-pattern policies
+      Write    -> path + content (so dont_copy_api_keys catches keys in content)
+      Edit     -> path + diff (old->new) so dont_commit_api_keys catches diff secrets
+      Glob     -> path=pattern (so dont_access_home_dir fires) + glob_pattern
+      Grep     -> grep_pattern (for block_grep_secret_patterns) + path
+      WebFetch -> url + prompt (URL_POLICIES read context.payload["url"])
     """
     if tool_name == "Bash":
         command = tool_input.get("command") or ""
@@ -214,6 +223,19 @@ def parse_tool_input(tool_name: str, tool_input: dict) -> dict | None:
             "path": path,
             "grep_pattern": pattern,
             "command": f"Grep {pattern}" + (f" {path}" if path else ""),
+            "diff": "",
+            "content": "",
+        }
+
+    if tool_name == "WebFetch":
+        url = tool_input.get("url") or ""
+        if not url:
+            return None
+        prompt = tool_input.get("prompt") or ""
+        return {
+            "url": url,
+            "prompt": prompt,
+            "command": f"WebFetch {url}",
             "diff": "",
             "content": "",
         }
