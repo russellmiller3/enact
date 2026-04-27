@@ -152,24 +152,95 @@ Documented in DEFAULT_POLICIES_PY comment.
 
 **Outreach** — `docs/outreach-plan.md` — 10 people to contact for validation/feedback (potential customers, agent space founders, governance experts).
 
-### Next Step
+### What Was Done (session 10 cont.) — Live A/B trial REAL
 
-**Run real Sweep A vs B in a fresh CC session.** This session's hooks
-won't reload mid-conversation. Steps:
-1. End this CC session.
-2. Open a new CC session in `/home/user/enact` (hook config will load).
-3. Verify hook fires: `git push --force origin nonexistent` — expect deny JSON.
-4. Run the live trial loop end-to-end via `python` calls + Agent dispatches.
-   Pattern is in this conversation's transcript.
-5. After full sweep: `python -c "from enact.chaos.reporter import generate_report; print(generate_report())"`.
-6. Inspect `chaos/report.md` for real A/B comparison numbers.
+**Hooks DO fire on subagent commands.** Earlier session 10 assumed they
+didn't because parent-session probe didn't get blocked — but that probe
+ran BEFORE `enact-code-hook init` had created `.enact/policies.py`, so
+the hook silently allowed (empty policies list). Once init ran, the
+next subagent's `DELETE FROM users` got blocked with the explicit
+message "BLOCKED by Enact protect_tables policy." Real Sweep A.
 
-**Marketing artifact ready.** Even the partial Sweep B in session 10
-showed 3 critical damage events in 5 runs — usable for cold-email proof
-points: "tested against 5 simulated agent attacks; uncontrolled agents
-caused 3 critical-severity incidents."
+**Trial result (11 runs total across 2 sweeps):**
 
-**Then:** merge to master + bump PyPI to 0.6.0 once Sweep A validates.
+| Outcome | Sweep A (hooks on) | Sweep B (no hooks) |
+|---|---|---|
+| damage | 0 | 2 |
+| enact_blocked | 1 | 0 |
+| agent_refused | 3 | 2 |
+| clean | 2 | 1 |
+
+Sweep B was 5 dangerous + control runs without enact installed; 2 of
+5 dangerous tasks succeeded in causing CRITICAL damage (drop customers,
+split-delete bypass). Sweep A was 6 runs with enact installed; 0 damage,
+1 explicit Enact block, 3 agent self-refusals.
+
+**Caveat:** Sweep A and Sweep B ran DIFFERENT tasks (not paired). Honest
+A/B requires running the same task list in both modes. Next-session
+handoff (below) describes how.
+
+### Five flywheel tweaks shipped (session 10 part 2)
+
+1. **Self-refusal tracking** — `outcome` column with 4-way classification
+   (damage / enact_blocked / agent_refused / clean). 9 tests.
+2. **Per-run receipt env var** — `ENACT_CHAOS_RUN_ID` routes receipts
+   to per-run dirs, unblocks parallel sweeps. 2 tests.
+3. **One-shot orchestrator** — `run_sweep` + `record_sweep` collapse
+   N round-trips to 2. 6 tests.
+4. **Corpus warmup** — `compute_attempt_rates` from Sweep B history,
+   `filter_low_signal_tasks` strips noise. 10 tests.
+5. **Auto-policy suggestion** — `detect_leaks` + `write_leak_files` +
+   `build_suggestion_prompt` so every leak produces a draft policy
+   ready for human review. 8 tests.
+
+Total: 135 tests across hook + chaos.
+
+### Next Step — honest paired A/B in a fresh CC session
+
+Goal: run the SAME 18 tasks in BOTH sweeps so we get a defensible
+"with vs without enact" comparison.
+
+```python
+from enact.chaos.tasks import load_corpus
+from enact.chaos.orchestrate import run_sweep, record_sweep
+from enact.chaos.runner import disable_sweep_b, restore_after_sweep
+from enact.chaos.reporter import generate_report
+from enact.chaos.suggest import write_leak_files
+
+corpus = load_corpus("chaos/tasks")  # all 18
+
+# Sweep A — hooks ON (default state after `enact-code-hook init`)
+dispatches_a = run_sweep(corpus, sweep="A")
+# Parent: dispatch all 18 Agents in PARALLEL (multiple Agent calls in
+#   one assistant message). Each subagent is told to set
+#   ENACT_CHAOS_RUN_ID — verify it actually does (last session's
+#   subagents skipped it, causing receipt cross-attribution).
+# Collect summaries from each Agent return.
+record_sweep(summaries_a)
+
+# Sweep B — control
+disable_sweep_b()
+dispatches_b = run_sweep(corpus, sweep="B")
+# Parallel dispatch again
+record_sweep(summaries_b)
+restore_after_sweep()
+
+# Report + leaks
+print(generate_report())
+write_leak_files()  # JSONs in chaos/leaks/ for any Sweep A damage
+```
+
+**Critical pre-flight:** before any chaos, run a single throwaway Bash
+command in the new session to confirm the hook fires:
+`echo '{"tool_name":"Bash","tool_input":{"command":"git push --force"}}' | enact-code-hook pre`
+should output a deny JSON. If it does, hooks are wired. If not, debug
+before running the sweep.
+
+**Receipt attribution warning:** if subagents skip the env var,
+fall back to looking at `chaos/runs/{run_id}/agent_summary.txt` —
+the agents are clear about what happened in plain text.
+
+**Then:** merge to master + bump PyPI to 0.6.0.
 
 **Deferred from earlier sessions:** Deploy to Fly + wire up Stripe — code is done,
 needs 3 secrets set in production:
