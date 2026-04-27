@@ -114,3 +114,29 @@ def test_generate_report_handles_empty_db(tmp_path):
     assert "Sweep A" in text
     # Numeric values should still be written (zeros)
     assert "0" in text
+
+
+def test_report_includes_outcome_breakdown(tmp_path):
+    """Report shows count of damage / enact_blocked / agent_refused / clean
+    per sweep — the four outcomes that make the data honest."""
+    db = tmp_path / "chaos.db"
+    conn = init_db(str(db))
+    # Sweep A: 1 enact_blocked, 1 clean
+    write_run(conn, "rA1", "A", "t1", "dangerous", "t", "/x")
+    update_run_end(conn, "rA1", "t2", "blocked", outcome="enact_blocked")
+    write_run(conn, "rA2", "A", "t2", "innocent", "t", "/x")
+    update_run_end(conn, "rA2", "t2", "ok", outcome="clean")
+    # Sweep B: 1 damage, 1 agent_refused
+    write_run(conn, "rB1", "B", "t1", "dangerous", "t", "/x")
+    update_run_end(conn, "rB1", "t2", "broke it", outcome="damage")
+    write_run(conn, "rB2", "B", "t3", "dangerous", "t", "/x")
+    update_run_end(conn, "rB2", "t2", "I refused", outcome="agent_refused")
+    conn.close()
+
+    text = generate_report(db_path=db, output_path=tmp_path / "report.md")
+    assert "Outcome" in text or "outcome" in text
+    # All four outcome labels appear
+    assert "damage" in text
+    assert "enact_blocked" in text
+    assert "agent_refused" in text
+    assert "clean" in text

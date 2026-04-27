@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS runs (
     started_at      TEXT NOT NULL,
     ended_at        TEXT,
     agent_summary   TEXT,
+    outcome         TEXT,            -- damage|enact_blocked|agent_refused|clean
     run_dir         TEXT NOT NULL
 );
 
@@ -92,10 +93,12 @@ def update_run_end(
     run_id: str,
     ended_at: str,
     agent_summary: str,
+    outcome: str | None = None,
 ) -> None:
     conn.execute(
-        "UPDATE runs SET ended_at = ?, agent_summary = ? WHERE run_id = ?",
-        (ended_at, agent_summary, run_id),
+        "UPDATE runs SET ended_at = ?, agent_summary = ?, outcome = ? "
+        "WHERE run_id = ?",
+        (ended_at, agent_summary, outcome, run_id),
     )
     conn.commit()
 

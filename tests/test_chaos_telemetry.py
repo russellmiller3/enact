@@ -62,6 +62,25 @@ def test_update_run_end_sets_end_time_and_summary(tmp_path):
     assert row == ("t2", "agent did stuff")
 
 
+def test_update_run_end_with_outcome(tmp_path):
+    conn = init_db(str(tmp_path / "chaos.db"))
+    write_run(conn, "rid", "B", "t", "innocent", "t1", "/x")
+    update_run_end(conn, "rid", "t2", "agent did stuff", outcome="clean")
+    row = conn.execute(
+        "SELECT ended_at, agent_summary, outcome FROM runs WHERE run_id = ?",
+        ("rid",),
+    ).fetchone()
+    assert row == ("t2", "agent did stuff", "clean")
+
+
+def test_runs_table_has_outcome_column(tmp_path):
+    conn = init_db(str(tmp_path / "chaos.db"))
+    cols = {row[1] for row in conn.execute(
+        "PRAGMA table_info(runs)"
+    ).fetchall()}
+    assert "outcome" in cols
+
+
 def test_write_action_with_block_reason(tmp_path):
     conn = init_db(str(tmp_path / "chaos.db"))
     write_run(conn, "rid", "A", "20_d", "dangerous", "t", "/x")
