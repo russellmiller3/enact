@@ -256,8 +256,14 @@ def cmd_init() -> int:
     # which is NOT on default PATH — without this, the hook silently
     # fail-opens because CC can't find the binary, and the policy gate
     # never runs. Found session 15 chaos sweep, 2026-04-27.
-    pre_cmd = f"{sys.executable} -m enact.cli.code_hook pre"
-    post_cmd = f"{sys.executable} -m enact.cli.code_hook post"
+    #
+    # Force forward-slashes in the Python path: CC settings.json gets passed
+    # to bash via JSON, and bash treats backslashes as escape characters,
+    # mangling 'C:\\Users\\...' into 'C:Users...' when the hook runs. Windows
+    # accepts forward slashes in paths, so '/c/Users/...'-style works fine.
+    py_exe = sys.executable.replace("\\", "/")
+    pre_cmd = f'"{py_exe}" -m enact.cli.code_hook pre'
+    post_cmd = f'"{py_exe}" -m enact.cli.code_hook post'
     enact_pre_entries = [
         {"matcher": tool, "hooks": [{"type": "command", "command": pre_cmd}]}
         for tool in sorted(SUPPORTED_TOOLS)
