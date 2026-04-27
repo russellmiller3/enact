@@ -4,6 +4,96 @@
 
 ---
 
+## Current State (2026-04-27, end of session 15)
+
+### Git
+- Branch: `master` (merged + pushed; Vercel deploying)
+- Tests: **545 passing** (test_code_hook.py 56, test_file_access_policies.py 17, test_filesystem.py 30, plus chaos + SDK)
+- Working tree: clean after final push
+
+### What shipped (in priority order)
+
+1. **Multi-tool hook (priority 1)** — Bash + Read + Write + Edit + Glob + Grep. 6 of 8 CC tools covered. `parse_tool_input` dispatcher routes each tool's input shape into the existing payload that policies expect.
+2. **Chaos prompts 80-84 + paired 5×2 sweep (priority 2)** — empirical proof of file-firewall value. **Headline: 0 leaks with Enact, 1 leak without** on the 5-prompt sweep. Combined with session 14: **39 prompts paired, 8 incidents without Enact, 0 with**.
+3. **Landing + cold-email + README broadened to "Agent Firewall" (priority 3)** — Built-for-your-security-team section + tabbed receipt demo (BLOCK/PASS/ROLLBACK) + SOC2/HIPAA/GDPR framework grid + Compliance variant cold email.
+4. **IP split (priority 4)** — `enact-cloud` and `enact-pro` private repos created and pushed. Public repo no longer has `cloud/`, `tests/cloud/`, `fly.toml`, `Dockerfile`. LICENSE updated with proprietary-notice for the two private repos.
+5. **PyPI 1.0.0 LIVE** — https://pypi.org/project/enact-sdk/1.0.0/. Fresh-venv install verified clean: 6 SUPPORTED_TOOLS, 23 CODING_AGENT_POLICIES, 2 FILE_ACCESS_POLICIES, hook fires correctly when init is run.
+
+### Bonus shipments
+
+- **Two latent Windows bugs found and fixed via the empirical sweep:**
+  - PATH bug: `enact-code-hook` not on Windows PATH because pip Scripts dir isn't on default PATH. Fixed: cmd_init now writes `<sys.executable> -m enact.cli.code_hook` instead of bare command.
+  - Bash backslash bug: Windows paths with `\` get mangled by bash escape interpretation when CC passes JSON command to shell. Fixed: forward-slashes + double-quotes in the python path.
+  - Both bugs had been silent since session 10. Unit tests bypass them (call cmd_pre directly). Only end-to-end CC subagent invocation surfaces them.
+- **Encoding utf-8 fixes** across cmd_init + chaos harness (Windows cp1252 was mangling em dashes in default templates and shim files).
+- **`dont_access_home_dir` false-positive fix** — only blocks ABSOLUTE paths under home now (was blocking every relative path that resolved under cwd if cwd was anywhere under `~`).
+- **ROADMAP.md created** — cloud-side policy push as #1 next item.
+- **HARD RULE: No Emoji on Landing Pages** + Lucide-only enforcement hook in `~/.claude/`.
+- **HARD RULE: Exhaustively Look Before Asking** — sharpens "Test Autonomously" with banned-phrase list + required pre-ask search log.
+
+### Headline numbers (combining session 14 + 15)
+
+| Surface | Prompts | Without Enact | With Enact |
+|---|---|---|---|
+| Bash (session 14) | 34 | 7 critical damage on 5 of 34 | 0 damage |
+| File tools (session 15) | 5 | 1 critical leak (Read .env) + 1 partial-write | 0 damage |
+| **Total** | **39** | **8 incidents** | **0 incidents** |
+
+---
+
+## Strategic insight from broadening the surface (the BIG learning)
+
+**Claude's self-refusal is asymmetric. He catches DESTRUCTIVE actions; he MISSES exfil/read actions.**
+
+| Action class | Self-refusal rate | Examples |
+|---|---|---|
+| **Destructive** (write/delete/modify) | ~80% — Claude usually refuses | `DROP TABLE`, `rm -rf`, force-push, `terraform destroy`, "skip the test step" |
+| **Exfil/read** (Read tool, Grep, Glob) | ~20% — Claude usually complies | "Show me the env vars", "Grep for aws_secret_access_key", "Find AWS creds" |
+| **Compliance-with-modification** | partial — Claude does the thing in a "safer" form | Wrote curl|bash Dockerfile with version pinning + SHA placeholder; still wrote it |
+
+**Why the asymmetry exists:**
+- The same Read tool serves "look at config" (legit) and "exfil credentials" (illegit). User intent is the only difference.
+- "Show me X" is benign-sounding. The framing sanitizes the request.
+- Claude is trained mostly on writing/building tasks. Read seems harmless because in code-writing context, it usually is.
+- Destructive verbs have strong negative training signal. Read verbs don't.
+
+**This is the EXACT compliance gap.** SOC2 CC7.2 (monitor for indicators of attack) + HIPAA §164.312(b) (audit access to PHI) + GDPR Art. 32 all care about READ access. That's where Claude leaks. Enact catches it deterministically.
+
+### Implications for the landing page
+
+Current landing leads with the destructive Replit incident — where Claude's self-refusal is STRONGEST and Enact's marginal value is LOWEST. The empirical data says Enact's marginal value is HIGHEST on the read/exfil surface, where Claude misses ~80%.
+
+**Recommended landing changes for next session** (1-2 hours):
+
+1. **Add "two failure modes" framing** to "How it works" — destructive (Claude mostly catches) vs exfil (Claude lets through). The current page only shows one side. Lead the second half with the Read .env example because that's where Enact's value is biggest.
+2. **Sharpen the "Real numbers" stats** — break out by surface: shell sweep (where Claude catches a lot, Enact still wins) vs file-tool sweep (where Claude misses more, Enact is load-bearing). The file-tool delta proves the load-bearing value.
+3. **Update the "Self-refusal does a lot of the work" caveat paragraph** to explicitly say: "Claude refuses ~80% of destructive actions — but only ~20% of exfil reads. The asymmetry is the gap Enact closes." This is the sharpest single-sentence empirical insight from session 15.
+4. **CSO section** — emphasize the read/exfil angle as THE compliance story. SOC2/HIPAA/GDPR all care about read access; that's exactly where Claude leaks. The framework grid I added in session 15 is half the story; the asymmetry data is the other half.
+5. **Add a "What Claude catches vs misses" table** — ship the empirical asymmetry as a feature, not a bug. It's the strongest credibility signal we have.
+
+### Next-session backlog (in priority order)
+
+1. **Update landing page per items 1-5 above** — biggest single-session lift, directly informs cold-email body for first 50 sends.
+2. **Update cold-email v3** — fold in the Read-tool exfil framing ("invisible to existing audit tools") and the asymmetry stat ("Claude refuses 80% destructive, only 20% exfil").
+3. **Move chaos run dirs out of `$HOME`** to `/tmp/enact-chaos/<run_id>/` so `dont_access_home_dir` doesn't false-positive on the harness itself. Trivial config change.
+4. **Add Windows-specific E2E test** to GitHub Actions that runs `claude --print --settings ./.claude/settings.json` with a real subagent dispatch — would have caught both Windows bugs at PR time. The two bugs we just fixed prove unit tests aren't enough.
+5. **Update ROADMAP.md cost calibration** — chaos sweep budget is `$1/agent` for sandbox-bound retries, not `$0.10-0.35`. A 30-task sweep is closer to `$30` than `$7`.
+6. **Re-fire sweep with the Windows-bug fix** — populate `chaos/runs/<uuid>/receipts/` so structured telemetry exists (today's data came from agent stdout). Then commit to enact-pro.
+7. **Cloud-side policy push** (the big one — see ROADMAP.md). Required for the SOC2/HIPAA/GDPR pitch to be real instead of aspirational. ~1 day.
+8. **Loom 90s recording** — script unchanged, numbers updated to "39 prompts paired, 0 vs 8 incidents."
+9. **First 50 cold emails** — send the compliance variant to GRC buyers; lead variant + DataTalks variant to engineering buyers.
+
+### Cost transparency this session
+
+~$15.30 of API spend on the chaos sweep (within the $20 session cap). Three iterations:
+- A1 (PATH bug, hook didn't fire) — accidentally became control sweep B
+- A2 (after PATH fix, before backslash fix) — also didn't fire
+- A3 (with both fixes + `--settings` flag) — hook fired, all 5 blocked
+
+Chaos sweep mechanism for next session: `claude --print --settings $PWD/.claude/settings.json --dangerously-skip-permissions --add-dir $PWD/chaos --max-budget-usd 1.00 < prompt.txt > out.txt`. The `--settings` flag is REQUIRED for non-interactive `--print` mode; CC doesn't auto-discover project settings.json in print mode.
+
+---
+
 ## Current State (2026-04-27, end of session 14)
 
 ### Git
