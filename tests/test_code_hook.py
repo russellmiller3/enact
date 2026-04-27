@@ -314,8 +314,24 @@ class TestCmdInit:
         cmd_init()
         assert (tmp_path / ".enact" / "secret").read_text() == original_secret
 
+    def test_init_adds_matchers_for_all_supported_tools(self, tmp_path, monkeypatch):
+        # Enact wires PreToolUse + PostToolUse for every member of SUPPORTED_TOOLS
+        monkeypatch.chdir(tmp_path)
+        from enact.cli.code_hook import SUPPORTED_TOOLS
+        cmd_init()
+        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
+        for hook_event in ("PreToolUse", "PostToolUse"):
+            entries = settings["hooks"][hook_event]
+            enact_matchers = {
+                e["matcher"] for e in entries
+                if any("enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
+            }
+            assert enact_matchers == set(SUPPORTED_TOOLS), \
+                f"{hook_event}: expected {set(SUPPORTED_TOOLS)}, got {enact_matchers}"
+
     def test_init_preserves_existing_unrelated_hooks(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)
+        from enact.cli.code_hook import SUPPORTED_TOOLS
         claude_dir = tmp_path / ".claude"
         claude_dir.mkdir()
         prior = {
@@ -333,31 +349,35 @@ class TestCmdInit:
 
         cmd_init()
 
-        settings = json.loads((claude_dir / "settings.json").read_text())
+        settings = json.loads((claude_dir / "settings.json").read_text(encoding="utf-8"))
         assert settings["theme"] == "dark"
         pre_hooks = settings["hooks"]["PreToolUse"]
-        assert len(pre_hooks) == 2
-        matchers = {e["matcher"] for e in pre_hooks}
-        assert matchers == {"Read", "Bash"}
+        # 6 enact entries (Bash/Read/Write/Edit/Glob/Grep) + the user's Read = 7
+        assert len(pre_hooks) == len(SUPPORTED_TOOLS) + 1
         all_commands = [
             h["command"]
             for entry in pre_hooks
             for h in entry["hooks"]
         ]
         assert "some-other-tool check" in all_commands
+        enact_count = sum(1 for c in all_commands if "enact-code-hook pre" in c)
+        assert enact_count == len(SUPPORTED_TOOLS)
 
     def test_init_replaces_prior_enact_entry_no_duplicate(self, tmp_path, monkeypatch):
+        # Re-running init must produce the same N enact entries (no duplication)
         monkeypatch.chdir(tmp_path)
+        from enact.cli.code_hook import SUPPORTED_TOOLS
         cmd_init()
         cmd_init()
-        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text())
+        settings = json.loads((tmp_path / ".claude" / "settings.json").read_text(encoding="utf-8"))
         for hook_event in ("PreToolUse", "PostToolUse"):
             entries = settings["hooks"][hook_event]
             enact_entries = [
                 e for e in entries
                 if any("enact-code-hook" in h.get("command", "") for h in e.get("hooks", []))
             ]
-            assert len(enact_entries) == 1, f"{hook_event} duplicated enact entry"
+            assert len(enact_entries) == len(SUPPORTED_TOOLS), \
+                f"{hook_event} expected {len(SUPPORTED_TOOLS)} enact entries, got {len(enact_entries)}"
 
     def test_init_does_not_double_add_gitignore_line(self, tmp_path, monkeypatch):
         monkeypatch.chdir(tmp_path)

@@ -237,24 +237,26 @@ def cmd_init() -> int:
     settings = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
     settings.setdefault("hooks", {})
 
-    pre_entry = {
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "enact-code-hook pre"}],
-    }
-    post_entry = {
-        "matcher": "Bash",
-        "hooks": [{"type": "command", "command": "enact-code-hook post"}],
-    }
+    # One entry per supported tool (Bash, Read, Write, Edit, Glob, Grep) —
+    # CC requires a separate matcher per tool name. Sorted for stable diffs.
+    enact_pre_entries = [
+        {"matcher": tool, "hooks": [{"type": "command", "command": "enact-code-hook pre"}]}
+        for tool in sorted(SUPPORTED_TOOLS)
+    ]
+    enact_post_entries = [
+        {"matcher": tool, "hooks": [{"type": "command", "command": "enact-code-hook post"}]}
+        for tool in sorted(SUPPORTED_TOOLS)
+    ]
 
-    # Merge: keep user's existing hooks for other tools / matchers; replace any
-    # prior enact-code-hook entry so re-running init never duplicates ours.
+    # Merge: strip ALL prior enact entries (idempotent re-init), keep user's
+    # other-tool hooks, append fresh enact set.
     existing_pre = settings["hooks"].get("PreToolUse", [])
     existing_post = settings["hooks"].get("PostToolUse", [])
     settings["hooks"]["PreToolUse"] = (
-        [e for e in existing_pre if not _is_enact_hook_entry(e)] + [pre_entry]
+        [e for e in existing_pre if not _is_enact_hook_entry(e)] + enact_pre_entries
     )
     settings["hooks"]["PostToolUse"] = (
-        [e for e in existing_post if not _is_enact_hook_entry(e)] + [post_entry]
+        [e for e in existing_post if not _is_enact_hook_entry(e)] + enact_post_entries
     )
     settings_path.write_text(json.dumps(settings, indent=2), encoding="utf-8")
 
