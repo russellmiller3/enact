@@ -2,8 +2,8 @@
 
 Pairing artifact for the research post at `docs/research/post-2026-04-28-claude-code-asymmetry.md`.
 
-**Canonical URL:** swap once enact.cloud/blog goes live. For now, use the GitHub raw link:
-`https://github.com/russellmiller3/enact/blob/master/docs/research/post-2026-04-28-claude-code-asymmetry.md`
+**Canonical URL:** `https://enact.cloud/blog/2026-04-28-claude-code-asymmetry.html` (live on Vercel after this commit auto-deploys; styled to match the rest of enact.cloud, dark theme by default).
+**Fallback URL** (if Vercel deploy lags): `https://github.com/russellmiller3/enact/blob/master/docs/research/post-2026-04-28-claude-code-asymmetry.md`
 
 **Send order:**
 1. Publish to canonical home (enact.cloud/blog OR github raw OR GitHub Pages)

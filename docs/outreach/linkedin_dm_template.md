@@ -4,10 +4,9 @@ Pairing artifact for the target-list spreadsheet at `target-list-2026-04-28.md`.
 
 **Voice match:** matches the lead `cold_email_v2.md` voice — named real incidents, concrete numbers, no profanity, no resume attachment.
 
-**Asset to drop in every DM:** the research post URL. Until enact.cloud/blog is live, use the GitHub raw link:
-`https://github.com/russellmiller3/enact/blob/master/docs/research/post-2026-04-28-claude-code-asymmetry.md`
-
-(Once published on enact.cloud, swap URL across all variants in one pass.)
+**Asset to drop in every DM:** the research post URL.
+Canonical: `https://enact.cloud/blog/2026-04-28-claude-code-asymmetry.html` (Vercel deploys auto on push to master).
+Fallback (if Vercel deploy is delayed): `https://github.com/russellmiller3/enact/blob/master/docs/research/post-2026-04-28-claude-code-asymmetry.md`
 
 ---
 
