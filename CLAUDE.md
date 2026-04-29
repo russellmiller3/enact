@@ -6,21 +6,21 @@
 
 ## Startup
 
-At the start of every session, read `Handoff.md`.Also read `enact-intent.md` for the full state/action map of the app. Flag any drift vs code before starting work. See `INTENT_GUIDE.md` for the full protocol.
+At the start of every session, read `.internal/Handoff.md`. Also read `.internal/enact-intent.md` for the full state/action map of the app. Flag any drift vs code before starting work. See `.internal/INTENT_GUIDE.md` for the full protocol.
 
 As supplement, if needed, read `README.md` and `SPEC.md` to get current on what's shipped, what's planned, and what conventions are in place.
 
-Note: Russell is an amateur dev, and this whole repo was written by AI.
+Note: Russell is an amateur dev, and this whole repo was written by AI. Internal AI working docs (Handoff, plan templates, intent maps, draft plans) live in `.internal/` — local-only, gitignored, not part of the public repo. The public repo presents as a portfolio piece.
 
 ## Coding
 
-1. Make a plan using `PLAN-TEMPLATE.md`. Plans go in `plans/`.
-2. **Always red-team the plan immediately after creating it** using `plans/guides/RED-TEAM-MODE-GUIDE.md`. Fix issues before coding. Never skip this step.
+1. Make a plan using `.internal/PLAN-TEMPLATE.md`. Plans go in `.internal/plans/`.
+2. **Always red-team the plan immediately after creating it** using `.internal/plans/guides/RED-TEAM-MODE-GUIDE.md`. Fix issues before coding. Never skip this step.
 3. Implement using TDD.
 
 ## Red Team Protocol
 
-Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
+Read `.internal/plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 
 **Core Rule:** If you mention a test, WRITE THE TEST CODE. If you mention an edge case, WRITE THE HANDLER CODE. If you mention an error, WRITE THE ERROR STRING. No vague bullshit.
 
@@ -44,7 +44,7 @@ Read `plans/guides/RED-TEAM-MODE-GUIDE.md` for the full checklist.
 - `enact/receipt.py` — audit receipts
 - `tests/` — pytest suite
 - `examples/` — usage examples
-- `plans/` — implementation plans
+- `.internal/plans/` — implementation plans (gitignored; local-only AI working docs)
 - `index.html` — the landing page (when Russell says "landing page", he means this file)
 
 ## Stack
