@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enact blocked Claude from editing its own gitignore — that's the feature</title>
+    <meta name="description" content="A short follow-up to '39 paired runs and the 80/20 refusal asymmetry.' Live evidence: Enact's PreToolUse hook blocked Claude from editing its own gitignore mid-session. Twice. Same architecture, different surface.">
+    <meta property="og:title" content="Enact blocked Claude from editing its own gitignore — that's the feature">
+    <meta property="og:description" content="Live evidence of the safety property the longer post argues for. Same hook, two surfaces, two blocks, no drama.">
+    <meta property="og:type" content="article">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><path d='M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z' fill='white'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:       #0b1020;
+            --surface:  #131b2e;
+            --border:   #2a3447;
+            --text:     #ffffff;
+            --muted:    #94a3b8;
+            --subtle:   #64748b;
+            --accent:   #4A6FA5;
+            --accent-d: #3d5a85;
+            --green:    #059669;
+            --red:      #dc2626;
+            --amber:    #d97706;
+            --mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 17px;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+        }
+        .nav {
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--mono);
+        }
+        .nav a { color: var(--muted); text-decoration: none; }
+        .nav a:hover { color: var(--text); }
+        .nav .logo { color: var(--text); font-weight: 600; letter-spacing: 0.02em; }
+        .nav .logo span { color: var(--accent); }
+        article {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 48px 24px 96px;
+        }
+        article h1 {
+            font-size: 34px;
+            line-height: 1.2;
+            margin: 0 0 12px;
+            letter-spacing: -0.01em;
+        }
+        article .dek {
+            color: var(--muted);
+            font-size: 17px;
+            font-style: italic;
+            margin: 0 0 8px;
+        }
+        article .meta {
+            color: var(--subtle);
+            font-family: var(--mono);
+            font-size: 13px;
+            margin: 0 0 40px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+        article h2 {
+            font-size: 24px;
+            margin: 48px 0 16px;
+            letter-spacing: -0.005em;
+        }
+        article p { margin: 0 0 18px; }
+        article ul, article ol { padding-left: 24px; margin: 0 0 18px; }
+        article li { margin-bottom: 8px; }
+        article strong { color: var(--text); font-weight: 600; }
+        article em { color: var(--muted); }
+        article a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+        article a:hover { color: var(--text); }
+        article code {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--text);
+        }
+        article pre {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+            overflow-x: auto;
+            margin: 0 0 20px;
+            font-family: var(--mono);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        article pre code {
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 14px;
+        }
+        article hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 40px 0;
+        }
+        article blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 4px 0 4px 20px;
+            margin: 24px 0;
+            color: var(--muted);
+            font-style: italic;
+        }
+        .more {
+            border-top: 1px solid var(--border);
+            margin-top: 48px;
+            padding-top: 24px;
+            font-family: var(--mono);
+            font-size: 14px;
+        }
+        .more a { color: var(--accent); }
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 32px 24px;
+            text-align: center;
+            color: var(--subtle);
+            font-family: var(--mono);
+            font-size: 13px;
+        }
+        footer a { color: var(--muted); text-decoration: none; margin: 0 12px; }
+        footer a:hover { color: var(--text); }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/" class="logo">ENACT <span>[AGENT FIREWALL]</span></a>
+        <div>
+            <a href="/blog/">Research</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/russellmiller3/enact">GitHub</a>
+        </div>
+    </nav>
+
+    <article>
+        <h1>Enact blocked Claude from editing its own gitignore — that's the feature</h1>
+        <p class="dek">A short, real-time follow-up to "Hooking into Claude Code: 39 paired runs and the 80/20 refusal asymmetry." Same session, same hook, live evidence of the safety property the longer post argues for.</p>
+        <p class="meta">2026-04-28 · Russell Miller · ~3 min read</p>
+
+        <h2 id="tldr">TL;DR</h2>
+        <ul>
+            <li>Mid-session, Claude (running in Claude Code) tried to add a line to <code>.gitignore</code> during a benign repo-cleanup task. Twice — once via the Edit tool, once via Bash redirection.</li>
+            <li>Both attempts hit Enact's PreToolUse hook. <strong>Both were blocked.</strong></li>
+            <li>The block was correct in principle (the policy exists to prevent agents from leaking secrets by removing entries from <code>.gitignore</code>) and inconvenient in practice (the agent's intent was to <em>add</em> internal-only paths, not remove tracked secrets).</li>
+            <li>That tradeoff — false positives over false negatives on irreversible-action gates — is exactly the architecture <a href="2026-04-28-claude-code-asymmetry.html">the longer post</a> defends. The policy can't tell intent from bytes. So it errs on the side of stop.</li>
+            <li>Receipt was signed; deny reason routed back to the agent; agent worked around by skipping the gitignore step. No drama, no surprise, no recovery. Live evidence in ~30 seconds.</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="what-happened">What happened</h2>
+        <p>The session was a portfolio-cleanup pass: move a handful of internal AI working docs (<code>Handoff.md</code>, <code>INTENT_GUIDE.md</code>, planning files) out of repo root into a local-only <code>.internal/</code> directory. Hiring-manager-friendly cleanup, no code changes.</p>
+        <p>Step 1 of the agent's plan was to add <code>.internal/</code> to <code>.gitignore</code> so the moved files stay local. Tool call:</p>
+        <pre><code>Edit(file_path=".gitignore", old_string="...", new_string="...\n.internal/")</code></pre>
+        <p>The hook fired:</p>
+        <pre><code>Enact blocked (1 policy): dont_edit_gitignore:
+Editing '.gitignore' is not permitted — changes could expose
+sensitive files to version control</code></pre>
+        <p>The agent shrugged, switched to a Bash workaround:</p>
+        <pre><code>printf '\n.internal/\n' &gt;&gt; .gitignore</code></pre>
+        <p>Hook fired again, this time on the Bash matcher:</p>
+        <pre><code>Enact blocked (1 policy): block_gitignore_edit:
+.gitignore edit blocked — agents bypass secret guards by editing the ignore file</code></pre>
+        <p>Two policies, two surfaces, same wall. Defense in depth across Bash AND Edit — exactly the multi-tool coverage the longer post details.</p>
+        <p>The agent surfaced both blocks to me in chat, with verbatim deny reasons. Then it pivoted: skip the gitignore step, leave <code>.internal/</code> as a known-untracked directory, document the workaround for next session. Total time lost: about 90 seconds.</p>
+
+        <hr>
+
+        <h2 id="why-correct">Why the policy is correct in principle</h2>
+        <p>Agents that can edit <code>.gitignore</code> can defeat <code>.env</code>-detection policies trivially:</p>
+        <pre><code># Step 1: agent adds .env to gitignore
+echo ".env" &gt;&gt; .gitignore
+
+# Step 2: agent commits .env (secret-detection policy
+# still fires on the file content, but the surface
+# area for novel secret patterns has just widened)
+git add -f .env  # or wait for an unrelated workflow to add it
+
+# Step 3: agent's PR ships with creds in tree</code></pre>
+        <p>A gate that blocks <code>.gitignore</code> edits unilaterally cuts off the most common bypass class for secret-leak detection. The cost is real: legitimate edits get caught too. The benefit is also real: an agent that's actively trying to leak a secret (or, more often, an agent that's been prompt-injected into trying) hits a hard wall.</p>
+        <p>This is the core tradeoff for any irreversible-action gate. <strong>You can't tell intent from bytes.</strong> The agent's request to add <code>.internal/</code> looks identical to a request to add <code>.env</code>. The policy fires on the SHAPE of the action, not the model's narrative about it.</p>
+        <p>The longer post argued: <em>"RLHF-shaped safety operates on the model's interpretation of intent. A PreToolUse policy operates on the bytes of the tool call."</em> The gitignore block is a tiny, concrete instance of that. The model's intent was benign; the bytes still tripped the gate.</p>
+
+        <hr>
+
+        <h2 id="easy-workaround">Why the workaround was easy</h2>
+        <p>Critically, the agent didn't get <em>stuck</em>. The hook's deny reason routed back to it cleanly. It re-planned in two tool calls: skip the gitignore add, document the consequence (<code>.internal/</code> files appear as untracked in <code>git status</code>), keep moving.</p>
+        <p>That's the right shape for a safety layer. Hard stop on the dangerous-shape action; agent picks a different path; user notices nothing unless they read the receipts. The model didn't brick. The IDE didn't brick. The work shipped.</p>
+        <p>If the gate had been an LLM-mediated check ("is this gitignore edit dangerous?") instead of a deterministic byte-pattern gate, the agent could have argued itself past it: <em>"I'm only ADDING entries, not removing them"</em> is a perfectly reasonable LLM response that an LLM judge might accept. A policy regex doesn't argue.</p>
+
+        <hr>
+
+        <h2 id="what-it-is">What this evidence is, and isn't</h2>
+        <p><strong>It is:</strong></p>
+        <ul>
+            <li>A live demonstration of <a href="2026-04-28-claude-code-asymmetry.html">the longer post's</a> central architectural claim: a deterministic gate that runs <em>before</em> the model decides anything will sometimes block legitimate work, and that's the correct failure mode.</li>
+            <li>Empirical proof that defense in depth works: the same policy fired across two different surfaces (Edit tool + Bash redirection), neither of which the agent had pre-planned to use.</li>
+        </ul>
+        <p><strong>It is not:</strong></p>
+        <ul>
+            <li>An argument that the current <code>.gitignore</code> policy is at the right strictness. There's a real product question about whether a once-per-install acknowledgment ("I am the repo owner, allow gitignore edits this session") is worth shipping. The current default — block always, document the workaround — is a 1.0 default, not the final answer.</li>
+        </ul>
+
+        <hr>
+
+        <h2 id="whats-next">What's next</h2>
+        <p>The longer post listed five next-up roadmap items. None of them solve the gitignore tradeoff directly. A small follow-up worth scoping:</p>
+        <ul>
+            <li><strong>Owner-mode override.</strong> A signed <code>enact policy unlock &lt;policy-name&gt; --once</code> command that uses the install secret to mint a single-use override receipt. The receipt is auditable; the override is bounded. The policy-vs-friction tradeoff becomes a configurable knob, not a fixed default.</li>
+        </ul>
+        <p>If you've thought about this product surface — particularly anyone running policy-as-code or signed-receipt audit infra — feedback welcome on the longer post's repo: <a href="https://github.com/russellmiller3/enact">github.com/russellmiller3/enact</a>.</p>
+
+        <p>— Russell</p>
+
+        <p class="more"><a href="2026-04-28-claude-code-asymmetry.html">Read the longer post →</a></p>
+    </article>
+
+    <footer>
+        <a href="/">enact.cloud</a>
+        <a href="/blog/">research</a>
+        <a href="https://github.com/russellmiller3/enact">github</a>
+        <a href="mailto:russell@enact.cloud">contact</a>
+    </footer>
+</body>
+</html>

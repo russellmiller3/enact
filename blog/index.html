@@ -132,6 +132,12 @@
             <p class="summary">Built a PreToolUse hook firewall for Claude Code, ran 39 paired chaos prompts. Without the hook: 8 critical incidents. With: 0. The headline finding: Claude refuses ~80% of destructive shell commands the user types, ~20% of read-shaped exfil, ~0% of cases where the agent invents the destructive action itself. Plus two latent Windows bugs the chaos sweep surfaced.</p>
         </a>
 
+        <a class="post" href="/blog/2026-04-28-gitignore-block.html">
+            <p class="date">2026-04-28 · 3 min read · follow-up</p>
+            <h2>Enact blocked Claude from editing its own gitignore — that's the feature</h2>
+            <p class="summary">Live evidence from the same session: Enact's PreToolUse hook blocked Claude from editing its own .gitignore. Twice — once via the Edit tool, once via Bash redirection. The block was correct in principle (the policy stops agents from leaking secrets via gitignore edits) and inconvenient in practice (the agent's intent was benign). That tradeoff is exactly the architecture defended in the longer post.</p>
+        </a>
+
         <div class="upcoming">
             <strong>In the queue</strong>
             <ul>
