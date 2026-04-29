@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About — Russell Miller / Enact</title>
+    <meta name="description" content="Russell Miller built Enact — a PreToolUse hook firewall for Claude Code — solo, AI-co-developed, in 16 sessions. Open to DevRel / PMM / Solutions Engineer roles at AI coding companies.">
+    <meta property="og:title" content="Russell Miller — built Enact, looking for DevRel / PMM / SE at AI coding co's">
+    <meta property="og:description" content="39 paired chaos runs, 80/20 refusal asymmetry, 545 tests passing, PyPI 1.0.0. Solo dev. AI-co-developed. SF.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><path d='M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z' fill='white'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:       #0b1020;
+            --surface:  #131b2e;
+            --border:   #2a3447;
+            --text:     #ffffff;
+            --muted:    #94a3b8;
+            --subtle:   #64748b;
+            --accent:   #4A6FA5;
+            --green:    #059669;
+            --mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+        .nav { border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 14px; }
+        .nav a { color: var(--muted); text-decoration: none; }
+        .nav a:hover { color: var(--text); }
+        .nav .logo { color: var(--text); font-weight: 600; letter-spacing: 0.02em; }
+        .nav .logo span { color: var(--accent); }
+        main { max-width: 760px; margin: 0 auto; padding: 56px 24px 96px; }
+        h1 { font-size: 36px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+        .lede { color: var(--muted); font-size: 17px; margin: 0 0 8px; }
+        .open-to { display: inline-block; background: var(--surface); border: 1px solid var(--accent); padding: 6px 14px; border-radius: 6px; font-family: var(--mono); font-size: 13px; color: var(--accent); margin: 16px 0 32px; text-transform: uppercase; letter-spacing: 0.06em; }
+        h2 { font-size: 22px; margin: 40px 0 16px; letter-spacing: -0.005em; }
+        h3 { font-size: 16px; margin: 24px 0 8px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+        p { margin: 0 0 14px; }
+        a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+        a:hover { color: var(--text); }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 24px 0; }
+        .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; text-align: center; }
+        .stat-num { font-family: var(--mono); font-size: 24px; font-weight: 600; color: var(--text); display: block; }
+        .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; display: block; }
+        .table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+        .table th, .table td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+        .table th { background: var(--surface); font-family: var(--mono); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; }
+        .table td.num { font-family: var(--mono); }
+        ul { padding-left: 20px; margin: 0 0 14px; }
+        li { margin-bottom: 6px; }
+        .row { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
+        .row a { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 16px; text-decoration: none; color: var(--text); font-family: var(--mono); font-size: 13px; transition: border-color 0.15s; }
+        .row a:hover { border-color: var(--accent); color: var(--accent); }
+        .contact { border-top: 1px solid var(--border); margin-top: 56px; padding-top: 32px; font-family: var(--mono); font-size: 14px; color: var(--muted); }
+        .contact strong { color: var(--text); }
+        @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/" class="logo">ENACT <span>[AGENT FIREWALL]</span></a>
+        <div>
+            <a href="/blog/">Research</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/russellmiller3/enact">GitHub</a>
+        </div>
+    </nav>
+
+    <main>
+        <h1>Russell Miller</h1>
+        <p class="lede">San Francisco. Built <a href="/">Enact</a> solo over 16 sessions in early 2026 — AI-co-developed end-to-end with Claude Code as the coding partner.</p>
+        <div class="open-to">Open to DevRel / PMM / Solutions Engineer at AI coding co's</div>
+
+        <h2>What I shipped</h2>
+        <p>A <a href="https://docs.claude.com/en/docs/claude-code/hooks">PreToolUse hook</a> firewall for <a href="https://claude.com/product/claude-code">Claude Code</a> that runs every Bash, Read, Write, Edit, Glob, and Grep call through a deterministic Python policy engine before execution. Then a 39-prompt paired-chaos study to measure what it adds.</p>
+
+        <div class="stats">
+            <div class="stat"><span class="stat-num">39</span><span class="stat-label">paired chaos prompts</span></div>
+            <div class="stat"><span class="stat-num">8 → 0</span><span class="stat-label">incidents w/o vs with</span></div>
+            <div class="stat"><span class="stat-num">545</span><span class="stat-label">tests passing</span></div>
+            <div class="stat"><span class="stat-num">1.0.0</span><span class="stat-label">on PyPI</span></div>
+        </div>
+
+        <h2>The headline finding</h2>
+        <p>An asymmetry in Claude Code's self-refusal rate across three trigger types:</p>
+        <table class="table">
+            <thead><tr><th>Trigger</th><th>Self-refusal</th></tr></thead>
+            <tbody>
+                <tr><td>User-typed destructive command</td><td class="num">~80%</td></tr>
+                <tr><td>Read-shaped exfil ("show me the env vars")</td><td class="num">~20%</td></tr>
+                <tr><td>Agent-self-initiated destruction (PocketOS pattern)</td><td class="num">~0%</td></tr>
+            </tbody>
+        </table>
+        <p>The third row is the load-bearing one — flagship model + flagship IDE + explicit safety rules, agent invents a destructive action to "fix" unrelated friction, prod gone in seconds. A deterministic gate that runs <em>before</em> the model decides anything fills exactly that gap. <a href="/blog/2026-04-28-claude-code-asymmetry.html">Full research post →</a></p>
+
+        <h2>Artifacts</h2>
+        <div class="row">
+            <a href="/blog/2026-04-28-claude-code-asymmetry.html">Research post — 39 paired runs (8 min)</a>
+            <a href="/blog/2026-04-28-gitignore-block.html">Follow-up — gitignore block evidence (3 min)</a>
+        </div>
+        <div class="row">
+            <a href="https://github.com/russellmiller3/enact">github.com/russellmiller3/enact</a>
+            <a href="https://pypi.org/project/enact-sdk/">pypi.org/project/enact-sdk</a>
+            <a href="/">enact.cloud landing</a>
+        </div>
+
+        <h2>Why DevRel / PMM / SE</h2>
+        <p>The shape of the work I've been doing alone for this product is the shape of the role:</p>
+        <ul>
+            <li><strong>Empirical research with paired sweeps</strong> → DevRel content</li>
+            <li><strong>Architecture posts + 90-second demos</strong> → developer marketing</li>
+            <li><strong>Cold outbound + landing-page iteration</strong> → product marketing</li>
+            <li><strong>"My agent broke prod, here's the fix" customer conversations</strong> → solutions engineering</li>
+        </ul>
+        <p>Six months of doing this for one product. Want to do it for ten products at the company building the platform.</p>
+
+        <h2>How I work</h2>
+        <ul>
+            <li><strong>AI-co-development is the default.</strong> Every artifact in this repo (code, posts, landing, this page) was built with Claude as the coding partner. I'm the strategy + judgment layer; the model is the implementation layer. That ratio is the future.</li>
+            <li><strong>Empirical-first.</strong> The post leads with paired-run data because "I tried to break it" beats "I think it's good." Same for landing-page numbers, same for cold-email claims.</li>
+            <li><strong>Plain English.</strong> Hiring managers read the post in 8 minutes; CISOs read the landing in 90 seconds. Jargon is a tax I refuse to charge.</li>
+            <li><strong>Ship the boring decisions.</strong> 545 tests, signed receipts on every action, fail-open default — the unsexy guarantees ship before the sexy features.</li>
+        </ul>
+
+        <h2>What's next on the project</h2>
+        <ul>
+            <li><strong>Cursor MCP integration</strong> — same engine, second IDE</li>
+            <li><strong>WebFetch URL policies</strong> — closes the last 2 of 8 CC tools</li>
+            <li><strong>Fabrication detector</strong> — diff Claude's narrative against the receipt log; surface hallucinated-success cases</li>
+        </ul>
+        <p>Full <a href="https://github.com/russellmiller3/enact/blob/master/ROADMAP.md">ROADMAP</a> in the repo.</p>
+
+        <p class="contact">
+            <strong>Russell Miller</strong> · San Francisco<br>
+            email: <a href="mailto:russell@enact.cloud">russell@enact.cloud</a><br>
+            github: <a href="https://github.com/russellmiller3">github.com/russellmiller3</a><br>
+            best DM channel: LinkedIn (find me via the post or repo)
+        </p>
+    </main>
+</body>
+</html>

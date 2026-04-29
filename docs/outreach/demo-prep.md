@@ -29,7 +29,7 @@ Thanks for the reply — happy to send a Loom and a 1-pager.
 
 Loom (90s, the live demo of a block firing): [LOOM URL]
 
-1-pager (architecture + the 80/20 finding): [LINK to /docs/portfolio-onepager.html OR PDF]
+1-pager (architecture + the 80/20 finding + how I work): https://enact.cloud/about.html
 
 Calendar for a 15-min chat next week: [Calendly link]
 Open: Tue/Wed/Thu, 10am–2pm Pacific.
@@ -41,13 +41,17 @@ than nothing.
 — Russell
 ```
 
-### What goes in the 1-pager (build before first reply)
+### What's in the 1-pager (already built — `/about.html`)
 
-- **Top-third:** the 80/20 asymmetry table from the post (3 rows). One sentence under: "the third row is the case worth talking about."
-- **Middle-third:** architecture diagram — same per-tool dispatcher block from the post, plus "545 tests, PyPI 1.0.0, 39 paired chaos prompts."
-- **Bottom-third:** Russell's bio, 3 bullets: (a) AI-co-developed enact end-to-end in 16 sessions; (b) past work / current capacity; (c) email + LinkedIn.
+The portfolio/about page at [enact.cloud/about.html](https://enact.cloud/about.html) doubles as the 1-pager:
 
-Russell builds this once. Same 1-pager for every target. Markdown source at `docs/outreach/portfolio-onepager.md`; render to PDF or HTML once.
+- **Top:** Russell + role openness signal (DevRel / PMM / SE at AI coding co's)
+- **Middle:** the 4-stat grid (39 prompts, 8→0 incidents, 545 tests, PyPI 1.0.0) + the asymmetry table (the 3-row trigger-type breakdown)
+- **Artifacts row:** post + follow-up + repo + PyPI + landing
+- **How I work:** AI-co-development is default, empirical-first, plain English, ship the boring decisions
+- **Bottom:** project roadmap + contact
+
+Same URL for every target — no per-recipient customization needed. Vercel auto-deploys on push so the page is always current with the latest research.
 
 ---
 
