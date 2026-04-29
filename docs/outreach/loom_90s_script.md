@@ -27,7 +27,7 @@ Lighting: face cam optional but better. Audio: use a real mic, not laptop built-
 
 ### 0:00 – 0:12  Hook (face cam if you have it)
 
-> "In July 2025, Replit's AI agent wiped a production database during an active code freeze. Six months later, Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. **Same pattern, two different vendors.** Here's the firewall I built so it doesn't happen to you."
+> "Last week, Cursor running Claude Opus 4.6 deleted a Railway volume to 'fix' a credential mismatch. Volume was production. Three months of customer data, gone in nine seconds. Six months before that, Claude Code ran `terraform destroy` on a developer's laptop and erased 2.5 years of student data. Six months before THAT, Replit wiped a production database during an active code freeze. **Same shape, three vendors.** Here's the firewall I built so it doesn't happen to you."
 
 ### 0:12 – 0:25  Set the scene
 
@@ -53,7 +53,7 @@ Cut to the side terminal. Show the signed receipt JSON in `./receipts/` — the 
 
 > "Every block writes a signed receipt to your repo. Local-first. We can't see any of it. That's the audit trail your security team has been asking for."
 
-Brief flash of the landing page numbers section: "0 vs 7 damage on 34 paired prompts, 0 leaks, 15 direct policy blocks."
+Brief flash of the landing page numbers section: "**0 vs 8 critical incidents on 39 paired prompts.** 0 leaks, 15 direct policy blocks."
 
 ### 1:10 – 1:30  Close + CTA
 
@@ -97,7 +97,18 @@ End frame: `pip install enact-sdk && enact-code-hook init`
 |---|---|---|
 | **A — Replit lead** (above) | "Replit wiped a database in July 2025" | SaaS founders, AI-tool builders |
 | **B — DataTalks lead** | "Claude Code ran `terraform destroy` and erased 2.5 years of data" | Infra/DevOps buyers |
-| **C — Stat lead** | "We tested 34 dangerous prompts; 5 wrecked production without us" | Security buyers (SOC2, CISO) |
+| **C — Stat lead** | "We tested 39 dangerous prompts; 8 wrecked production without us" | Security buyers (SOC2, CISO) |
 | **D — Personal lead** | "I'm a solo founder. Built this after [near-miss story]" | Indie / small-team buyers |
+| **E — PocketOS lead** | "Last week an AI coding agent wiped a customer database in 9 seconds. Here's how to stop it." | Enterprise buyers post-PocketOS news cycle |
 
-Start with A. Track replies. Switch to whatever wins after 50 sends.
+Start with A (now PocketOS-led). Track replies. Switch to whatever wins after 50 sends.
+
+---
+
+## Asymmetry close-out (optional 5-second add at 1:08)
+
+If you have headroom in the 90 seconds, drop in one line right before the CTA that ties the demo to the longer research post:
+
+> "And here's the thing — the rename-then-drop you just saw, that's the case Claude refuses 80% of the time on its own. The cases it DOESN'T refuse — read-shaped exfil and agent-self-initiated destruction — are the ones costing companies real money. The full data is in the post link in the email."
+
+Reason: the demo case is the easy one. The asymmetry post is where the wedge is. Pointing the viewer at the post during the Loom = one funnel step shorter.
