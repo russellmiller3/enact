@@ -203,6 +203,43 @@ This is the difference between "candidate" and "hire on the verge." Most candida
 
 ---
 
+## The killer question: "Can't Anthropic just build this?"
+
+Every Anthropic interviewer (and most Cursor/Cline ones) will ask some version of this. Don't dodge it. Don't get defensive. **The honest answer IS the strongest answer.**
+
+### The pitfall (don't do this)
+
+- "We have a 6-month head start"
+- "Our policies are more sophisticated"
+- "We'll go cross-vendor before they can"
+- Anything that sounds like fighting the platform owner on their own turf
+
+### The right answer (memorize this)
+
+> "Yeah, Anthropic can trivially add this — and probably should. That's exactly why I'm reaching out about a role here rather than pitching it as a product. The research artifact proves I see what your team should be building. It's a hireable signal, not a fundable one. The right place for this work is inside the team that owns the protocol — which is why we're talking."
+
+3 things this does:
+
+1. **Acknowledges the obvious without trying to spin.** They respect that immediately.
+2. **Repositions the conversation from "product pitch" to "strategic judgment demo."** The interview now shifts to *"what would you do here?"* — which is the actual question they're hiring on.
+3. **Compliments their team without sucking up.** "The right place for this work is inside the team that owns the protocol" is structural, not flattery.
+
+### The follow-up they'll likely ask
+
+- *"So what would you build here in your first 90 days?"* — This is the buy signal. Have an answer ready that's specific to their roadmap, not generic. (See "What I'd do in the first 30 days" doc, Stage 3.)
+- *"Why didn't you just contribute this back?"* — Answer: "The hook protocol is the contribution. Enact builds on it; doesn't compete with it. If Anthropic supersedes Enact, that's a feature." Same logic as Q11 in the HN FAQ — consistent across surfaces.
+- *"What about the cross-vendor angle?"* — Acknowledge the niche, don't oversell: "Cursor + Codex + Cline coverage is real but consulting-shaped, not platform-shaped. If Anthropic doesn't ship native gates, that niche grows. If they do, the niche stays small. Either way the artifact stands."
+
+### What this answer signals to the hiring manager
+
+- Self-awareness about competitive dynamics (rare)
+- Comfort with strategic honesty (rarer)
+- Clear understanding that hire = better outcome than product (rarest)
+
+Most candidates fail this question by trying to defend the product. The candidates who get hired are the ones who say "you're right, that's why I'm here."
+
+---
+
 ## What to avoid in every call
 
 - **Don't pitch enact during the interview.** They've read the post. The post is the pitch. The interview is about *you fitting their team*, not selling them the toolkit.
