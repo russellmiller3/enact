@@ -1,7 +1,7 @@
 # Loom 90s demo script — Enact
 
 **Goal:** in 90 seconds, get the viewer to install Enact themselves.
-**Hook:** lead with the named incident (Replit + DataTalks), end with a single command.
+**Hook:** lead with three escalating incidents (PocketOS Apr 2026 → DataTalks Feb 2026 → Replit Jul 2025), end with a single command. Recency matters — PocketOS is the freshest news cycle.
 **Demo case:** the rename-then-drop bypass — most cinematic of the bypasses.
 
 ---
