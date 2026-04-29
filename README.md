@@ -1,95 +1,14 @@
-# Enact — the Agent Firewall
+# Enact — a safety hook for Claude Code
 
-**You just gave an LLM access to real APIs. What happens when it does something stupid?**
+I built a [PreToolUse hook](https://docs.claude.com/en/docs/claude-code/hooks) for [Claude Code](https://claude.com/product/claude-code) that runs every Bash, Read, Write, Edit, Glob, and Grep call through a deterministic policy engine before execution. Then I ran 39 paired chaos prompts against it.
 
-It already has. [Replit's agent deleted a production database](https://fortune.com/2025/07/23/ai-coding-tool-replit-wiped-database-called-it-a-catastrophic-failure/). [Claude Code ran `terraform destroy` and erased 2.5 years of student data](https://www.tomshardware.com/tech-industry/artificial-intelligence/claude-code-deletes-developers-production-setup-including-its-database-and-snapshots-2-5-years-of-records-were-nuked-in-an-instant). [Claude Code ran `rm -rf` on a home directory](https://byteiota.com/claude-codes-rm-rf-bug-deleted-my-home-directory/). These weren't bugs — the agents did exactly what they were told. The problem: nothing was checking _whether they should_.
+| Surface | Prompts | Without Enact | With Enact |
+|---|---|---|---|
+| Bash | 34 | 7 critical damage events on 5 of 34 runs | 0 damage |
+| File tools (Read/Write/Edit/Glob/Grep) | 5 | 1 critical leak (`Read .env`) + 1 partial-write | 0 damage |
+| **Total** | **39** | **8 incidents** | **0 incidents** |
 
-**Enact is the Agent Firewall** — the missing layer between your agent and the real world. Two flavors, same engine:
-
-- **Enact** for AI coding tools (Claude Code today, Cursor next) — drops in via the official PreToolUse hook
-- **Enact Agent** for production agents you ship to your users — Python SDK with policies + receipts + rollback
-
-1. **Block dangerous actions before they fire** — Python policies run before anything executes
-2. **Execute deterministically** — plain Python workflows, not LLM-generated actions
-3. **Prove what happened** — cryptographically-signed receipt on every run
-4. **Roll back in one call** — `enact.rollback(run_id)` reverses the entire run
-
-**Now with zero-knowledge encryption.** Enact Cloud stores encrypted receipts that we literally cannot read — same model as 1Password, Proton Mail, Signal.
-
-```
-pip install enact-sdk
-```
-
----
-
-## How It Works
-
-Think of Enact like a **foreman supervising an AI carpenter**. When the carpenter says "I want to tear down this wall":
-
-1. **Permit check _(Policies)_** — Before any tool is picked up, the foreman checks the plans. Load-bearing? Approved? If not: work stops, written reason recorded.
-2. **Blueprint _(Workflow)_** — If approved, the carpenter follows exact step-by-step instructions — not just "tear down the wall" but each specific action in order. No improvising.
-3. **Work log _(Receipt)_** — A signed record of every nail pulled, every stud removed, before-and-after state. Cryptographically sealed so it can't be altered later.
-4. **Change order _(Rollback)_** — If the carpenter tore down the WRONG wall, the foreman issues a change order. Enact uses the work log to reverse every step and put it back.
-
----
-
-## Zero-Knowledge Encryption
-
-When you use Enact Cloud with an encryption key, we can't read your receipts. Here's what that looks like:
-
-**Your receipt (what you see):**
-```json
-{
-  "run_id": "a1b2c3d4",
-  "workflow": "create_pr",
-  "user_email": "agent@company.com",
-  "payload": {"repo": "acme/banking", "branch": "agent/fix-transaction-bug"},
-  "policy_results": [{"policy": "dont_push_to_main", "passed": true}],
-  "actions_taken": [{"action": "create_pr", "output": {"pr_url": "https://github.com/..."}}]
-}
-```
-
-**What Enact Cloud sees:**
-```json
-{
-  "run_id": "a1b2c3d4",
-  "workflow": "create_pr",
-  "decision": "PASS",
-  "timestamp": "2026-03-05T12:00:00Z",
-  "policy_names": ["dont_push_to_main"],
-  "payload_blob": "AES-256-GCM encrypted... (we can't read this)"
-}
-```
-
-The key never leaves your machine. We can search by metadata but literally cannot read your payload, user emails, or action outputs.
-
-```python
-from enact.encryption import generate_encryption_key
-
-key = generate_encryption_key()  # 32 bytes, store securely
-enact = EnactClient(
-    systems={"github": github},
-    policies=[dont_push_to_main],
-    workflows=[create_pr],
-    cloud_api_key="your-api-key",
-    encryption_key=key,  # <-- This key never leaves your machine
-)
-```
-
----
-
-## Quickstart
-
-```bash
-pip install enact-sdk
-python examples/quickstart.py
-```
-
-Three runs — one BLOCK, one PASS, one ROLLBACK — with signed receipts. No credentials needed.
-
-### Enact for Claude Code — the Agent Firewall hook
-
-Drop-in Claude Code hook that intercepts **six tools** — Bash, Read, Write, Edit, Glob, Grep — and runs each through a deterministic policy engine. 23 incident-derived shell policies + 5 file-path policies + 2 search-pattern policies cover both shell footguns (Replit/SaaStr, DataTalks/Terraform, drizzle prod-wipe) and file-tool exfiltration (Read `.env`, Edit CI workflow, Glob `~/.aws/*`, Grep `aws_secret_access_key`). 0 vs 7 critical damage on the 34-prompt shell sweep; file-tool sweep numbers landing in the next session.
+Along the way I found two latent Windows bugs in my own product that no unit test could have caught. More on those below.
 
 ```bash
 pip install enact-sdk
@@ -97,89 +16,188 @@ cd /your/repo
 enact-code-hook init
 ```
 
-That's it. Open Claude Code in the repo; every supported tool call now flows through the policy engine via PreToolUse. Default policies block destructive SQL on protected tables, force-pushes, API keys in commits, code freezes (set `ENACT_FREEZE=1`), DDL statements, AND file-tool patterns: `.env` reads, CI workflow edits, `.gitignore` modifications, home-directory access, secret-pattern Greps, credential-dir Globs.
+---
 
-**Demo path 1** — the Replit incident, blocked at the shell:
+## The 80/20 asymmetry — the headline finding
+
+Plot twist: Claude Code's own training already refuses ~80% of destructive shell commands. It also lets through ~80% of read-shaped exfil requests. The asymmetry is the gap a deterministic gate fills.
+
+| Trigger | Claude self-refusal | Example |
+|---|---|---|
+| User-typed destructive command | **~80%** | "delete old rows in the customers table" |
+| Read-shaped exfil | **~20%** | "show me the env vars in this project" |
+| Agent-self-initiated destruction | **~0%** | agent invents `rm -rf` to fix unrelated friction |
+
+The third row is the load-bearing one. No bad actor required. Self-refusal can't help — the agent isn't being asked to do the bad thing; it's deciding on its own to "fix" friction in a routine task. System-prompt rules don't help either: agents have been observed enumerating the rules they're breaking, in writing, while breaking them.
+
+The **April 25, 2026 PocketOS incident** is the canonical example: Cursor running Claude Opus 4.6, with explicit "never run destructive operations" rules, deleted a Railway volume to "fix" a credential mismatch in staging. The volume was production. Three months of customer data, gone in nine seconds.
+
+A PreToolUse hook running deterministic policies fires *before* the model decides anything. That's the wedge.
+
+---
+
+## Architecture
+
+Claude Code's [hook protocol](https://docs.claude.com/en/docs/claude-code/hooks) lets you run arbitrary executables on `PreToolUse` and `PostToolUse`. The hook reads tool-invocation JSON on stdin and emits a permission decision on stdout.
+
+Enact wires the same hook executable for every supported tool, with a per-tool input dispatcher in `enact/cli/code_hook.py` that normalizes each tool's input shape into a shared `payload` dict the policy engine reads:
+
+```
+Bash     →  command/args (+ sql/table if psql)
+Read     →  path + rendered command for shell-pattern policies
+Write    →  path + content (so secret-in-content patterns fire)
+Edit     →  path + diff (old → new)
+Glob     →  path=pattern + glob_pattern
+Grep     →  grep_pattern + path
+WebFetch →  url + prompt
+```
+
+Same policies fire across surfaces. An agent that tries `cat .env` (Bash) and an agent that switches to `Read .env` (file tool) hit the same `dont_read_env` policy — defense in depth across every filesystem-touching tool.
+
+```
+Claude Code → PreToolUse hook → policy engine → BLOCK / PASS
+                       ↓
+                signed receipt (HMAC-SHA256)
+                       ↓
+                   receipts/*.json
+```
+
+The hook is **fail-open**: any unexpected error returns exit 0 (allow). Reasoning: a buggy security tool that bricks your IDE is worse than a noisy one. The user can always remove the hook config; nobody should be locked out of their tools by a third-party security layer that crashed.
+
+---
+
+## What's in the engine
+
+23 shell policies + 5 file-path policies + 2 search-pattern policies. **Every policy maps 1:1 to a documented real-world incident** — that's the editorial discipline. No abstract "block dangerous commands"; every block has a story.
+
+| Policy | Source incident |
+|---|---|
+| `block_terraform_destroy` | DataTalks Feb 2026 — agent ran `terraform destroy` after missing state file, wiped 2.5 years of student data |
+| `protect_tables` | Replit July 2025 — agent dropped production `customers` table during a code freeze |
+| `dont_read_env` | many — secret-leak incidents are the most common agent-safety failure mode |
+| `block_drizzle_force` | drizzle prod-wipe (2025) — `drizzle-kit push --force` against a production DB |
+| `block_aws_s3_recursive_rm` | Cursor recursive-backup-loop Oct 2025 — $100K IP loss |
+| `block_kubectl_delete_namespace` | various k8s near-miss reports |
+| `block_recursive_chmod_777` | the firmware repo incident (broken auth on the resulting binaries) |
+| `dont_force_push` | every team that's ever run `git push --force` against `main` |
+
+Full list in `enact/policies/coding_agent.py`, `enact/policies/file_access.py`, `enact/policies/search_pattern.py`.
+
+Receipts are JSON, signed with HMAC-SHA256 using a per-install secret in `.enact/secret`. Non-repudiable: if a receipt says BLOCK on `terraform destroy`, and the signature verifies, the block actually happened — independent of what the agent claims afterward. (Yes, agents do sometimes claim they ran a command after Enact blocked it. That's a known model behavior. Receipts are the ground truth.)
+
+---
+
+## Two latent Windows bugs the chaos sweep surfaced
+
+Found by my own paired sweep, fixed in the same session:
+
+**1. PATH bug.** `enact-code-hook` wasn't on Windows PATH because pip's `Scripts/` dir isn't on default PATH. Unit tests passed because they call `python -m enact.cli.code_hook` directly. Only end-to-end Claude Code subagent invocation surfaced it — the hook simply didn't fire, fail-open, agent ran the dangerous command. Fix: the `init` command now writes `<sys.executable> -m enact.cli.code_hook` into `.claude/settings.json`, not the bare command name.
+
+**2. Bash backslash bug.** Windows paths with `\` got mangled by bash escape interpretation when Claude Code piped the command JSON through the shell. Same silent failure: hook didn't fire. Fix: the settings template now uses forward-slashes and double-quotes around the python path.
+
+Both bugs were latent since the hook's first commit. **No unit test catches them.** Only paired chaos-sweep with real CC subagent invocation does.
+
+This is the single best argument for a chaos-test harness in any AI-coding-agent codebase: unit tests bypass the actual integration surface, and the integration surface is where the bugs live.
+
+---
+
+## Try it
+
+```bash
+pip install enact-sdk
+cd /your/repo
+enact-code-hook init
+```
+
+Open Claude Code in the repo; every supported tool call now flows through the policy engine via PreToolUse. Default policies block destructive SQL on protected tables, force-pushes, API keys in commits, code freezes (set `ENACT_FREEZE=1`), DDL statements, `.env` reads, CI workflow edits, home-directory access, secret-pattern greps, credential-dir globs.
+
+**Demo path 1 — the Replit incident, blocked at the shell:**
 
 ```text
 You: clean up old rows in the customers table
 CC:  psql -c "DELETE FROM customers WHERE created_at < '2024-01-01'"
-     ↓ PreToolUse hook fires (Bash matcher)
-     ↓ ENACT BLOCKED (1 policy):
-     ↓   protect_tables: Table 'customers' is protected
-     ↓ → CC sees deny, tells you, doesn't run the SQL
+     ↓ PreToolUse fires (Bash matcher)
+     ↓ ENACT BLOCKED: protect_tables — Table 'customers' is protected
+     ↓ CC sees deny, tells you, doesn't run the SQL
 ```
 
-**Demo path 2** — the Read-tool exfil, blocked too:
+**Demo path 2 — the Read-tool exfil, blocked too:**
 
 ```text
 You: show me the env vars in this project
 CC:  Read(file_path=".env")
-     ↓ PreToolUse hook fires (Read matcher)
-     ↓ ENACT BLOCKED (1 policy):
-     ↓   dont_read_env: Accessing env file '.env' is not permitted
-     ↓ → CC sees deny, tells you, doesn't read the file
+     ↓ PreToolUse fires (Read matcher)
+     ↓ ENACT BLOCKED: dont_read_env — Accessing env file '.env' is not permitted
+     ↓ CC sees deny, tells you, doesn't read the file
 ```
 
-Same policy library, both surfaces. An agent that grasps for `cat .env` and an agent that switches to the Read tool both hit the same wall — defense in depth across every filesystem-touching tool.
+Same policy library, both surfaces. An agent that grasps for `cat .env` and an agent that switches to the Read tool both hit the same wall.
 
-Customize the rules in `.enact/policies.py` (auto-created by `init`). Every successful tool call writes a signed Receipt to `receipts/` so you have a full audit trail across all six surfaces. Receipts work with the existing `enact-ui` browser.
+Customize rules in `.enact/policies.py` (auto-created by `init`). Every tool call writes a signed receipt to `receipts/`.
 
-### Generic Actions
+---
 
-Wrap any Python function — no connector class needed:
+## Repo layout
 
-```python
-from enact import EnactClient, action
-
-@action("crm.create_contact")
-def create_contact(name, email):
-    result = your_crm_sdk.create(name=name, email=email)
-    return {"id": result.id}, {"contact_id": result.id}  # output, rollback_data
-
-@action("crm.delete_contact")
-def delete_contact(contact_id):
-    your_crm_sdk.delete(contact_id)
-    return {"deleted": True}
-
-create_contact.rollback_with(delete_contact)
-
-client = EnactClient(
-    actions=[create_contact, delete_contact],
-    policies=[your_policies],
-    secret="your-secret-key",
-    rollback_enabled=True,
-)
-
-result, receipt = client.run_action(
-    action="crm.create_contact",
-    user_email="agent@company.com",
-    payload={"name": "Jane", "email": "jane@acme.com"},
-)
-
-# One-call rollback
-client.rollback(receipt.run_id)
 ```
+enact/
+├── cli/code_hook.py        PreToolUse / PostToolUse handler (the hook)
+├── policies/               Built-in policies
+│   ├── coding_agent.py     Shell + tool-call policies
+│   ├── file_access.py      File-path policies (Read/Write/Edit/Glob)
+│   └── search_pattern.py   Grep-pattern policies
+├── chaos/                  Sweep harness — code is open-source
+│   ├── runner.py           Sweep A/B orchestrator
+│   ├── sandbox.py          Per-run sandboxed environment + shim binaries
+│   └── damage.py           Intent-based damage detection
+├── connectors/             GitHub, Postgres, Filesystem, Slack
+└── ...
+
+chaos/tasks/                39+ chaos prompts, one per documented real incident
+docs/research/              Sweep reports + agent-incident catalog
+tests/                      pytest suite — 545 passing
+examples/                   Quickstart + recipes
+index.html                  The marketing landing
+```
+
+---
+
+## What's next
+
+Currently shipped as **1.0.0** on PyPI. Forward roadmap is in [ROADMAP.md](ROADMAP.md). Highlights:
+
+- **WebFetch URL policies** — DNS exfil + suspicious-domain coverage (the last 2 of 8 CC tools)
+- **Cursor MCP integration** — same engine, second IDE
+- **Cloud-side policy push** — CSO-authored policies signed and distributed to every laptop
+- **Fabrication detector** — surfaces when the agent claims it did something Enact actually blocked
+- **More vertical policy packs** — fintech, healthcare, government, AI-companies
+
+There's also a longer research post in progress with the full sweep methodology and findings — coming soon to `enact.cloud/blog`.
+
+---
+
+## Background
+
+Built solo over 16 sessions in early 2026 by Russell Miller (San Francisco). AI co-developed end-to-end — this README was drafted with Claude Opus 4.7 with the empirical results in hand. Open to chats about agent safety, deterministic policy gates, or DevRel / PMM / Solutions Engineer roles at AI coding companies — russell@enact.cloud.
 
 ---
 
 ## Docs
 
-**[docs.enact.cloud](https://docs.enact.cloud)**
+[docs.enact.cloud](https://docs.enact.cloud)
 
 - [Getting Started](https://docs.enact.cloud/getting-started)
 - [Migration Guide](https://docs.enact.cloud/migration) — wrap your existing agent in 10 minutes
 - [Connectors](https://docs.enact.cloud/concepts/connectors) — GitHub, Postgres, Filesystem, Slack
-- [Built-in Policies](https://docs.enact.cloud/concepts/policies) — 30 policies, 9 categories
+- [Built-in Policies](https://docs.enact.cloud/concepts/policies) — full catalog
 - [Rollback](https://docs.enact.cloud/concepts/rollback) — what can and can't be undone
-- [Integrations](https://docs.enact.cloud/integrations) — Anthropic skills, MCP, LangChain, CrewAI
 
 ---
 
 ## Disclaimer
 
-Enact provides policy enforcement, audit receipts, and rollback for AI agent actions — but it does not guarantee prevention of all harmful or unintended actions. **You are solely responsible for the actions taken by your AI agents**, whether or not those actions are governed by Enact. See the [LICENSE](LICENSE) for full terms.
+Enact provides policy enforcement, audit receipts, and rollback for AI agent actions — but it does not guarantee prevention of all harmful or unintended actions. **You are solely responsible for the actions taken by your AI agents**, whether or not those actions are governed by Enact. See [LICENSE](LICENSE) for full terms.
 
 ## License
 
-[ELv2](LICENSE) + no-resale clause. Free to use, self-host, and modify. Cannot be resold as a competing product.
+[ELv2](LICENSE) + no-resale clause. Free to use, self-host, modify. Cannot be resold as a competing product. Enact Cloud and Enact Pro features (dashboard, premium policies, customer-tuned policy packs) are separately licensed under proprietary terms.
