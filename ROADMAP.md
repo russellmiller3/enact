@@ -6,17 +6,45 @@ Living doc. Update at session-end when scope shifts.
 
 ---
 
-## Now (1.0.0 shipped end of session 15)
+## Now (1.0.0 shipped end of session 15; expanded research + distribution end of session 17)
 
+**SDK and engine:**
 - Multi-tool hook covers 6 of 8 Claude Code tools (Bash + Read + Write + Edit + Glob + Grep)
 - 23 incident-derived shell policies + 5 file-path policies + 2 search-pattern policies
-- 0 vs 7 critical damage on the 34-prompt shell sweep (file-tool sweep landing next session)
-- Landing has both engineer-led wedge (top) AND CSO/GRC story (Built for your security team section + tabbed receipt demo + SOC2/HIPAA/GDPR mapping)
 - IP split into three repos: public `enact` (ELv2 SDK + chaos harness code + landing) + private `enact-cloud` (FastAPI backend, dashboard, HITL, Stripe) + private `enact-pro` (chaos telemetry + auto-suggested policy candidates + premium policy packs)
+
+**Empirical:**
+- 39 paired chaos prompts, 8 critical incidents without Enact, 0 with — across both shell and file-tool surfaces
+- 80/20 self-refusal asymmetry surfaced: Claude Code refuses ~80% of user-typed destructive commands, ~20% of read-shaped exfil, ~0% of agent-self-initiated destruction (the PocketOS pattern). Deterministic gate fills the third row.
+- Two latent Windows bugs found by the chaos harness and fixed (PATH + bash backslash mangling)
+
+**Distribution and research (session 17):**
+- Research post live at [enact.cloud/blog/2026-04-28-claude-code-asymmetry.html](https://enact.cloud/blog/2026-04-28-claude-code-asymmetry.html) (the long-form study) + [follow-up at /blog/2026-04-28-gitignore-block.html](https://enact.cloud/blog/2026-04-28-gitignore-block.html) (live evidence of the safety property)
+- Landing-page research callout band linking to the post above the fold
+- Cross-post variants prepped for HN, X, LinkedIn (in `docs/outreach/`)
+- Target list of 10 hiring managers (5 TIER A all HIGH confidence)
+- 8 pre-personalized DMs (5 Tier A + 3 Tier B) ready to fire
+- HN-submission FAQ with 12 pre-drafted answers for the comment window
 
 ---
 
-## Next — Cloud-side policy push (highest priority, currently NOT BUILT)
+## Next — technical priorities (re-ranked end of session 17)
+
+The cloud-side policy push (was #1) is now demoted to "when first paying customer materializes." It's a sales-driven build; without an active buyer pipeline, finishing it is speculative. The current technical priorities in order:
+
+### 1. Cursor MCP integration
+
+Closes the second-largest agent-coding surface. MCP server wraps the same `enact.policy.evaluate_all` engine. Reaches Cursor's user base directly. Effort: ~half day.
+
+### 2. WebFetch URL policies (the last 2 of 8 CC tools)
+
+WebFetch needs a URL-policy class — domain allowlist + suspicious-URL patterns (DNS exfil, pastebin, `*.tk`/`*.ml`). Different shape from file paths; new policy module. Effort: ~half day. Closes the engine's coverage of every CC tool except NotebookEdit (which is rare in non-Jupyter projects).
+
+### 3. Fabrication detector
+
+At session end, parse Claude's narrative against the receipt log; surface cases where Claude claimed it ran an action that the hook actually blocked. Real failure mode observed in the chaos sweep — agent told user "git reset --hard succeeded" after Enact denied it. Productizing this becomes a landing-page section once shipped. Effort: ~half day.
+
+### 4. Cloud-side policy push (deferred — was #1)
 
 **Why first:** the SOC2/HIPAA/GDPR pitch on the landing is hollow without it. CSOs buy compliance products to PUSH controls down to engineers. Today, every developer's `.enact/policies.py` is local — engineers can edit/disable. CSOs cannot enforce a global policy update across their team.
 
@@ -54,20 +82,8 @@ Both work, both require engineer cooperation. Neither is what a CSO actually wan
 
 ## Soon (next 2-3 sessions)
 
-### File-firewall paired sweep
-Already-shipped chaos prompts 80-84 + the cloud-policy-push blockers depend on this empirical data. ~10-15 min wall clock + ~$1-3 once you fire from a CC session in `enact-fresh`. Runbook in `plans/2026-04-27-file-firewall-sweep.md`.
-
-### Cursor MCP integration
-Reach Cursor's user base (similar wedge to Claude Code). MCP server wraps the same `enact.policy.evaluate_all` engine. Open question: build before or after first paying Marcus customer.
-
-### NotebookEdit + WebFetch + Task tool coverage
-Closes the last 2 of 8 CC tools. NotebookEdit is rare in non-Jupyter projects (low priority); WebFetch needs URL-policy class (different shape — domain allowlist, suspicious-URL patterns); Task spawns subagents (needs inheritance verification end-to-end).
-
 ### Loom 90s demo recording
-Script lives at `docs/outreach/loom_90s_script.md`. Goes into every cold-email send. Needs the file-firewall sweep numbers landed first so the "0 vs N" stat in the demo is current.
-
-### First 50 cold emails
-Templates in `docs/outreach/cold_email_v2.md` (lead + DataTalks + Compliance variants). Filter: 100-300 person eng team, AI-forward, near-miss public OR regulated industry. Realistic math: 50 → 5-10 replies → 3-5 demos → 1-2 paid in 30 days.
+Script lives at `docs/outreach/loom_90s_script.md` — refreshed end of session 17 with the new "39 paired prompts, 0 vs 8 incidents" headline + a PocketOS-led hook + an asymmetry close-out at 1:08. Needs Russell to record once.
 
 ### SDK split — engine open, policies closed (Russell-confirmed direction, session 16)
 
@@ -84,19 +100,13 @@ Effort estimate: ~half day.
 
 Dependency: `enact-pro` repo already exists from session 15 IP split. Just need the bundle distribution mechanism.
 
-### Hallucination-block notification — agent can't hide blocks from user
+### OS-level toast on block (companion to fabrication detector in "Next")
 
-**Why this matters (verified session 16):** the Claude Code hook protocol has NO field that surfaces a message directly to the user. `permissionDecisionReason` only goes to Claude. Claude can — and empirically does — claim it succeeded after Enact blocked it. We confirmed Claude Code does not currently expose a `userMessage` or equivalent field that bypasses the model.
+The fabrication-detector approach surfaces hallucinated-success at session end. A cheaper companion: OS-level toast on every BLOCK so the user sees it in real time, independent of what Claude says. `osascript -e 'display notification "..."'` (Mac), `New-BurntToastNotification` (Windows), `notify-send` (Linux). ~30 min.
 
-Three options, ranked. Russell decision (session 16): cheapest fails the criterion; ship Better and Best.
+Plus: file `/feedback` request to Anthropic for a `userMessage` hook field that renders outside the chat thread — the long-term proper fix referenced in the research post.
 
-- **Cheapest (~10 min) — DOES NOT MEET CRITERION (skip):** add a stderr line `[ENACT BLOCKED: <policy> — <reason>]` from the hook. Goes to Claude, not the user. Claude can ignore it. Hallucination remains possible.
-- **Better (~30 min) — SHIP:** OS-level toast on block. Hook subprocess invokes `osascript -e 'display notification "..."'` (Mac), `New-BurntToastNotification` (Windows), or `notify-send` (Linux) on every BLOCK. User sees it system-wide, independent of what Claude says.
-- **Best (~half day) — SHIP after Better:** "fabrication detector" — at session end, parse Claude's final summary text and diff against the receipt actions. If Claude claims X happened and the receipt shows X was blocked, surface a "fabrication detected" alert in the receipt UI. This is the productized version of the hallucinated-success finding from session 15. Worth its own landing-page section once shipped.
-
-Plus: file `/feedback` request to Anthropic for a `userMessage` hook field that renders outside the chat thread. Long-term proper fix.
-
-### Chaos sweep — DB write-completion bug
+### Chaos sweep — DB write-completion bug (deferred)
 
 Discovered session 16: `chaos.db` has 25 runs but all have NULL outcomes. The runner inserts run rows at start but never UPDATEs with final classification. Top-level `receipts/` directory has the actual block evidence (39 receipts, 31 BLOCKs across 6 distinct policies) but the per-run outcome attribution is broken.
 
