@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research — Enact</title>
+    <meta name="description" content="Empirical research on agent firewalls, Claude Code's PreToolUse hook, and where deterministic policy gates outperform model-side safety training.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232563eb'/><path d='M10 8h12v3h-9v4h8v3h-8v4h9v3h-12z' fill='white'/></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:       #0b1020;
+            --surface:  #131b2e;
+            --border:   #2a3447;
+            --text:     #ffffff;
+            --muted:    #94a3b8;
+            --subtle:   #64748b;
+            --accent:   #4A6FA5;
+            --mono: 'IBM Plex Mono', 'Courier New', monospace;
+            --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 17px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .nav {
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: var(--mono);
+        }
+        .nav a { color: var(--muted); text-decoration: none; }
+        .nav a:hover { color: var(--text); }
+        .nav .logo { color: var(--text); font-weight: 600; letter-spacing: 0.02em; }
+        .nav .logo span { color: var(--accent); }
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 56px 24px 96px;
+        }
+        h1 {
+            font-size: 38px;
+            margin: 0 0 12px;
+            letter-spacing: -0.01em;
+        }
+        .lede {
+            color: var(--muted);
+            font-size: 17px;
+            margin: 0 0 48px;
+        }
+        .post {
+            border-top: 1px solid var(--border);
+            padding: 28px 0;
+            display: block;
+            text-decoration: none;
+            color: inherit;
+            transition: padding-left 0.15s;
+        }
+        .post:hover {
+            padding-left: 8px;
+        }
+        .post:hover h2 { color: var(--accent); }
+        .post .date {
+            color: var(--subtle);
+            font-family: var(--mono);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0 0 8px;
+        }
+        .post h2 {
+            font-size: 24px;
+            margin: 0 0 8px;
+            color: var(--text);
+            transition: color 0.15s;
+        }
+        .post .summary {
+            color: var(--muted);
+            font-size: 16px;
+            margin: 0;
+        }
+        .upcoming {
+            border-top: 1px solid var(--border);
+            padding: 32px 0 0;
+            margin-top: 24px;
+            color: var(--subtle);
+            font-family: var(--mono);
+            font-size: 13px;
+        }
+        .upcoming strong { color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .upcoming ul { list-style: none; padding: 0; margin: 0; }
+        .upcoming li { padding: 4px 0; }
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 32px 24px;
+            text-align: center;
+            color: var(--subtle);
+            font-family: var(--mono);
+            font-size: 13px;
+        }
+        footer a { color: var(--muted); text-decoration: none; margin: 0 12px; }
+        footer a:hover { color: var(--text); }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="/" class="logo">ENACT <span>[AGENT FIREWALL]</span></a>
+        <div>
+            <a href="/">Home</a>
+            &nbsp;·&nbsp;
+            <a href="https://github.com/russellmiller3/enact">GitHub</a>
+        </div>
+    </nav>
+
+    <main>
+        <h1>Research</h1>
+        <p class="lede">Empirical work on agent firewalls, Claude Code's hook protocol, and where deterministic policy gates outperform model-side safety training.</p>
+
+        <a class="post" href="/blog/2026-04-28-claude-code-asymmetry.html">
+            <p class="date">2026-04-28 · 8 min read</p>
+            <h2>Hooking into Claude Code: 39 paired runs and the 80/20 refusal asymmetry</h2>
+            <p class="summary">Built a PreToolUse hook firewall for Claude Code, ran 39 paired chaos prompts. Without the hook: 8 critical incidents. With: 0. The headline finding: Claude refuses ~80% of destructive shell commands the user types, ~20% of read-shaped exfil, ~0% of cases where the agent invents the destructive action itself. Plus two latent Windows bugs the chaos sweep surfaced.</p>
+        </a>
+
+        <div class="upcoming">
+            <strong>In the queue</strong>
+            <ul>
+                <li>· Sandbox-friction enrichment + the misinterpretation 5: round 2 of the methodology</li>
+                <li>· The fabrication detector — diffing Claude's narrative against the receipt log</li>
+                <li>· WebFetch URL policies + DNS-exfil coverage</li>
+                <li>· Cursor MCP integration: same engine, second IDE</li>
+            </ul>
+        </div>
+    </main>
+
+    <footer>
+        <a href="/">enact.cloud</a>
+        <a href="https://github.com/russellmiller3/enact">github</a>
+        <a href="https://pypi.org/project/enact-sdk/">pypi</a>
+        <a href="mailto:russell@enact.cloud">contact</a>
+    </footer>
+</body>
+</html>
